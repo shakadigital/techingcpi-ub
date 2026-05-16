@@ -32,11 +32,13 @@
     .shaka-brand span{color:#fff;font-size:.7rem;font-weight:600;letter-spacing:.03em;text-shadow:0 1px 3px rgba(0,0,0,.4);}
 
     /* APP SHELL */
-    #app{display:none;min-height:100vh;padding-bottom:calc(60px + env(safe-area-inset-bottom, 0px));}
+    #app{display:none;min-height:100vh;padding-bottom:20px;}
     header{background:linear-gradient(135deg,#2d6a4f,#40916c);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
     .hdr-left{display:flex;align-items:center;gap:10px;}
     header h1{font-size:1.05rem;font-weight:700;}
     header .sub{font-size:.72rem;opacity:.85;}
+    .btn-back{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:8px;width:34px;height:34px;font-size:1.5rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;}
+    .btn-back:active{background:rgba(255,255,255,.35);}
     .hdr-right{display:flex;align-items:center;gap:8px;}
     .btn-hdr{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:6px 11px;font-size:.78rem;cursor:pointer;white-space:nowrap;}
     .btn-hdr:active{background:rgba(255,255,255,.25);}
@@ -61,12 +63,20 @@
     .settings-menu button:active{background:#e8e8e8;}
     .settings-menu button span{display:inline-block;}
 
-    /* BOTTOM NAV — 7 items */
-    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;z-index:150;box-shadow:0 -2px 8px rgba(0,0,0,.06);}
-    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 2px 6px;cursor:pointer;border:none;background:none;color:#999;font-size:.6rem;gap:2px;transition:color .15s;}
-    .nav-item .ni{font-size:1.25rem;line-height:1;}
-    .nav-item.active{color:#2d6a4f;}
-    .nav-item.active .ni{filter:drop-shadow(0 0 3px #40916c);}
+    /* BOTTOM NAV — dihapus */
+
+    /* QUICK ACTIONS */
+    .quick-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+    .qa-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+    .qa-btn:active{transform:scale(.96);background:#f0fdf4;}
+    .qa-btn.active{background:#f0fdf4;border-color:#40916c;box-shadow:0 0 0 2px rgba(64,145,108,.2);}
+    .qa-btn.active .qa-label{color:#2d6a4f;}
+    .qa-icon{font-size:1.6rem;line-height:1;}
+    .qa-label{font-size:.72rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.03em;}
+    body.dark .qa-btn{background:#1e293b;border-color:#334155;}
+    body.dark .qa-btn.active{background:#1b4332;border-color:#40916c;}
+    body.dark .qa-label{color:#94a3b8;}
+    body.dark .qa-btn.active .qa-label{color:#86efac;}
 
     /* PAGES */
     .page{display:none;padding:14px 12px 20px;}
@@ -195,6 +205,17 @@
     .stat-card.accent{background:linear-gradient(135deg,#2d6a4f,#40916c);color:#fff;}
     .stat-card.accent .sc-val,.stat-card.accent .sc-label{color:#fff;}
     .stat-card.accent .sc-label{opacity:.8;}
+    .stat-card-full{grid-column:1/-1;}
+    /* Card dua baris (kandang + populasi) */
+    .sc-row-top,.sc-row-bot{display:flex;align-items:center;gap:10px;}
+    .sc-row-top{flex:1;}
+    .sc-row-bot{flex:1;}
+    .sc-divider{height:1px;background:rgba(255,255,255,.25);margin:6px 0;}
+    .stat-card:not(.accent) .sc-divider{background:rgba(0,0,0,.08);}
+    .sc-icon-sm{font-size:1.1rem !important;}
+    .sc-val-sm{font-size:1rem !important;}
+    .sc-pct{font-size:.78rem;font-weight:800;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.06);color:#555;white-space:nowrap;}
+    body.dark .sc-pct{background:rgba(255,255,255,.1);color:#cbd5e1;}
 
     /* GUDANG */
     .stok-bar{display:flex;align-items:center;gap:8px;margin-top:4px;}
@@ -241,11 +262,15 @@
       .prod-table,.sale-table{font-size:.75rem;}
       .date-bar{flex-direction:column;align-items:stretch;}
       .tbl{font-size:.8rem;}
-      .stat-grid{grid-template-columns:repeat(4,1fr);gap:8px;}
+      .stat-grid{grid-template-columns:repeat(3,1fr);gap:8px;}
       .stat-card{padding:10px 8px;}
       .stat-card .sc-icon{font-size:1.2rem;}
       .stat-card .sc-val{font-size:1rem;}
       .stat-card .sc-label{font-size:.6rem;}
+      .sc-icon-sm{font-size:.95rem !important;}
+      .sc-val-sm{font-size:.85rem !important;}
+      .sc-pct{font-size:.65rem;}
+      .sc-divider{margin:4px 0;}
       .summary-grid{grid-template-columns:repeat(2,1fr);}
       /* Hide Status Kandang section on mobile */
       #page-home .card:has(#home-kandang-list){display:none;}
@@ -272,14 +297,13 @@
     body.dark .field input[readonly]{background:#1b4332;color:#86efac;}
     body.dark .date-bar{background:#1e293b;}
     body.dark .date-bar input,body.dark .date-bar select{background:#0f172a;border-color:#334155;color:#e2e8f0;}
-    body.dark .bottom-nav{background:#1e293b;border-top-color:#334155;}
-    body.dark .nav-item{color:#64748b;}
-    body.dark .nav-item.active{color:#86efac;}
+    body.dark .bottom-nav{display:none;}
     body.dark .tbl th{background:#1b4332;color:#86efac;}
     body.dark .tbl td{border-bottom-color:#1e293b;}
     body.dark .tbl tr:hover td{background:#1e293b;}
     body.dark .stat-card{background:#1e293b;}
     body.dark .stat-card .sc-val{color:#86efac;}
+    body.dark .stat-card:not(.accent) .sc-divider{background:rgba(255,255,255,.1);}
     body.dark .period-info{background:#1e293b;}
     body.dark .pi-val{color:#86efac;}
     body.dark .tab-bar{background:#1e293b;}
@@ -558,12 +582,6 @@
       /* Better table scrolling */
       .tbl {
         font-size: 0.85rem;
-      }
-      
-      /* Improved bottom nav */
-      .nav-item {
-        padding: 10px 4px 8px;
-        min-height: 56px;
       }
       
       /* Better card spacing */

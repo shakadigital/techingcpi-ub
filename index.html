@@ -50,7 +50,7 @@
   </script>
   <script>
     (function(){
-      const m = localStorage.getItem('DB_MODE') || 'supabase';
+      const m = localStorage.getItem('DB_MODE') || 'local';
       window.DB_MODE = m;
       const s = document.createElement('script');
       s.src = (m === 'supabase') ? 'supabase.js' : 'db_local.js';
@@ -121,6 +121,7 @@
 <div id="app">
   <header>
     <div class="hdr-left">
+      <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none" title="Kembali">‹</button>
       <span style="font-size:1.5rem">🐔</span>
       <div>
         <h1>Teaching Farm UB <span style="font-size:0.6rem;background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">V2.8.2</span></h1>
@@ -139,16 +140,16 @@
           <button onclick="toggleDark();toggleSettings()">
             <span id="dark-icon">🌙</span> <span id="dark-text">Mode Gelap</span>
           </button>
-          <button onclick="goSettings('kandang')">
+          <button onclick="switchPage('kandang');toggleSettings()">
             <span>🏠</span> <span>Kandang</span>
           </button>
-          <button id="smenu-user" onclick="goSettings('user')">
+          <button id="smenu-user" onclick="switchPage('user');toggleSettings()">
             <span>👤</span> <span>User</span>
           </button>
-          <button id="smenu-master" onclick="goSettings('master')" style="display:none">
+          <button id="smenu-master" onclick="switchPage('master');toggleSettings()" style="display:none">
             <span>🗃️</span> <span>Master Data</span>
           </button>
-          <button id="smenu-backup" onclick="goSettings('backup')" style="display:none">
+          <button id="smenu-backup" onclick="goSettings('backup');toggleSettings()" style="display:none">
             <span>💾</span> <span>Backup & Restore</span>
           </button>
           <button onclick="doLogout()">
@@ -162,13 +163,92 @@
   <!-- ══ PAGE: HOME ══ -->
   <div class="page active" id="page-home">
     <div class="page-inner">
+      <div class="stat-grid" id="home-stats">
+        <div class="stat-card accent">
+          <div class="sc-row-top">
+            <div class="sc-icon">🏠</div>
+            <div>
+              <div class="sc-val" id="hs-kandang">0</div>
+              <div class="sc-label">Kandang Aktif</div>
+            </div>
+          </div>
+          <div class="sc-divider"></div>
+          <div class="sc-row-bot">
+            <div class="sc-icon sc-icon-sm">🐔</div>
+            <div>
+              <div class="sc-val sc-val-sm" id="hs-populasi">0</div>
+              <div class="sc-label">Total Populasi</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-row-top">
+            <div class="sc-icon">🥚</div>
+            <div>
+              <div class="sc-val" id="hs-produksi">0</div>
+              <div class="sc-label">Produksi Hari Ini (butir)</div>
+            </div>
+          </div>
+          <div class="sc-divider"></div>
+          <div class="sc-row-bot">
+            <div class="sc-icon sc-icon-sm">🌾</div>
+            <div>
+              <div class="sc-val sc-val-sm" id="hs-pakan">0</div>
+              <div class="sc-label">Pakan Hari Ini (kg)</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-full">
+          <div class="sc-row-top">
+            <div class="sc-icon">💰</div>
+            <div>
+              <div class="sc-val" id="hs-penjualan">Rp 0</div>
+              <div class="sc-label">Penjualan Hari Ini</div>
+            </div>
+          </div>
+          <div class="sc-divider"></div>
+          <div class="sc-row-bot">
+            <div class="sc-icon sc-icon-sm">📊</div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:baseline;gap:6px">
+                <div class="sc-val sc-val-sm" id="hs-harga-pasar">—</div>
+                <span class="sc-pct" id="hs-pct-jual">—</span>
+              </div>
+              <div class="sc-label" id="hs-harga-pasar-label">Harga Pasar · % Terjual</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Alert Section -->
       <div class="alert-section" id="home-alerts" style="display:none"></div>
-      <div class="stat-grid" id="home-stats">
-        <div class="stat-card accent"><div class="sc-icon">🏠</div><div class="sc-val" id="hs-kandang">0</div><div class="sc-label">Kandang Aktif</div></div>
-        <div class="stat-card"><div class="sc-icon">🐔</div><div class="sc-val" id="hs-populasi">0</div><div class="sc-label">Total Populasi</div></div>
-        <div class="stat-card"><div class="sc-icon">🥚</div><div class="sc-val" id="hs-produksi">0</div><div class="sc-label">Produksi Hari Ini (butir)</div></div>
-        <div class="stat-card"><div class="sc-icon">💰</div><div class="sc-val" id="hs-penjualan">Rp 0</div><div class="sc-label">Penjualan Hari Ini</div></div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="qa-btn" id="nav-input" onclick="switchPage('input')">
+          <span class="qa-icon">📋</span>
+          <span class="qa-label">Input</span>
+        </button>
+        <button class="qa-btn" id="nav-penjualan" onclick="switchPage('penjualan')">
+          <span class="qa-icon">🥚</span>
+          <span class="qa-label">Jual</span>
+        </button>
+        <button class="qa-btn" id="nav-biaya" onclick="switchPage('biaya')">
+          <span class="qa-icon">💰</span>
+          <span class="qa-label">Biaya</span>
+        </button>
+        <button class="qa-btn" id="nav-gudang" onclick="switchPage('gudang')">
+          <span class="qa-icon">📦</span>
+          <span class="qa-label">Gudang</span>
+        </button>
+        <button class="qa-btn" id="nav-laporan" onclick="switchPage('laporan')">
+          <span class="qa-icon">📊</span>
+          <span class="qa-label">Laporan</span>
+        </button>
+        <button class="qa-btn" id="nav-riwayat" onclick="switchPage('riwayat')">
+          <span class="qa-icon">🗂️</span>
+          <span class="qa-label">Riwayat</span>
+        </button>
       </div>
 
       <!-- Daily Performance Summary -->
@@ -650,19 +730,9 @@
     </div>
   </div>
 
-  <!-- ══ PAGE: PENGATURAN ══ -->
-  <div class="page" id="page-settings">
+  <!-- ══ PAGE: KANDANG ══ -->
+  <div class="page" id="page-kandang">
     <div class="page-inner">
-      <div class="tab-bar" style="margin-bottom:14px">
-        <button class="tab-btn active" id="stab-kandang" onclick="switchSTab('kandang')">🏠 Kandang</button>
-        <button class="tab-btn" id="stab-user" onclick="switchSTab('user')">👤 User</button>
-        <button class="tab-btn" id="stab-master" onclick="switchSTab('master')" style="display:none">🗃️ Master</button>
-        <button class="tab-btn" id="stab-standar" onclick="switchSTab('standar')" style="display:none">📊 Std. Performa</button>
-        <button class="tab-btn" id="stab-backup" onclick="switchSTab('backup')">💾 Backup</button>
-      </div>
-
-      <!-- Tab: Kandang -->
-      <div id="stab-content-kandang">
       <div class="card">
         <div class="card-header"><div class="num">🏠</div><h2>Informasi Kandang</h2></div>
         <div class="card-body">
@@ -674,10 +744,12 @@
           <button class="btn-add" onclick="openKandangModal()">＋ Tambah Kandang</button>
         </div>
       </div>
-      </div>
+    </div>
+  </div>
 
-      <!-- Tab: User -->
-      <div id="stab-content-user" style="display:none">
+  <!-- ══ PAGE: USER ══ -->
+  <div class="page" id="page-user">
+    <div class="page-inner">
       <div class="card">
         <div class="card-header"><div class="num">👤</div><h2>Manajemen User <small>(Admin only)</small></h2></div>
         <div class="card-body">
@@ -690,6 +762,135 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE: MASTER DATA ══ -->
+  <div class="page" id="page-master">
+    <div class="page-inner">
+      <div class="info-box" style="margin-bottom:14px">🗃️ Data master digunakan sebagai referensi di seluruh aplikasi. Hanya Manager ke atas yang dapat mengelola data ini.</div>
+
+      <!-- Sub-tab Master -->
+      <div class="tab-bar" style="margin-bottom:12px">
+        <button class="tab-btn active" id="smtab-pakan"     onclick="switchMTab('pakan')">🌾 Pakan</button>
+        <button class="tab-btn"        id="smtab-supplier"  onclick="switchMTab('supplier')">🏭 Supplier</button>
+        <button class="tab-btn"        id="smtab-vitamin"   onclick="switchMTab('vitamin')">💊 Vitamin</button>
+        <button class="tab-btn"        id="smtab-obat"      onclick="switchMTab('obat')">🩺 Obat</button>
+        <button class="tab-btn"        id="smtab-vaksin"    onclick="switchMTab('vaksin')">💉 Vaksin</button>
+        <button class="tab-btn"        id="smtab-pelanggan" onclick="switchMTab('pelanggan')">👥 Pelanggan</button>
+      </div>
+
+      <!-- Pakan -->
+      <div id="smtab-content-pakan">
+        <div class="card">
+          <div class="card-header"><div class="num">🌾</div><h2>Master Pakan</h2></div>
+          <div class="card-body">
+            <div style="overflow-x:auto">
+              <table class="tbl">
+                <thead><tr><th>Kode</th><th>Nama Pakan</th><th>Satuan</th><th>Min. Stok (kg)</th><th>Status</th><th></th></tr></thead>
+                <tbody id="m-pakan-tbody"></tbody>
+              </table>
+            </div>
+            <div id="m-pakan-empty" class="info-box" style="display:none">Belum ada data pakan.</div>
+            <button class="btn-add" id="btn-add-pakan" onclick="openMasterModal('pakan')">＋ Tambah Pakan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supplier -->
+      <div id="smtab-content-supplier" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="num">🏭</div><h2>Master Supplier</h2></div>
+          <div class="card-body">
+            <div style="overflow-x:auto">
+              <table class="tbl">
+                <thead><tr><th>Kode</th><th>Nama Supplier</th><th>Telepon</th><th>Status</th><th></th></tr></thead>
+                <tbody id="m-supplier-tbody"></tbody>
+              </table>
+            </div>
+            <div id="m-supplier-empty" class="info-box" style="display:none">Belum ada data supplier.</div>
+            <button class="btn-add" id="btn-add-supplier" onclick="openMasterModal('supplier')">＋ Tambah Supplier</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vitamin -->
+      <div id="smtab-content-vitamin" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="num">💊</div><h2>Master Vitamin</h2></div>
+          <div class="card-body">
+            <div style="overflow-x:auto">
+              <table class="tbl">
+                <thead><tr><th>Kode</th><th>Nama Vitamin</th><th>Supplier</th><th>Satuan</th><th>Status</th><th></th></tr></thead>
+                <tbody id="m-vitamin-tbody"></tbody>
+              </table>
+            </div>
+            <div id="m-vitamin-empty" class="info-box" style="display:none">Belum ada data vitamin.</div>
+            <button class="btn-add" id="btn-add-vitamin" onclick="openMasterModal('vitamin')">＋ Tambah Vitamin</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Obat -->
+      <div id="smtab-content-obat" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="num">🩺</div><h2>Master Obat</h2></div>
+          <div class="card-body">
+            <div style="overflow-x:auto">
+              <table class="tbl">
+                <thead><tr><th>Kode</th><th>Nama Obat</th><th>Supplier</th><th>Satuan</th><th>Status</th><th></th></tr></thead>
+                <tbody id="m-obat-tbody"></tbody>
+              </table>
+            </div>
+            <div id="m-obat-empty" class="info-box" style="display:none">Belum ada data obat.</div>
+            <button class="btn-add" id="btn-add-obat" onclick="openMasterModal('obat')">＋ Tambah Obat</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vaksin -->
+      <div id="smtab-content-vaksin" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="num">💉</div><h2>Master Vaksin</h2></div>
+          <div class="card-body">
+            <div style="overflow-x:auto">
+              <table class="tbl">
+                <thead><tr><th>Kode</th><th>Nama Vaksin</th><th>Supplier</th><th>Satuan</th><th>Status</th><th></th></tr></thead>
+                <tbody id="m-vaksin-tbody"></tbody>
+              </table>
+            </div>
+            <div id="m-vaksin-empty" class="info-box" style="display:none">Belum ada data vaksin.</div>
+            <button class="btn-add" id="btn-add-vaksin" onclick="openMasterModal('vaksin')">＋ Tambah Vaksin</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pelanggan -->
+      <div id="smtab-content-pelanggan" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="num">👥</div><h2>Master Pelanggan</h2></div>
+          <div class="card-body">
+            <div style="overflow-x:auto">
+              <table class="tbl">
+                <thead><tr><th>Kode</th><th>Nama Pelanggan</th><th>Tipe</th><th>Telepon</th><th>Status</th><th></th></tr></thead>
+                <tbody id="m-pelanggan-tbody"></tbody>
+              </table>
+            </div>
+            <div id="m-pelanggan-empty" class="info-box" style="display:none">Belum ada data pelanggan.</div>
+            <button class="btn-add" id="btn-add-pelanggan" onclick="openMasterModal('pelanggan')">＋ Tambah Pelanggan</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ PAGE: PENGATURAN ══ -->
+  <div class="page" id="page-settings">
+    <div class="page-inner">
+      <div class="tab-bar" style="margin-bottom:14px">
+        <button class="tab-btn active" id="stab-standar" onclick="switchSTab('standar')">📊 Std. Performa</button>
+        <button class="tab-btn" id="stab-backup" onclick="switchSTab('backup')">💾 Backup</button>
       </div>
 
       <!-- Tab: Backup & Restore -->
@@ -742,126 +943,8 @@
       </div>
       </div>
 
-      <!-- Tab: Master Data (Manager ke atas) -->
-      <div id="stab-content-master" style="display:none">
-        <div class="info-box" style="margin-bottom:14px">🗃️ Data master digunakan sebagai referensi di seluruh aplikasi. Hanya Manager ke atas yang dapat mengelola data ini.</div>
-
-        <!-- Sub-tab Master -->
-        <div class="tab-bar" style="margin-bottom:12px">
-          <button class="tab-btn active" id="smtab-pakan"     onclick="switchMTab('pakan')">🌾 Pakan</button>
-          <button class="tab-btn"        id="smtab-supplier"  onclick="switchMTab('supplier')">🏭 Supplier</button>
-          <button class="tab-btn"        id="smtab-vitamin"   onclick="switchMTab('vitamin')">💊 Vitamin</button>
-          <button class="tab-btn"        id="smtab-obat"      onclick="switchMTab('obat')">🩺 Obat</button>
-          <button class="tab-btn"        id="smtab-vaksin"    onclick="switchMTab('vaksin')">💉 Vaksin</button>
-          <button class="tab-btn"        id="smtab-pelanggan" onclick="switchMTab('pelanggan')">👥 Pelanggan</button>
-        </div>
-
-        <!-- Pakan -->
-        <div id="smtab-content-pakan">
-          <div class="card">
-            <div class="card-header"><div class="num">🌾</div><h2>Master Pakan</h2></div>
-            <div class="card-body">
-              <div style="overflow-x:auto">
-                <table class="tbl">
-                  <thead><tr><th>Kode</th><th>Nama Pakan</th><th>Satuan</th><th>Min. Stok (kg)</th><th>Status</th><th></th></tr></thead>
-                  <tbody id="m-pakan-tbody"></tbody>
-                </table>
-              </div>
-              <div id="m-pakan-empty" class="info-box" style="display:none">Belum ada data pakan.</div>
-              <button class="btn-add" id="btn-add-pakan" onclick="openMasterModal('pakan')">＋ Tambah Pakan</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Supplier -->
-        <div id="smtab-content-supplier" style="display:none">
-          <div class="card">
-            <div class="card-header"><div class="num">🏭</div><h2>Master Supplier</h2></div>
-            <div class="card-body">
-              <div style="overflow-x:auto">
-                <table class="tbl">
-                  <thead><tr><th>Kode</th><th>Nama Supplier</th><th>Telepon</th><th>Status</th><th></th></tr></thead>
-                  <tbody id="m-supplier-tbody"></tbody>
-                </table>
-              </div>
-              <div id="m-supplier-empty" class="info-box" style="display:none">Belum ada data supplier.</div>
-              <button class="btn-add" id="btn-add-supplier" onclick="openMasterModal('supplier')">＋ Tambah Supplier</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Vitamin -->
-        <div id="smtab-content-vitamin" style="display:none">
-          <div class="card">
-            <div class="card-header"><div class="num">💊</div><h2>Master Vitamin</h2></div>
-            <div class="card-body">
-              <div style="overflow-x:auto">
-                <table class="tbl">
-                  <thead><tr><th>Kode</th><th>Nama Vitamin</th><th>Supplier</th><th>Satuan</th><th>Status</th><th></th></tr></thead>
-                  <tbody id="m-vitamin-tbody"></tbody>
-                </table>
-              </div>
-              <div id="m-vitamin-empty" class="info-box" style="display:none">Belum ada data vitamin.</div>
-              <button class="btn-add" id="btn-add-vitamin" onclick="openMasterModal('vitamin')">＋ Tambah Vitamin</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Obat -->
-        <div id="smtab-content-obat" style="display:none">
-          <div class="card">
-            <div class="card-header"><div class="num">🩺</div><h2>Master Obat</h2></div>
-            <div class="card-body">
-              <div style="overflow-x:auto">
-                <table class="tbl">
-                  <thead><tr><th>Kode</th><th>Nama Obat</th><th>Supplier</th><th>Satuan</th><th>Status</th><th></th></tr></thead>
-                  <tbody id="m-obat-tbody"></tbody>
-                </table>
-              </div>
-              <div id="m-obat-empty" class="info-box" style="display:none">Belum ada data obat.</div>
-              <button class="btn-add" id="btn-add-obat" onclick="openMasterModal('obat')">＋ Tambah Obat</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Vaksin -->
-        <div id="smtab-content-vaksin" style="display:none">
-          <div class="card">
-            <div class="card-header"><div class="num">💉</div><h2>Master Vaksin</h2></div>
-            <div class="card-body">
-              <div style="overflow-x:auto">
-                <table class="tbl">
-                  <thead><tr><th>Kode</th><th>Nama Vaksin</th><th>Supplier</th><th>Satuan</th><th>Status</th><th></th></tr></thead>
-                  <tbody id="m-vaksin-tbody"></tbody>
-                </table>
-              </div>
-              <div id="m-vaksin-empty" class="info-box" style="display:none">Belum ada data vaksin.</div>
-              <button class="btn-add" id="btn-add-vaksin" onclick="openMasterModal('vaksin')">＋ Tambah Vaksin</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pelanggan -->
-        <div id="smtab-content-pelanggan" style="display:none">
-          <div class="card">
-            <div class="card-header"><div class="num">👥</div><h2>Master Pelanggan</h2></div>
-            <div class="card-body">
-              <div style="overflow-x:auto">
-                <table class="tbl">
-                  <thead><tr><th>Kode</th><th>Nama Pelanggan</th><th>Tipe</th><th>Telepon</th><th>Status</th><th></th></tr></thead>
-                  <tbody id="m-pelanggan-tbody"></tbody>
-                </table>
-              </div>
-              <div id="m-pelanggan-empty" class="info-box" style="display:none">Belum ada data pelanggan.</div>
-              <button class="btn-add" id="btn-add-pelanggan" onclick="openMasterModal('pelanggan')">＋ Tambah Pelanggan</button>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- end stab-content-master -->
-
       <!-- Tab: Standar Performa (Superadmin only) -->
-      <div id="stab-content-standar" style="display:none">
+      <div id="stab-content-standar">
         <div class="card" style="border:2px solid #92400e">
           <div class="card-header" style="background:linear-gradient(135deg,#92400e,#b45309);border-bottom:1px solid #b45309">
             <div class="num" style="background:#fff;color:#92400e">📊</div>
@@ -1046,6 +1129,27 @@
         <button class="btn-export" onclick="exportLaporan('pdf')" style="border-color:#c0392b;color:#c0392b">📄 PDF</button>
       </div>
 
+      <!-- Harga Pasar Harian -->
+      <div class="card" id="card-harga-pasar" style="margin-bottom:10px">
+        <div class="card-header" style="padding:10px 14px">
+          <div class="num">🏷️</div>
+          <h2 style="font-size:.9rem">Harga Pasar Telur</h2>
+          <span id="hp-saved-badge" style="display:none;margin-left:8px;font-size:.7rem;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-weight:700">✓ Tersimpan</span>
+        </div>
+        <div class="card-body" style="padding:10px 14px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <input type="date" id="hp-tanggal" onchange="loadHargaPasarUI()" style="border:1.5px solid #b7e4c7;border-radius:6px;padding:6px 10px;font-size:.85rem;background:#fff"/>
+            <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:140px">
+              <span style="font-size:.82rem;color:#555;white-space:nowrap">Rp</span>
+              <input type="number" id="hp-harga" min="0" step="100" placeholder="Harga per kg" style="border:1.5px solid #b7e4c7;border-radius:6px;padding:6px 10px;font-size:.85rem;width:100%;background:#fff"/>
+              <span style="font-size:.82rem;color:#555;white-space:nowrap">/kg</span>
+            </div>
+            <button class="btn-primary" style="padding:6px 14px;font-size:.82rem;white-space:nowrap" onclick="saveHargaPasar()">💾 Simpan</button>
+          </div>
+          <div id="hp-riwayat" style="margin-top:8px;font-size:.75rem;color:#888"></div>
+        </div>
+      </div>
+
       <!-- Tab: Rekap Produksi -->
       <div id="ltab-content-rekap">
         <div class="summary-grid" id="lap-summary"></div>
@@ -1114,16 +1218,7 @@
     </div>
   </div>
 
-  <!-- BOTTOM NAV -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" id="nav-home" onclick="switchPage('home')"><span class="ni">🏡</span>Home</button>
-    <button class="nav-item" id="nav-input" onclick="switchPage('input')"><span class="ni">📋</span>Input</button>
-    <button class="nav-item" id="nav-penjualan" onclick="switchPage('penjualan')"><span class="ni">🥚</span>Jual</button>
-    <button class="nav-item" id="nav-biaya" onclick="switchPage('biaya')"><span class="ni">💰</span>Biaya</button>
-    <button class="nav-item" id="nav-gudang" onclick="switchPage('gudang')"><span class="ni">📦</span>Gudang</button>
-    <button class="nav-item" id="nav-laporan" onclick="switchPage('laporan')"><span class="ni">📊</span>Laporan</button>
-    <button class="nav-item" id="nav-riwayat" onclick="switchPage('riwayat')"><span class="ni">🗂️</span>Riwayat</button>
-  </nav>
+  <!-- BOTTOM NAV dihapus — navigasi via Quick Action di Home -->
 </div>
 
 <!-- MODAL MASTER DATA -->
@@ -1240,29 +1335,24 @@
       </div>
       <div class="field" style="margin-bottom:12px">
         <label>Nama Item <span style="color:#dc2626">*</span></label>
-        <input type="text" id="npk-nama" placeholder="Nama produk..." list="npk-nama-list"/>
-        <datalist id="npk-nama-list"></datalist>
+        <select id="npk-nama-select" onchange="onNpkNamaChange()" style="border:1.5px solid #b7e4c7;border-radius:7px;padding:8px 10px;font-size:.9rem;width:100%;background:#fff">
+          <option value="">-- Pilih Item --</option>
+        </select>
+        <input type="text" id="npk-nama" placeholder="Ketik nama item..." style="display:none;margin-top:6px"/>
       </div>
       <div class="row">
         <div class="field">
           <label>Jumlah <span style="color:#dc2626">*</span></label>
-          <input type="number" id="npk-jumlah" min="0" step="0.1" placeholder="0" oninput="calcNpTotal()"/>
+          <input type="number" id="npk-jumlah" min="0" step="0.001" placeholder="0" oninput="calcNpTotal();calcNpConversion()"/>
         </div>
         <div class="field">
           <label>Satuan</label>
-          <select id="npk-satuan">
-            <option value="botol">botol</option>
-            <option value="sachet">sachet</option>
-            <option value="dosis">dosis</option>
-            <option value="liter">liter</option>
-            <option value="kg">kg</option>
-            <option value="tablet">tablet</option>
-            <option value="ampul">ampul</option>
-            <option value="vial">vial</option>
-            <option value="pcs">pcs</option>
+          <select id="npk-satuan" onchange="calcNpTotal();calcNpConversion()">
+            <!-- Diisi JS berdasarkan category -->
           </select>
         </div>
       </div>
+      <div id="npk-conversion-info" style="display:none;font-size:.75rem;color:#2d6a4f;background:#f0fdf4;border-radius:6px;padding:6px 10px;margin-bottom:10px"></div>
       <div class="row">
         <div class="field">
           <label>Harga/Satuan (Rp)</label>
@@ -1314,29 +1404,25 @@
       </div>
       <div class="field" style="margin-bottom:12px">
         <label>Nama Item <span style="color:#dc2626">*</span></label>
-        <input type="text" id="npp-nama" placeholder="Nama produk..." list="npp-nama-list"/>
-        <datalist id="npp-nama-list"></datalist>
+        <select id="npp-nama-select" onchange="onNppNamaChange()" style="border:1.5px solid #bfdbfe;border-radius:7px;padding:8px 10px;font-size:.9rem;width:100%;background:#fff">
+          <option value="">-- Pilih Item --</option>
+        </select>
+        <input type="text" id="npp-nama" placeholder="Ketik nama item..." style="display:none;margin-top:6px"/>
+      </div>
       </div>
       <div class="row">
         <div class="field">
           <label>Jumlah <span style="color:#dc2626">*</span></label>
-          <input type="number" id="npp-jumlah" min="0" step="0.1" placeholder="0"/>
+          <input type="number" id="npp-jumlah" min="0" step="0.001" placeholder="0" oninput="calcNpPakaiConversion()"/>
         </div>
         <div class="field">
           <label>Satuan</label>
-          <select id="npp-satuan">
-            <option value="botol">botol</option>
-            <option value="sachet">sachet</option>
-            <option value="dosis">dosis</option>
-            <option value="liter">liter</option>
-            <option value="kg">kg</option>
-            <option value="tablet">tablet</option>
-            <option value="ampul">ampul</option>
-            <option value="vial">vial</option>
-            <option value="pcs">pcs</option>
+          <select id="npp-satuan" onchange="calcNpPakaiConversion()">
+            <!-- Diisi JS berdasarkan category -->
           </select>
         </div>
       </div>
+      <div id="npp-conversion-info" style="display:none;font-size:.75rem;color:#1e40af;background:#eff6ff;border-radius:6px;padding:6px 10px;margin-bottom:10px"></div>
       <div class="field">
         <label>Keterangan</label>
         <input type="text" id="npp-ket" placeholder="Mis. Pemberian vitamin rutin..."/>

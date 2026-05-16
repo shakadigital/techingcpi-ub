@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════
-// INSTALL PROMPT - Teaching Farm UB V2.0
+// INSTALL PROMPT - Teaching Farm UB V2.1
 // ═══════════════════════════════════════════════════
 
-const APP_VERSION = '2.8.2'; // Naikkan ini setiap ada update besar
+const APP_VERSION = '2.9.0'; // Naikkan ini setiap ada update besar
 
 class InstallPrompt {
   constructor() {
@@ -173,12 +173,9 @@ class InstallPrompt {
             <p>Fitur baru yang tersedia:</p>
           </div>
           <div class="version-features">
-            <div class="version-feature">🐛 Fix bug crash stok telur pada data lama</div>
-            <div class="version-feature">🔢 Fix jumlah pakan tersimpan sebagai teks, bukan angka</div>
-            <div class="version-feature">🔒 Fix mode edit tidak ter-reset setelah simpan/reset form</div>
-            <div class="version-feature">🔔 Hapus notifikasi berulang saat form belum diisi</div>
-            <div class="version-feature">🗄️ Fix IndexedDB error loop saat app dapat fokus</div>
-            <div class="version-feature">✨ Form input lebih natural — scroll otomatis tanpa gangguan</div>
+            <div class="version-feature">📱 Shortcut home screen sekarang tampil sebagai "TF-UB"</div>
+            <div class="version-feature">🔄 Update versi aplikasi ke V2.1</div>
+            <div class="version-feature">⚡ Peningkatan cache untuk performa lebih cepat</div>
           </div>
           <div class="version-tip">💡 Swipe kiri/kanan untuk navigasi cepat antar halaman!</div>
         </div>

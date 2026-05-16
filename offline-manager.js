@@ -52,7 +52,8 @@ class OfflineManager {
     
     // Add offline styling
     document.body.classList.add('offline-mode');
-    document.getElementById('offline-badge').style.display = 'inline-block';
+    const badge = document.getElementById('offline-badge');
+    if (badge) badge.style.display = 'inline-block';
   }
 
   // Handle app visibility changes (mobile-friendly)
@@ -127,7 +128,8 @@ class OfflineManager {
     
     // Remove offline styling
     document.body.classList.remove('offline-mode');
-    document.getElementById('offline-badge').style.display = 'none';
+    const badge = document.getElementById('offline-badge');
+    if (badge) badge.style.display = 'none';
   }
 
   showSyncStatus(message, type = 'syncing') {
@@ -237,9 +239,9 @@ class OfflineManager {
       // Remove offline-specific fields
       const { id, sync_status, created_offline, temp_id, synced_at, server_id, ...cleanData } = item;
       
-      // Save to server using existing function
+      // Save to server using existing function with correct arguments
       if (typeof dbSaveInput === 'function') {
-        await dbSaveInput(cleanData);
+        await dbSaveInput(cleanData.tanggal, cleanData.kandang, cleanData);
         
         // Mark as synced in IndexedDB
         await window.offlineDB.updateSyncStatus('input_harian_offline', id, 'synced');
@@ -362,20 +364,19 @@ class OfflineManager {
 // Global instance
 window.offlineManager = new OfflineManager();
 
-// Override existing save functions to support offline mode
-const originalDbSaveInput = window.dbSaveInput;
-const originalDbSavePenjualan = window.dbSavePenjualan;
-const originalDbSaveKas = window.dbSaveKas;
-
 // Enhanced save functions with offline support
+// Use lazy lookup (window.dbSaveInput) instead of capturing at load time
+// to avoid race condition where DB script hasn't loaded yet
 window.dbSaveInputWithOffline = async function(data) {
   if (window.offlineManager.shouldUseOfflineMode()) {
     return await window.offlineManager.saveOffline('input_harian', data);
   } else {
     try {
-      return await originalDbSaveInput(data);
+      if (typeof window.dbSaveInput === 'function') {
+        return await window.dbSaveInput(data);
+      }
+      throw new Error('dbSaveInput not available');
     } catch (error) {
-      // If online save fails, try offline
       console.warn('Online save failed, trying offline:', error);
       return await window.offlineManager.saveOffline('input_harian', data);
     }
@@ -387,7 +388,10 @@ window.dbSavePenjualanWithOffline = async function(data) {
     return await window.offlineManager.saveOffline('penjualan', data);
   } else {
     try {
-      return await originalDbSavePenjualan(data);
+      if (typeof window.dbSavePenjualan === 'function') {
+        return await window.dbSavePenjualan(data);
+      }
+      throw new Error('dbSavePenjualan not available');
     } catch (error) {
       console.warn('Online save failed, trying offline:', error);
       return await window.offlineManager.saveOffline('penjualan', data);
@@ -400,7 +404,10 @@ window.dbSaveKasWithOffline = async function(data) {
     return await window.offlineManager.saveOffline('kas_operasional', data);
   } else {
     try {
-      return await originalDbSaveKas(data);
+      if (typeof window.dbSaveKas === 'function') {
+        return await window.dbSaveKas(data);
+      }
+      throw new Error('dbSaveKas not available');
     } catch (error) {
       console.warn('Online save failed, trying offline:', error);
       return await window.offlineManager.saveOffline('kas_operasional', data);
@@ -408,7 +415,8 @@ window.dbSaveKasWithOffline = async function(data) {
   }
 };
 
-// Manual sync function for button
-window.manualSync = function() {
+// Manual sync function for button — delegates to offlineManager only for offline queue,
+// full server refresh is handled by manualSync() in app.js
+window.offlineManualSync = function() {
   window.offlineManager.manualSync();
 };

@@ -9,6 +9,7 @@ const DB={
 // ═══ MANUAL SYNC ═══
 async function manualSync(){
   const btn=document.getElementById('btn-sync');
+  if(!btn) return;
   if(btn.classList.contains('syncing'))return; // Prevent double click
   
   btn.classList.add('syncing');
@@ -22,8 +23,13 @@ async function manualSync(){
       btn.classList.remove('syncing');
       return;
     }
+
+    // 1. Sync offline queue ke server (jika ada pending data)
+    if(window.offlineManager && window.offlineManager.isOnline){
+      await window.offlineManager.backgroundSync();
+    }
     
-    // Refresh semua data dari server
+    // 2. Refresh semua data dari server
     const results=await Promise.allSettled([
       dbGetUsers(),
       dbGetKandang(),
@@ -72,24 +78,59 @@ async function manualSync(){
 
 
 // ═══ NAVIGATION ═══
-function switchPage(name){
+const _pageHistory = [];
+
+const PAGE_LABELS = {
+  home:'Home', input:'Input Harian', penjualan:'Penjualan',
+  biaya:'Biaya Operasional', gudang:'Gudang', laporan:'Laporan',
+  riwayat:'Riwayat', settings:'Pengaturan', kandang:'Kandang',
+  user:'User', master:'Master Data'
+};
+
+function switchPage(name, _fromBack=false){
   if(name==='penjualan'&&!can('JUAL')){showToast('Tidak ada akses ke halaman Penjualan');return;}
   if(name==='biaya'&&!can('BIAYA')){showToast('Tidak ada akses ke halaman Biaya Operasional');return;}
+  if(name==='master'&&!can('KEUANGAN')){showToast('Tidak ada akses ke Master Data');return;}
+
+  // Track history (jangan push jika dipanggil dari goBack)
+  if(!_fromBack){
+    const current = document.querySelector('.page.active')?.id?.replace('page-','');
+    if(current && current !== name) _pageHistory.push(current);
+    if(_pageHistory.length > 20) _pageHistory.shift(); // batas stack
+  }
+
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.qa-btn').forEach(n=>n.classList.remove('active'));
   const targetPage = document.getElementById('page-'+name);
   if(targetPage) targetPage.classList.add('active');
   else console.warn('Halaman tidak ditemukan: page-'+name);
   const navEl = document.getElementById('nav-'+name);
   if(navEl) navEl.classList.add('active');
+
+  // Back button: tampil di semua halaman kecuali home
+  const btnBack = document.getElementById('btn-back');
+  if(btnBack) btnBack.style.display = name==='home' ? 'none' : 'flex';
+
+  // Update subtitle header dengan nama halaman
+  const sub = document.getElementById('hdr-kandang');
+  if(sub) sub.textContent = name==='home' ? '—' : (PAGE_LABELS[name]||name);
+
   if(name==='home')renderHome();
-  if(name==='input')autoLoadInputHarian();   // ← auto-load data hari ini
+  if(name==='input')autoLoadInputHarian();
   if(name==='settings')renderSettings();
+  if(name==='kandang')renderKandangTable();
+  if(name==='user')renderUserTable();
+  if(name==='master')renderMaster();
   if(name==='gudang') { _currentGTab='pakan'; switchGTab('pakan'); }
   if(name==='penjualan'){renderStokTelur();renderRiwayatJual();}
   if(name==='biaya'){initBiayaPage();}
   if(name==='riwayat')renderRiwayat();
-  if(name==='laporan'){populateLaporanKandang();renderLaporan();}
+  if(name==='laporan'){populateLaporanKandang();renderLaporan();initHargaPasarUI();}
+}
+
+function goBack(){
+  const prev = _pageHistory.pop();
+  switchPage(prev || 'home', true);
 }
 
 // ═══ INIT ═══
@@ -839,8 +880,13 @@ async function saveKiriman(){
 
   try{
     if(editId){
-      await SB.update('kiriman_pakan',{tanggal,nama_pakan,jumlah,harga_per_kg,harga_total,supplier,keterangan,sisa_tagihan:harga_total},`?id=eq.${editId}`);
-      cache.del('kiriman_pakan');
+      // Update kiriman yang sudah ada
+      const kiriman = await dbGetKiriman({});
+      const existing = kiriman.find(x => x.id === editId);
+      if(existing){
+        await dbUpsert('kiriman_pakan', {...existing, tanggal, nama_pakan, jumlah, harga_per_kg, harga_total, supplier, keterangan, sisa_tagihan: harga_total});
+        cache.del('kiriman_pakan');
+      }
     }else{
       await dbSaveKiriman({tanggal,nama_pakan,jumlah,harga_per_kg,harga_total,supplier,keterangan,sisa_tagihan:harga_total,status_bayar:'belum',user_input:currentUser?.username||''});
     }
@@ -884,11 +930,49 @@ async function renderHome(){
   const today=new Date().toISOString().split('T')[0];
   const todayInputs=await dbGetInput({tanggal:today});
   let totalProd=0;
-  todayInputs.forEach(row=>{const d=row.data;if(d&&d.produksi)totalProd+=parseInt(d.produksi.total.butir)||0;});
+  let totalPakan=0;
+  todayInputs.forEach(row=>{
+    const d=row.data;
+    if(d&&d.produksi)totalProd+=parseInt(d.produksi.total.butir)||0;
+    if(d&&d.pakan)d.pakan.forEach(p=>totalPakan+=parseFloat(p.jumlah)||0);
+  });
   const juals=await dbGetPenjualan({dari:today,sampai:today});
   const totalJual=juals.reduce((s,j)=>s+(parseInt(j.grand_total)||0),0);
+  // Hitung total kilo terjual hari ini untuk % terjual
+  let totalKiloJual=0;
+  juals.forEach(j=>(j.rows||[]).forEach(r=>{totalKiloJual+=parseFloat(r.kilo)||0;}));
+  // Harga pasar dari input manual — fallback ke hari terdekat sebelumnya
+  const hargaPasarData=await dbGetHargaPasar();
+  let hargaRata=0, hargaPasarTgl=null;
+  if(hargaPasarData[today]){
+    hargaRata=parseFloat(hargaPasarData[today])||0;
+    hargaPasarTgl=today;
+  } else {
+    const tglLalu=Object.keys(hargaPasarData).filter(t=>t<today).sort().pop();
+    if(tglLalu){ hargaRata=parseFloat(hargaPasarData[tglLalu])||0; hargaPasarTgl=tglLalu; }
+  }
+  const hpEl=document.getElementById('hs-harga-pasar');
+  if(hargaRata>0){
+    hpEl.textContent='Rp '+hargaRata.toLocaleString('id-ID')+'/kg';
+    hpEl.title=hargaPasarTgl===today?'Harga pasar hari ini':'Data dari '+fmtTgl(hargaPasarTgl);
+    hpEl.style.opacity=hargaPasarTgl===today?'1':'0.7';
+    // Tambah tanda * jika data bukan hari ini
+    const labelEl=document.getElementById('hs-harga-pasar-label');
+    if(labelEl) labelEl.textContent=hargaPasarTgl===today?'Harga Pasar · % Terjual':'Harga Pasar* · % Terjual';
+  } else {
+    hpEl.textContent='—';
+    hpEl.style.opacity='1';
+  }
+  // % terjual = kilo terjual / total produksi hari ini (kg)
+  let totalProdKilo=0;
+  todayInputs.forEach(row=>{const d=row.data;if(d&&d.produksi){['normal','cream','retak'].forEach(g=>{totalProdKilo+=parseFloat(d.produksi[g]?.kilo)||0;});}});
+  const pctJual=totalProdKilo>0?Math.min(100,Math.round((totalKiloJual/totalProdKilo)*100)):0;
   document.getElementById('hs-produksi').textContent=totalProd.toLocaleString('id-ID');
+  document.getElementById('hs-pakan').textContent=totalPakan%1===0?totalPakan.toLocaleString('id-ID'):totalPakan.toFixed(1);
   document.getElementById('hs-penjualan').textContent='Rp '+totalJual.toLocaleString('id-ID');
+  const pctEl=document.getElementById('hs-pct-jual');
+  pctEl.textContent=totalKiloJual>0?pctJual+'%':'—';
+  pctEl.style.color=pctJual>=80?'#16a34a':pctJual>=50?'#f59e0b':'#dc2626';
   const actEl=document.getElementById('home-activity');
   const recent=await dbGetInput({});
   const last5=recent.slice(0,5);
@@ -1128,11 +1212,6 @@ async function captureSummary(){
 // ═══ SETTINGS — KANDANG ═══
 function renderSettings(){
   const isSuperadmin = currentUser?.role === 'superadmin';
-  const isManager    = can('KEUANGAN');
-
-  // Tab Master — manajer ke atas
-  const tabMaster = document.getElementById('stab-master');
-  if(tabMaster) tabMaster.style.display = isManager ? '' : 'none';
 
   // Tab Standar Performa — superadmin only
   const tabStandar = document.getElementById('stab-standar');
@@ -1142,21 +1221,18 @@ function renderSettings(){
   const tabBackup = document.getElementById('stab-backup');
   if(tabBackup) tabBackup.style.display = isSuperadmin ? '' : 'none';
 
-  switchSTab('kandang');
+  switchSTab('standar');
 }
 
-let currentSTab='kandang';
+let currentSTab='standar';
 function switchSTab(tab){
   currentSTab=tab;
-  ['kandang','user','master','standar','backup'].forEach(t=>{
+  ['standar','backup'].forEach(t=>{
     const btn = document.getElementById('stab-'+t);
     const content = document.getElementById('stab-content-'+t);
     if(btn) btn.classList.toggle('active',t===tab);
     if(content) content.style.display=t===tab?'block':'none';
   });
-  if(tab==='kandang') renderKandangTable();
-  if(tab==='user') renderUserTable();
-  if(tab==='master') renderMaster();
   if(tab==='standar') renderStandarPerforma();
   if(tab==='backup') loadCacheInfo();
 }
@@ -2053,7 +2129,7 @@ async function softDeleteUser(id, username){
   if(username === currentUser?.username){showToast('⚠️ Tidak bisa nonaktifkan akun sendiri!');return;}
   if(!confirm(`Nonaktifkan user "${username}"? User tidak bisa login tapi data tetap tersimpan.`)) return;
   try{
-    await SB.update('users', {active: false}, `?id=eq.${id}`);
+    await dbSaveUser({...(await dbGetUsers()).find(u=>u.id===id)||{id}, active: false});
     cache.del('users');
     await renderUserTable();
     await dbSaveLog('NONAKTIF','users',id,{active:true},{active:false},`Nonaktifkan user: ${username}`);
@@ -2064,7 +2140,7 @@ async function softDeleteUser(id, username){
 async function activateUser(id, username){
   if(!['admin','superadmin'].includes(currentUser?.role)){showToast('⚠️ Tidak ada akses!');return;}
   try{
-    await SB.update('users', {active: true}, `?id=eq.${id}`);
+    await dbSaveUser({...(await dbGetUsers()).find(u=>u.id===id)||{id}, active: true});
     cache.del('users');
     await renderUserTable();
     await dbSaveLog('AKTIFKAN','users',id,{active:false},{active:true},`Aktifkan kembali user: ${username}`);
@@ -2157,6 +2233,74 @@ function switchLTab(tab){
     document.getElementById('ltab-content-'+t).style.display=t===tab?'block':'none';
   });
   renderLaporan();
+}
+
+// ═══ HARGA PASAR HARIAN ═══
+async function dbGetHargaPasar() {
+  try {
+    const rec = await _getByKey('app_config', 'harga_pasar');
+    return (rec && rec.value) ? rec.value : {};
+  } catch {
+    try { return JSON.parse(localStorage.getItem('harga_pasar') || '{}'); } catch { return {}; }
+  }
+}
+
+async function dbSaveHargaPasarData(data) {
+  try {
+    await dbUpsert('app_config', { key: 'harga_pasar', value: data, updated_at: new Date().toISOString() });
+  } catch {
+    localStorage.setItem('harga_pasar', JSON.stringify(data));
+  }
+}
+
+async function getHargaPasarTanggal(tgl) {
+  const data = await dbGetHargaPasar();
+  return data[tgl] || 0;
+}
+
+async function initHargaPasarUI() {
+  const today = new Date().toISOString().split('T')[0];
+  const tglEl = document.getElementById('hp-tanggal');
+  if (tglEl && !tglEl.value) tglEl.value = today;
+  await loadHargaPasarUI();
+}
+
+async function loadHargaPasarUI() {
+  const tgl = document.getElementById('hp-tanggal')?.value;
+  if (!tgl) return;
+  const data = await dbGetHargaPasar();
+  const harga = data[tgl] || 0;
+  document.getElementById('hp-harga').value = harga || '';
+  // Badge tersimpan
+  const badge = document.getElementById('hp-saved-badge');
+  if (badge) badge.style.display = harga > 0 ? '' : 'none';
+  // Riwayat 5 hari terakhir
+  const riwEl = document.getElementById('hp-riwayat');
+  if (riwEl) {
+    const entries = Object.entries(data).sort((a,b) => b[0].localeCompare(a[0])).slice(0, 5);
+    if (entries.length) {
+      riwEl.innerHTML = '5 hari terakhir: ' + entries.map(([t, h]) =>
+        `<span style="margin-right:8px"><strong>${fmtTgl(t)}</strong> Rp ${parseFloat(h).toLocaleString('id-ID')}/kg</span>`
+      ).join('');
+    } else {
+      riwEl.textContent = 'Belum ada data harga pasar.';
+    }
+  }
+}
+
+async function saveHargaPasar() {
+  const tgl = document.getElementById('hp-tanggal').value;
+  const harga = parseFloat(document.getElementById('hp-harga').value) || 0;
+  if (!tgl) { showToast('⚠️ Pilih tanggal!'); return; }
+  if (harga <= 0) { showToast('⚠️ Masukkan harga yang valid!'); return; }
+  const data = await dbGetHargaPasar();
+  data[tgl] = harga;
+  await dbSaveHargaPasarData(data);
+  await loadHargaPasarUI();
+  showToast('✅ Harga pasar ' + fmtTgl(tgl) + ' disimpan: Rp ' + harga.toLocaleString('id-ID') + '/kg');
+  // Refresh home jika sedang di home
+  const activePage = document.querySelector('.page.active');
+  if (activePage && activePage.id === 'page-home') renderHome();
 }
 
 function populateLaporanKandang(){
@@ -2543,8 +2687,7 @@ function toggleSettings(){
 
 function goSettings(tab){
   switchPage('settings');
-  switchSTab(tab);
-  toggleSettings();
+  if(tab) switchSTab(tab);
 }
 
 // Close dropdown when clicking outside
@@ -3062,19 +3205,19 @@ async function restoreData(input){
     statusEl.textContent='⏳ Merestore data...';
     const d=backup.data;
     // Restore users
-    if(d.users?.length){for(const u of d.users){try{await SB.upsert('users',u);}catch(e){}}}
+    if(d.users?.length){for(const u of d.users){try{await dbSaveUser(u);}catch(e){}}}
     // Restore kandang
-    if(d.kandang?.length){for(const k of d.kandang){try{await SB.upsert('kandang',k);}catch(e){}}}
+    if(d.kandang?.length){for(const k of d.kandang){try{await dbSaveKandang(k);}catch(e){}}}
     // Restore input harian
-    if(d.inputs?.length){for(const r of d.inputs){try{await SB.upsert('input_harian',r);}catch(e){}}}
+    if(d.inputs?.length){for(const r of d.inputs){try{await dbUpsert('input_harian',r);}catch(e){}}}
     // Restore penjualan
-    if(d.penjualan?.length){for(const p of d.penjualan){try{await SB.upsert('penjualan',p);}catch(e){}}}
+    if(d.penjualan?.length){for(const p of d.penjualan){try{await dbUpsert('penjualan',p);}catch(e){}}}
     // Restore daftar pakan
-    if(d.daftar_pakan?.length){for(const p of d.daftar_pakan){try{await SB.upsert('daftar_pakan',p);}catch(e){}}}
+    if(d.daftar_pakan?.length){for(const p of d.daftar_pakan){try{await dbSaveDaftarPakan(p);}catch(e){}}}
     // Restore kiriman pakan
-    if(d.kiriman_pakan?.length){for(const k of d.kiriman_pakan){try{await SB.upsert('kiriman_pakan',k);}catch(e){}}}
+    if(d.kiriman_pakan?.length){for(const k of d.kiriman_pakan){try{await dbUpsert('kiriman_pakan',k);}catch(e){}}}
     // Restore kas
-    if(d.kas_operasional?.length){for(const k of d.kas_operasional){try{await SB.upsert('kas_operasional',k);}catch(e){}}}
+    if(d.kas_operasional?.length){for(const k of d.kas_operasional){try{await dbUpsert('kas_operasional',k);}catch(e){}}}
     // Clear cache
     ['users','kandang_list','input_harian','penjualan_list','daftar_pakan','kiriman_pakan','kas_list'].forEach(k=>cache.del(k));
     statusEl.innerHTML='<span style="color:#16a34a;font-weight:700">✅ Restore berhasil! Halaman akan dimuat ulang...</span>';
@@ -3598,12 +3741,67 @@ async function loadCacheInfo() {
 
 // ═══ GUDANG — TAB NON-PAKAN ═══
 const NP_CONFIG = {
-  vitamin:     { icon:'💊', label:'Vitamin',     satuan:'botol' },
-  obat:        { icon:'🩺', label:'Obat',        satuan:'botol' },
-  vaksin:      { icon:'💉', label:'Vaksin',      satuan:'dosis' },
-  desinfektan: { icon:'🧴', label:'Desinfektan', satuan:'liter' },
-  lainnya:     { icon:'📦', label:'Lainnya',     satuan:'pcs'   }
+  vitamin:     { icon:'💊', label:'Vitamin',     satuan:'botol',  category:'cair'  },
+  obat:        { icon:'🩺', label:'Obat',        satuan:'botol',  category:'cair'  },
+  vaksin:      { icon:'💉', label:'Vaksin',      satuan:'dosis',  category:'padat' },
+  desinfektan: { icon:'🧴', label:'Desinfektan', satuan:'liter',  category:'cair'  },
+  lainnya:     { icon:'📦', label:'Lainnya',     satuan:'pcs',    category:'padat' }
 };
+
+// ── Unit helpers (padat & cair) ──
+const UNITS_PADAT = [
+  { name:'pcs',    factor:1,    base:'pcs',   label:'pcs'    },
+  { name:'sachet', factor:1,    base:'pcs',   label:'sachet' },
+  { name:'tablet', factor:1,    base:'pcs',   label:'tablet' },
+  { name:'ampul',  factor:1,    base:'pcs',   label:'ampul'  },
+  { name:'vial',   factor:1,    base:'pcs',   label:'vial'   },
+  { name:'dosis',  factor:1,    base:'pcs',   label:'dosis'  },
+  { name:'pak',    factor:10,   base:'pcs',   label:'pak (10 pcs)'  },
+  { name:'box',    factor:12,   base:'pcs',   label:'box (12 pcs)'  },
+  { name:'dus',    factor:24,   base:'pcs',   label:'dus (24 pcs)'  },
+  { name:'kg',     factor:1000, base:'pcs',   label:'kg (1000 gr)'  },
+];
+const UNITS_CAIR = [
+  { name:'ml',    factor:0.001,  base:'liter', label:'ml'           },
+  { name:'botol', factor:0.6,    base:'liter', label:'botol (600ml)'},
+  { name:'liter', factor:1,      base:'liter', label:'liter'        },
+  { name:'galon', factor:3.785,  base:'liter', label:'galon (3.785L)'},
+  { name:'drum',  factor:200,    base:'liter', label:'drum (200L)'  },
+];
+
+function getUnitsForCategory(category) {
+  return category === 'cair' ? UNITS_CAIR : UNITS_PADAT;
+}
+
+function findUnitDef(name, category) {
+  return getUnitsForCategory(category).find(u => u.name === name) || { name, factor:1, base: category==='cair'?'liter':'pcs' };
+}
+
+// Konversi qty dari satuan input ke base unit
+function toBase(qty, unitName, category) {
+  const u = findUnitDef(unitName, category);
+  return parseFloat(qty) * u.factor;
+}
+
+// Format stok dari base unit ke display unit yang paling readable
+function formatStokDisplay(qtyBase, category, preferUnit) {
+  const units = getUnitsForCategory(category);
+  // Gunakan preferUnit jika ada, fallback ke base
+  const u = preferUnit ? findUnitDef(preferUnit, category) : units[0];
+  const val = qtyBase / u.factor;
+  const rounded = Math.round(val * 1000) / 1000;
+  return `${rounded.toLocaleString('id-ID')} ${u.name}`;
+}
+
+// Populate select satuan berdasarkan category
+function populateUnitSelect(selectId, category, selectedName) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const units = getUnitsForCategory(category);
+  sel.innerHTML = units.map(u =>
+    `<option value="${u.name}" ${u.name===selectedName?'selected':''}>${u.label}</option>`
+  ).join('');
+}
 
 let _currentGTab = 'pakan';
 
@@ -3654,11 +3852,14 @@ async function renderNpStok(kategori) {
   if(!stokList.length) { empty.style.display = 'block'; return; }
   empty.style.display = 'none';
   stokList.forEach(s => {
-    const low = s.stok <= 0;
+    const low = s.stok_base <= 0;
+    const categoryBadge = s.category === 'cair'
+      ? '<span class="badge badge-blue" style="font-size:.6rem">💧 Cair</span>'
+      : '<span class="badge badge-gray" style="font-size:.6rem">📦 Padat</span>';
     const tr = document.createElement('tr');
     tr.innerHTML =
-      `<td><strong>${esc(s.nama)}</strong></td>`+
-      `<td>${s.stok.toFixed(1)}</td>`+
+      `<td><strong>${esc(s.nama)}</strong> ${categoryBadge}</td>`+
+      `<td style="font-weight:700;color:${low?'#dc2626':'#1b4332'}">${s.stok.toFixed(2)}</td>`+
       `<td>${esc(s.satuan)}</td>`+
       `<td>${s.harga ? 'Rp '+parseFloat(s.harga).toLocaleString('id-ID') : '—'}</td>`+
       `<td>${low
@@ -3731,25 +3932,49 @@ async function openNpKirimanModal() {
   document.getElementById('npk-harga').value = '';
   document.getElementById('npk-total').value = '';
   document.getElementById('npk-ket').value = '';
-  document.getElementById('npk-satuan').value = cfg.satuan;
+  const convInfo = document.getElementById('npk-conversion-info');
+  if(convInfo) convInfo.style.display = 'none';
+
+  // Populate satuan berdasarkan category (padat/cair)
+  populateUnitSelect('npk-satuan', cfg.category, cfg.satuan);
 
   // Populate kandang
   const kandangList = cache.get('kandang_list') || await dbGetKandang();
-  const sel = document.getElementById('npk-kandang');
-  sel.innerHTML = '<option value="">Semua Kandang</option>';
+  const selKandang = document.getElementById('npk-kandang');
+  selKandang.innerHTML = '<option value="">Semua Kandang</option>';
   kandangList.forEach(k => {
     const o = document.createElement('option');
     o.value = k.nama; o.textContent = k.nama;
-    sel.appendChild(o);
+    selKandang.appendChild(o);
   });
 
-  // Autocomplete nama dari master
-  const getters = { vitamin: dbGetVitamin, obat: dbGetObat, vaksin: dbGetVaksin };
+  // Populate nama item dari master data sesuai kategori
+  const getters = {
+    vitamin:     dbGetVitamin,
+    obat:        dbGetObat,
+    vaksin:      dbGetVaksin,
+    desinfektan: () => dbGetMaster('master_obat', { kategori: 'desinfektan' }),
+    lainnya:     null
+  };
+  const selNama = document.getElementById('npk-nama-select');
+  selNama.innerHTML = '<option value="">-- Pilih Item --</option>';
+  document.getElementById('npk-nama').style.display = 'none';
+  document.getElementById('npk-nama').value = '';
+
   if(getters[kategori]) {
     const masterList = await getters[kategori]();
-    const dl = document.getElementById('npk-nama-list');
-    dl.innerHTML = masterList.map(m => `<option value="${esc(m.nama)}">`).join('');
+    masterList.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.nama;
+      o.textContent = m.nama + (m.satuan ? ` (${m.satuan})` : '');
+      if(m.satuan) o.dataset.satuan = m.satuan;
+      selNama.appendChild(o);
+    });
   }
+  const oLain = document.createElement('option');
+  oLain.value = '__lainnya__';
+  oLain.textContent = '＋ Ketik nama lain...';
+  selNama.appendChild(oLain);
 
   // Populate supplier dropdown
   await populateSupplierSelect('npk-supplier-select');
@@ -3758,16 +3983,77 @@ async function openNpKirimanModal() {
   document.getElementById('modal-np-kiriman').style.display = 'flex';
 }
 
+function onNpkNamaChange() {
+  const sel = document.getElementById('npk-nama-select');
+  const inp = document.getElementById('npk-nama');
+  if(sel.value === '__lainnya__') {
+    inp.style.display = '';
+    inp.value = '';
+    inp.focus();
+  } else {
+    inp.style.display = 'none';
+    inp.value = sel.value;
+    // Auto-set satuan dari master jika ada
+    const opt = sel.options[sel.selectedIndex];
+    if(opt && opt.dataset.satuan) {
+      const satuanSel = document.getElementById('npk-satuan');
+      if(satuanSel) {
+        // Cari option yang cocok
+        const match = [...satuanSel.options].find(o => o.value === opt.dataset.satuan);
+        if(match) satuanSel.value = opt.dataset.satuan;
+      }
+    }
+  }
+}
+
 function calcNpTotal() {
   const j = parseFloat(document.getElementById('npk-jumlah').value) || 0;
   const h = parseFloat(document.getElementById('npk-harga').value) || 0;
   document.getElementById('npk-total').value = j && h ? 'Rp ' + (j*h).toLocaleString('id-ID') : '';
+  calcNpConversion();
+}
+
+function calcNpConversion() {
+  const kategori = document.getElementById('npk-kategori')?.value;
+  const cfg = NP_CONFIG[kategori];
+  if(!cfg) return;
+  const qty = parseFloat(document.getElementById('npk-jumlah').value) || 0;
+  const unitName = document.getElementById('npk-satuan').value;
+  const infoEl = document.getElementById('npk-conversion-info');
+  if(!infoEl) return;
+  if(!qty || !unitName) { infoEl.style.display = 'none'; return; }
+  const u = findUnitDef(unitName, cfg.category);
+  const base = qty * u.factor;
+  const baseLabel = cfg.category === 'cair' ? 'liter' : 'pcs';
+  if(u.factor === 1) { infoEl.style.display = 'none'; return; }
+  infoEl.style.display = '';
+  infoEl.textContent = `≈ ${base.toLocaleString('id-ID', {maximumFractionDigits:3})} ${baseLabel} (dalam satuan dasar)`;
+}
+
+function calcNpPakaiConversion() {
+  const kategori = document.getElementById('npp-kategori')?.value;
+  const cfg = NP_CONFIG[kategori];
+  if(!cfg) return;
+  const qty = parseFloat(document.getElementById('npp-jumlah').value) || 0;
+  const unitName = document.getElementById('npp-satuan').value;
+  const infoEl = document.getElementById('npp-conversion-info');
+  if(!infoEl) return;
+  if(!qty || !unitName) { infoEl.style.display = 'none'; return; }
+  const u = findUnitDef(unitName, cfg.category);
+  const base = qty * u.factor;
+  const baseLabel = cfg.category === 'cair' ? 'liter' : 'pcs';
+  if(u.factor === 1) { infoEl.style.display = 'none'; return; }
+  infoEl.style.display = '';
+  infoEl.textContent = `≈ ${base.toLocaleString('id-ID', {maximumFractionDigits:3})} ${baseLabel} (dalam satuan dasar)`;
 }
 
 async function saveNpKiriman() {
-  const kategori = document.getElementById('npk-kategori').value;
-  const tanggal  = document.getElementById('npk-tgl').value;
-  const nama_item = document.getElementById('npk-nama').value.trim();
+  const kategori  = document.getElementById('npk-kategori').value;
+  const tanggal   = document.getElementById('npk-tgl').value;
+  const selNama   = document.getElementById('npk-nama-select');
+  const nama_item = (selNama.value === '__lainnya__' || selNama.value === '')
+    ? document.getElementById('npk-nama').value.trim()
+    : selNama.value;
   const jumlah   = parseFloat(document.getElementById('npk-jumlah').value) || 0;
   const satuan   = document.getElementById('npk-satuan').value;
   const harga_satuan = parseFloat(document.getElementById('npk-harga').value) || 0;
@@ -3784,6 +4070,7 @@ async function saveNpKiriman() {
   try {
     await dbSaveKirimanNonPakan({
       tanggal, kategori, nama_item, jumlah, satuan,
+      category: NP_CONFIG[kategori]?.category || 'padat',
       harga_satuan, harga_total, supplier: supplier||null,
       keterangan: keterangan||null, kandang: kandang||null,
       user_input: currentUser?.username || ''
@@ -3809,7 +4096,11 @@ async function openNpPakaiModal() {
   document.getElementById('npp-nama').value = '';
   document.getElementById('npp-jumlah').value = '';
   document.getElementById('npp-ket').value = '';
-  document.getElementById('npp-satuan').value = cfg.satuan;
+  const convInfoP = document.getElementById('npp-conversion-info');
+  if(convInfoP) convInfoP.style.display = 'none';
+
+  // Populate satuan berdasarkan category (padat/cair)
+  populateUnitSelect('npp-satuan', cfg.category, cfg.satuan);
 
   // Populate kandang
   const kandangList = cache.get('kandang_list') || await dbGetKandang();
@@ -3821,18 +4112,60 @@ async function openNpPakaiModal() {
     sel.appendChild(o);
   });
 
-  // Autocomplete dari stok yang ada
+  // Populate nama dari stok yang ada + opsi manual
   const stokList = await dbGetStokNonPakan(kategori);
-  const dl = document.getElementById('npp-nama-list');
-  dl.innerHTML = stokList.map(s => `<option value="${esc(s.nama)}">`).join('');
+  const selNpp = document.getElementById('npp-nama-select');
+  selNpp.innerHTML = '<option value="">-- Pilih Item --</option>';
+  document.getElementById('npp-nama').style.display = 'none';
+  document.getElementById('npp-nama').value = '';
+
+  stokList.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.nama;
+    o.textContent = `${s.nama} — stok: ${s.stok.toFixed(2)} ${s.satuan}`;
+    selNpp.appendChild(o);
+  });
+  // Juga tambahkan dari master jika belum ada di stok
+  const gettersNpp = { vitamin: dbGetVitamin, obat: dbGetObat, vaksin: dbGetVaksin };
+  if(gettersNpp[kategori]) {
+    const masterList = await gettersNpp[kategori]();
+    masterList.forEach(m => {
+      if(!stokList.find(s => s.nama === m.nama)) {
+        const o = document.createElement('option');
+        o.value = m.nama;
+        o.textContent = m.nama + ' (stok: 0)';
+        selNpp.appendChild(o);
+      }
+    });
+  }
+  const oLainNpp = document.createElement('option');
+  oLainNpp.value = '__lainnya__';
+  oLainNpp.textContent = '＋ Ketik nama lain...';
+  selNpp.appendChild(oLainNpp);
 
   document.getElementById('modal-np-pakai').style.display = 'flex';
+}
+
+function onNppNamaChange() {
+  const sel = document.getElementById('npp-nama-select');
+  const inp = document.getElementById('npp-nama');
+  if(sel.value === '__lainnya__') {
+    inp.style.display = '';
+    inp.value = '';
+    inp.focus();
+  } else {
+    inp.style.display = 'none';
+    inp.value = sel.value;
+  }
 }
 
 async function saveNpPakai() {
   const kategori  = document.getElementById('npp-kategori').value;
   const tanggal   = document.getElementById('npp-tgl').value;
-  const nama_item = document.getElementById('npp-nama').value.trim();
+  const selNama   = document.getElementById('npp-nama-select');
+  const nama_item = (selNama.value === '__lainnya__' || selNama.value === '')
+    ? document.getElementById('npp-nama').value.trim()
+    : selNama.value;
   const jumlah    = parseFloat(document.getElementById('npp-jumlah').value) || 0;
   const satuan    = document.getElementById('npp-satuan').value;
   const keterangan = document.getElementById('npp-ket').value.trim();
@@ -3842,18 +4175,23 @@ async function saveNpPakai() {
   if(!nama_item)  { showToast('⚠️ Nama item wajib diisi!'); return; }
   if(jumlah <= 0) { showToast('⚠️ Jumlah harus lebih dari 0!'); return; }
 
-  // Cek stok cukup
+  // Cek stok cukup — bandingkan dalam base unit
   const stokList = await dbGetStokNonPakan(kategori);
   const stokItem = stokList.find(s => s.nama === nama_item);
-  if(stokItem && jumlah > stokItem.stok) {
-    showToast(`⚠️ Stok ${nama_item} tidak cukup! Tersedia: ${stokItem.stok} ${stokItem.satuan}`);
-    return;
+  if(stokItem) {
+    const cfg = NP_CONFIG[kategori];
+    const qtyBase = toBase(jumlah, satuan, cfg?.category || 'padat');
+    if(qtyBase > stokItem.stok_base) {
+      showToast(`⚠️ Stok ${nama_item} tidak cukup! Tersedia: ${stokItem.stok.toFixed(2)} ${stokItem.satuan}`);
+      return;
+    }
   }
 
   showToast('⏳ Menyimpan...');
   try {
     await dbSavePemakaianNonPakan({
       tanggal, kategori, nama_item, jumlah, satuan,
+      category: NP_CONFIG[kategori]?.category || 'padat',
       keterangan: keterangan||null, kandang: kandang||null,
       user_input: currentUser?.username || ''
     });

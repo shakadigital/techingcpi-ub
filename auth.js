@@ -62,6 +62,9 @@ function applyRoleRestrictions() {
   // Tab Backup di settings — superadmin only
   const stabBackup = document.getElementById('stab-backup');
   if (stabBackup) stabBackup.style.display = isSuperadmin ? '' : 'none';
+  // Sync button — sembunyikan di mode local (tidak relevan)
+  const syncBtn = document.getElementById('btn-sync');
+  if (syncBtn) syncBtn.style.display = window.DB_MODE === 'supabase' ? '' : 'none';
 }
 
 // ═══ AUTH (Supabase) ═══
@@ -101,7 +104,9 @@ async function doLogin() {
       document.getElementById('login-pw').focus();
     }
   } catch (e) {
-    err.textContent = '❌ Gagal terhubung ke server. Cek koneksi internet.';
+    err.textContent = window.DB_MODE === 'supabase'
+      ? '❌ Gagal terhubung ke server. Cek koneksi internet.'
+      : '❌ Gagal login. Coba lagi.';
     console.error('[doLogin error]', e);
   }
 }

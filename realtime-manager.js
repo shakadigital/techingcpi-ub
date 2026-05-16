@@ -1,153 +1,115 @@
 // ═══════════════════════════════════════════════════
-// REAL-TIME MANAGER - Teaching Farm UB V2.0
+// REAL-TIME MANAGER - Teaching Farm UB V2.1
 // ═══════════════════════════════════════════════════
+// Fixed: Removed dependency on window.supabase (not used in this app)
+// Uses smart polling with actual server timestamp checks
 
 class RealtimeManager {
   constructor() {
-    this.ws = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
-    this.heartbeatInterval = null;
     this.isConnected = false;
     this.subscribers = new Map();
     this.messageQueue = [];
-    
-    // Use Supabase Realtime if available, otherwise fallback to WebSocket simulation
-    this.useSupabaseRealtime = typeof window.supabase !== 'undefined';
-    
+    this.pollInterval = null;
+    this.lastChecked = new Date().toISOString();
+
     this.init();
   }
 
   init() {
-    if (this.useSupabaseRealtime) {
-      this.initSupabaseRealtime();
-    } else {
-      this.initWebSocketSimulation();
-    }
-    
+    // Use smart polling — checks server for actual changes
+    this.startPolling();
+
     // Listen for online/offline events
     window.addEventListener('online', () => this.handleOnline());
     window.addEventListener('offline', () => this.handleOffline());
-    
+
     // Listen for page visibility changes
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && !this.isConnected) {
         this.connect();
+      } else if (document.hidden) {
+        this.stopPolling();
+      } else {
+        this.startPolling();
       }
     });
   }
 
-  initSupabaseRealtime() {
-    try {
-      // Subscribe to database changes using Supabase Realtime
-      this.subscribeToTableChanges();
-      this.isConnected = true;
-      this.updateConnectionStatus(true);
-      console.log('✅ Supabase Realtime initialized');
-    } catch (error) {
-      console.error('❌ Supabase Realtime failed:', error);
-      this.initWebSocketSimulation();
+  startPolling() {
+    if (this.pollInterval) return;
+
+    // Poll every 30 seconds when page is visible
+    this.pollInterval = setInterval(() => {
+      if (this.isConnected && !document.hidden) {
+        this.checkForUpdates();
+      }
+    }, 30000);
+
+    this.isConnected = true;
+    this.updateConnectionStatus(true);
+    console.log('📡 Real-time polling started (30s interval)');
+  }
+
+  stopPolling() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
     }
   }
 
-  subscribeToTableChanges() {
-    const tables = ['input_harian', 'penjualan', 'kas_operasional', 'kiriman_pakan', 'pembayaran'];
-    
-    tables.forEach(table => {
-      const subscription = window.supabase
-        .channel(`public:${table}`)
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: table },
-          (payload) => this.handleDatabaseChange(table, payload)
-        )
-        .subscribe();
-        
-      console.log(`📡 Subscribed to ${table} changes`);
-    });
+  async checkForUpdates() {
+    // Only check if we're in supabase mode and have the supa helper
+    if (window.DB_MODE !== 'supabase' || typeof SB === 'undefined') return;
+
+    try {
+      const tables = ['input_harian', 'penjualan', 'kas_operasional', 'kiriman_pakan'];
+
+      for (const table of tables) {
+        const query = `?select=id,updated_at&order=updated_at.desc&limit=1&updated_at=gt.${this.lastChecked}`;
+        const rows = await SB.select(table, query);
+
+        if (rows && rows.length > 0) {
+          this.handleDatabaseChange(table, 'UPDATE', rows[0]);
+        }
+      }
+
+      this.lastChecked = new Date().toISOString();
+    } catch (error) {
+      // Silent fail — polling will retry next interval
+      console.debug('Polling check failed:', error.message);
+    }
   }
 
-  handleDatabaseChange(table, payload) {
-    const { eventType, new: newRecord, old: oldRecord } = payload;
-    
-    console.log(`🔄 Database change: ${table} - ${eventType}`, payload);
-    
+  handleDatabaseChange(table, eventType, record) {
+    console.log(`🔄 Database change detected: ${table} - ${eventType}`);
+
     // Notify subscribers
     this.notifySubscribers('database_change', {
       table,
       eventType,
-      newRecord,
-      oldRecord,
+      newRecord: record,
       timestamp: new Date().toISOString()
     });
-    
+
     // Show real-time notification
-    this.showRealtimeNotification(table, eventType, newRecord);
-    
+    this.showRealtimeNotification(table, eventType, record);
+
     // Auto-refresh current page if relevant
     this.autoRefreshIfRelevant(table);
   }
 
-  initWebSocketSimulation() {
-    // Fallback: Simulate real-time using polling for demo purposes
-    console.log('📡 Using WebSocket simulation (polling)');
-    
-    this.simulationInterval = setInterval(() => {
-      if (this.isConnected && !document.hidden) {
-        this.simulateRealtimeUpdates();
-      }
-    }, 30000); // Check every 30 seconds
-    
-    this.isConnected = true;
-    this.updateConnectionStatus(true);
-  }
-
-  simulateRealtimeUpdates() {
-    // Simulate random updates for demo
-    const tables = ['input_harian', 'penjualan', 'kas_operasional'];
-    const events = ['INSERT', 'UPDATE'];
-    
-    if (Math.random() < 0.1) { // 10% chance of simulated update
-      const table = tables[Math.floor(Math.random() * tables.length)];
-      const eventType = events[Math.floor(Math.random() * events.length)];
-      
-      this.notifySubscribers('database_change', {
-        table,
-        eventType,
-        newRecord: { id: 'simulated', updated_at: new Date().toISOString() },
-        timestamp: new Date().toISOString(),
-        simulated: true
-      });
-    }
-  }
-
   connect() {
     if (this.isConnected) return;
-    
-    try {
-      if (this.useSupabaseRealtime) {
-        this.initSupabaseRealtime();
-      } else {
-        this.initWebSocketSimulation();
-      }
-    } catch (error) {
-      console.error('❌ Connection failed:', error);
-      this.scheduleReconnect();
-    }
+    this.startPolling();
   }
 
   disconnect() {
     this.isConnected = false;
     this.updateConnectionStatus(false);
-    
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
-    
-    if (this.simulationInterval) {
-      clearInterval(this.simulationInterval);
-    }
-    
+    this.stopPolling();
     console.log('📡 Disconnected from real-time service');
   }
 
@@ -156,12 +118,12 @@ class RealtimeManager {
       console.log('❌ Max reconnection attempts reached');
       return;
     }
-    
+
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-    
+
     console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
-    
+
     setTimeout(() => {
       this.connect();
     }, delay);
@@ -184,9 +146,8 @@ class RealtimeManager {
       this.subscribers.set(eventType, new Set());
     }
     this.subscribers.get(eventType).add(callback);
-    
+
     return () => {
-      // Return unsubscribe function
       const callbacks = this.subscribers.get(eventType);
       if (callbacks) {
         callbacks.delete(callback);
@@ -216,25 +177,21 @@ class RealtimeManager {
       timestamp: new Date().toISOString(),
       userId: window.currentUser?.username || 'anonymous'
     };
-    
+
     if (this.isConnected) {
-      // In a real implementation, this would send via WebSocket
       console.log('📤 Sending real-time message:', message);
-      
-      // For demo, echo back after delay
       setTimeout(() => {
         this.notifySubscribers('message_received', message);
       }, 100);
     } else {
-      // Queue message for when connection is restored
       this.messageQueue.push(message);
     }
   }
 
   // Show real-time notification
   showRealtimeNotification(table, eventType, record) {
-    if (document.hidden) return; // Don't show if app is not visible
-    
+    if (document.hidden) return;
+
     const tableNames = {
       'input_harian': 'Input Harian',
       'penjualan': 'Penjualan',
@@ -242,27 +199,20 @@ class RealtimeManager {
       'kiriman_pakan': 'Kiriman Pakan',
       'pembayaran': 'Pembayaran'
     };
-    
+
     const eventNames = {
       'INSERT': 'ditambahkan',
       'UPDATE': 'diperbarui',
       'DELETE': 'dihapus'
     };
-    
+
     const tableName = tableNames[table] || table;
     const eventName = eventNames[eventType] || eventType;
-    
-    // Show toast notification
+
     if (typeof showToast === 'function') {
       showToast(`🔄 ${tableName} ${eventName} oleh user lain`);
     }
-    
-    // Add haptic feedback
-    if (window.hapticFeedback) {
-      window.hapticFeedback('light');
-    }
-    
-    // Show real-time indicator
+
     this.showRealtimeIndicator();
   }
 
@@ -275,9 +225,9 @@ class RealtimeManager {
       indicator.innerHTML = '🔄 <span>Live Update</span>';
       document.body.appendChild(indicator);
     }
-    
+
     indicator.classList.add('show');
-    
+
     setTimeout(() => {
       indicator.classList.remove('show');
     }, 2000);
@@ -293,12 +243,11 @@ class RealtimeManager {
       'kiriman_pakan': ['gudang'],
       'pembayaran': ['gudang']
     };
-    
+
     const pages = relevantPages[table] || [];
     if (pages.includes(currentPage)) {
       console.log(`🔄 Auto-refreshing ${currentPage} due to ${table} change`);
-      
-      // Debounce refresh to avoid too many updates
+
       clearTimeout(this.refreshTimeout);
       this.refreshTimeout = setTimeout(() => {
         this.refreshCurrentPage();
@@ -313,23 +262,24 @@ class RealtimeManager {
 
   async refreshCurrentPage() {
     const currentPage = this.getCurrentPage();
-    
+
     try {
       switch (currentPage) {
         case 'home':
           if (typeof renderHome === 'function') await renderHome();
           break;
         case 'input':
-          if (typeof renderInput === 'function') await renderInput();
+          if (typeof autoLoadInputHarian === 'function') await autoLoadInputHarian();
           break;
         case 'penjualan':
-          if (typeof renderPenjualan === 'function') await renderPenjualan();
+          if (typeof renderStokTelur === 'function') await renderStokTelur();
+          if (typeof renderRiwayatJual === 'function') await renderRiwayatJual();
           break;
         case 'gudang':
-          if (typeof renderGudang === 'function') await renderGudang();
+          if (typeof switchGTab === 'function') switchGTab(window._currentGTab || 'pakan');
           break;
         case 'biaya':
-          if (typeof renderKasSaldo === 'function') await renderKasSaldo();
+          if (typeof initBiayaPage === 'function') await initBiayaPage();
           break;
         case 'riwayat':
           if (typeof renderRiwayat === 'function') await renderRiwayat();
@@ -342,18 +292,15 @@ class RealtimeManager {
 
   updateConnectionStatus(connected) {
     this.isConnected = connected;
-    
-    // Update connection indicator in header
+
+    // Update connection indicator in header (with null checks)
     const syncBtn = document.getElementById('btn-sync');
     if (syncBtn) {
       const icon = syncBtn.querySelector('.sync-icon');
-      if (connected) {
-        icon.style.color = '#16a34a'; // Green
-        syncBtn.title = 'Real-time: Connected';
-      } else {
-        icon.style.color = '#dc2626'; // Red
-        syncBtn.title = 'Real-time: Disconnected';
+      if (icon) {
+        icon.style.color = connected ? '#16a34a' : '#dc2626';
       }
+      syncBtn.title = connected ? 'Real-time: Connected' : 'Real-time: Disconnected';
     }
   }
 
@@ -362,14 +309,12 @@ class RealtimeManager {
     return {
       connected: this.isConnected,
       reconnectAttempts: this.reconnectAttempts,
-      useSupabaseRealtime: this.useSupabaseRealtime,
       subscriberCount: Array.from(this.subscribers.values()).reduce((total, set) => total + set.size, 0)
     };
   }
 }
 
 // Global instance — inisialisasi lazy setelah app siap
-// Tidak langsung new RealtimeManager() agar tidak block loading
 window.realtimeManager = null;
 
 window.initRealtimeManager = function() {
