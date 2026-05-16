@@ -16,7 +16,10 @@ class InstallPrompt {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       this.deferredPrompt = e;
-      this.showInstallBanner();
+      // Hanya tampilkan jika belum pernah dismiss
+      if(!localStorage.getItem('install_dismissed')) {
+        this.showHeaderUpdateBadge();
+      }
     });
 
     window.addEventListener('appinstalled', () => {
@@ -24,18 +27,11 @@ class InstallPrompt {
     });
 
     this.checkIfInstalled();
-
-    setTimeout(() => {
-      if (!this.isInstalled && !this.hasShownPrompt) {
-        this.showInstallPrompt();
-      }
-    }, 30000);
   }
 
   checkIfInstalled() {
     if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
       this.isInstalled = true;
-      // Cek apakah versi ini sudah pernah ditampilkan
       this.checkVersionAndShowInfo();
     }
     if (document.referrer.includes('android-app://')) {
@@ -54,47 +50,32 @@ class InstallPrompt {
   }
 
   showInstallBanner() {
-    const banner = document.createElement('div');
-    banner.id = 'install-banner';
-    banner.className = 'install-banner';
-    banner.innerHTML = `
-      <div class="install-content">
-        <div class="install-icon">📱</div>
-        <div class="install-text">
-          <div class="install-title">Install Teaching Farm V${APP_VERSION}</div>
-          <div class="install-subtitle">Akses offline, gestures, dan real-time updates</div>
-        </div>
-        <div class="install-actions">
-          <button class="install-btn-close" onclick="window.installPrompt.dismissBanner()">✕</button>
-          <button class="install-btn-install" onclick="window.installPrompt.triggerInstall()">Install</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(banner);
-    setTimeout(() => banner.classList.add('show'), 100);
+    // Tidak dipakai lagi — diganti showHeaderUpdateBadge
+    this.showHeaderUpdateBadge();
+  }
+
+  showHeaderUpdateBadge() {
+    if(this.isInstalled || document.getElementById('header-update-badge')) return;
+    // Tambahkan badge kecil di header center
+    const header = document.querySelector('header');
+    if(!header) return;
+    const badge = document.createElement('div');
+    badge.id = 'header-update-badge';
+    badge.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);bottom:-28px;background:rgba(45,106,79,.9);backdrop-filter:blur(8px);color:#fff;padding:4px 12px;border-radius:0 0 8px 8px;font-size:.7rem;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;z-index:199;box-shadow:0 2px 8px rgba(0,0,0,.15)';
+    badge.innerHTML = `<span>📲 Update V${APP_VERSION} tersedia</span><button onclick="window.installPrompt.triggerInstall()" style="background:#fff;color:#2d6a4f;border:none;border-radius:4px;padding:2px 8px;font-size:.65rem;font-weight:700;cursor:pointer">Install</button><button onclick="window.installPrompt.dismissUpdate()" style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:.8rem;padding:0 2px">✕</button>`;
+    header.style.position = 'relative';
+    header.appendChild(badge);
+  }
+
+  dismissUpdate() {
+    localStorage.setItem('install_dismissed', APP_VERSION);
+    const badge = document.getElementById('header-update-badge');
+    if(badge) badge.remove();
   }
 
   showInstallPrompt() {
-    if (this.hasShownPrompt || this.isInstalled) return;
-    this.hasShownPrompt = true;
-
-    const modal = document.createElement('div');
-    modal.id = 'install-modal';
-    modal.className = 'install-modal-overlay';
-    modal.innerHTML = `
-      <div class="install-modal install-modal-simple">
-        <div class="install-simple-content">
-          <div class="install-simple-text">
-            <strong>Update Aplikasi</strong>
-            <span>Versi ${APP_VERSION}</span>
-          </div>
-          <button class="btn-install-simple" onclick="window.installPrompt.triggerInstall()">INSTALL</button>
-        </div>
-        <button class="install-simple-close" onclick="window.installPrompt.dismissModal()">✕</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    setTimeout(() => modal.classList.add('show'), 100);
+    // Tidak dipakai lagi
+    return;
   }
 
   async triggerInstall() {

@@ -122,10 +122,11 @@ function switchPage(name, _fromBack=false){
   if(name==='user')renderUserTable();
   if(name==='master')renderMaster();
   if(name==='gudang') { showGudangCards(); }
-  if(name==='penjualan'){populateAllPelangganSelects();renderStokTelur();renderRiwayatJual();showPengambilanIntiSection();}
+  if(name==='penjualan'){populateAllPelangganSelects();renderStokTelur();loadHargaPasarJual();renderRiwayatJual();showPengambilanIntiSection();}
   if(name==='biaya'){initBiayaPage();}
   if(name==='riwayat')renderRiwayat();
-  if(name==='laporan'){populateLaporanKandang();renderLaporan();initHargaPasarUI();}
+  if(name==='bw')initBwPage();
+  if(name==='laporan'){populateLaporanKandang();renderLaporan();initHargaPasarUI();showKemitraanTab();}
 }
 
 function goBack(){
@@ -284,9 +285,70 @@ async function renderStokTelur(){
     '<table class="tbl" style="margin-bottom:0">'+
     '<thead><tr><th>Grade</th><th>Stok (butir)</th><th>Stok (kg)</th></tr></thead><tbody>'+
     grades.map(g=>'<tr><td>'+g+'</td><td style="font-weight:700;color:'+(stok[g].butir>0?'#1b4332':'#dc2626')+'">'+stok[g].butir.toLocaleString('id-ID')+'</td><td>'+stok[g].kilo.toFixed(2)+' kg</td></tr>').join('')+
-    '<tr style="background:#d8f3dc;font-weight:700"><td>TOTAL</td><td>'+totalButir.toLocaleString('id-ID')+'</td><td>'+totalKilo.toFixed(2)+' kg</td></tr>'+
+    '<tr class="total-row"><td>TOTAL</td><td>'+totalButir.toLocaleString('id-ID')+'</td><td>'+totalKilo.toFixed(2)+' kg</td></tr>'+
     '</tbody></table>'+
     '<div style="font-size:.75rem;color:#888;margin-top:8px">Kumulatif produksi semua kandang s.d. '+tgl+', dikurangi penjualan.</div>';
+}
+
+// ═══ HARGA PASAR DI HALAMAN JUAL ═══
+async function loadHargaPasarJual() {
+  const tgl = document.getElementById('jual-tanggal').value || new Date().toISOString().split('T')[0];
+  const el = document.getElementById('jual-harga-pasar');
+  const statusEl = document.getElementById('jual-hp-status');
+  if(!el) return;
+
+  // Cek apakah sudah ada harga pasar di input_harian hari ini (dari kandang manapun)
+  const inputs = await dbGetInput({tanggal: tgl});
+  let hargaFromInput = 0;
+  inputs.forEach(r => {
+    if(r.data?.harga_pasar && parseFloat(r.data.harga_pasar) > 0) {
+      hargaFromInput = parseFloat(r.data.harga_pasar);
+    }
+  });
+
+  if(hargaFromInput > 0) {
+    el.value = hargaFromInput;
+    el.readOnly = true;
+    el.style.opacity = '0.7';
+    statusEl.innerHTML = '✅ <span style="color:#2d6a4f">Sudah diinput di halaman Input</span>';
+  } else {
+    el.value = '';
+    el.readOnly = false;
+    el.style.opacity = '';
+    statusEl.innerHTML = '⚠️ <span style="color:#b45309">Belum diinput hari ini</span>';
+  }
+}
+
+async function saveHargaPasarFromJual() {
+  const tgl = document.getElementById('jual-tanggal').value || new Date().toISOString().split('T')[0];
+  const harga = parseFloat(document.getElementById('jual-harga-pasar').value) || 0;
+  if(!harga) return;
+
+  // Simpan ke semua input_harian hari ini yang belum punya harga_pasar
+  const inputs = await dbGetInput({tanggal: tgl});
+  if(inputs.length > 0) {
+    for(const row of inputs) {
+      if(!row.data?.harga_pasar || parseFloat(row.data.harga_pasar) === 0) {
+        const updatedData = { ...row.data, harga_pasar: harga };
+        await dbSaveInput(tgl, row.kandang, updatedData);
+      }
+    }
+    showToast('✅ Harga pasar Rp ' + harga.toLocaleString('id-ID') + '/kg tersimpan');
+  } else {
+    // Belum ada input harian — simpan ke kandang pertama yang aktif
+    const kandangList = cache.get('kandang_list') || await dbGetKandang();
+    const aktif = kandangList.find(k => k.status === 'Aktif');
+    if(aktif) {
+      await dbSaveInput(tgl, aktif.nama, { tanggal: tgl, kandang: aktif.nama, user: currentUser?.username || '', harga_pasar: harga });
+      showToast('✅ Harga pasar Rp ' + harga.toLocaleString('id-ID') + '/kg tersimpan');
+    }
+  }
+
+  // Update status
+  const statusEl = document.getElementById('jual-hp-status');
+  if(statusEl) statusEl.innerHTML = '✅ <span style="color:#2d6a4f">Tersimpan</span>';
+  document.getElementById('jual-harga-pasar').readOnly = true;
+  document.getElementById('jual-harga-pasar').style.opacity = '0.7';
 }
 
 // ═══ PENJUALAN ═══
@@ -929,6 +991,7 @@ async function saveKiriman(){
   const harga_total=jumlah*harga_per_kg;
   const supplier=document.getElementById('mk2-supplier').value.trim();
   const keterangan=document.getElementById('mk2-ket').value;
+  const sumber=document.getElementById('mk2-sumber').value||'inti';
   const editId=document.getElementById('mk2-id').value;
 
   if(!tanggal){showToast('⚠️ Tanggal wajib diisi!');return;}
@@ -939,21 +1002,20 @@ async function saveKiriman(){
 
   try{
     if(editId){
-      // Update kiriman yang sudah ada
       const kiriman = await dbGetKiriman({});
       const existing = kiriman.find(x => x.id === editId);
       if(existing){
-        await dbUpsert('kiriman_pakan', {...existing, tanggal, nama_pakan, jumlah, harga_per_kg, harga_total, supplier, keterangan, sisa_tagihan: harga_total});
+        await dbUpsert('kiriman_pakan', {...existing, tanggal, nama_pakan, jumlah, harga_per_kg, harga_total, supplier, keterangan, sumber, sisa_tagihan: harga_total});
         cache.del('kiriman_pakan');
       }
     }else{
-      await dbSaveKiriman({tanggal,nama_pakan,jumlah,harga_per_kg,harga_total,supplier,keterangan,sisa_tagihan:harga_total,status_bayar:'belum',user_input:currentUser?.username||''});
+      await dbSaveKiriman({tanggal,nama_pakan,jumlah,harga_per_kg,harga_total,supplier,keterangan,sumber,sisa_tagihan:harga_total,status_bayar:'belum',user_input:currentUser?.username||''});
     }
     closeModal('modal-kiriman');await renderGudang();
     await dbSaveLog(editId?'EDIT':'TAMBAH','kiriman_pakan',editId||null,null,
-      {tanggal,nama_pakan,jumlah,harga_per_kg,harga_total,supplier},
-      `${editId?'Edit':'Tambah'} kiriman: ${nama_pakan} ${jumlah}kg dari ${supplier||'—'}`);
-    showToast(editId?'✅ Kiriman diperbarui!':'✅ Kiriman pakan dicatat sebagai tagihan!');
+      {tanggal,nama_pakan,jumlah,harga_per_kg,harga_total,supplier,sumber},
+      `${editId?'Edit':'Tambah'} kiriman: ${nama_pakan} ${jumlah}kg dari ${supplier||'—'} (${sumber})`);
+    showToast(editId?'✅ Kiriman diperbarui!':`✅ Kiriman pakan dicatat (${sumber==='inti'?'tagihan inti':'beli sendiri'})!`);
   }catch(e){showToast('❌ Gagal: '+e.message);}
 }
 // Edit kiriman — supervisor ke atas boleh
@@ -1131,9 +1193,11 @@ async function renderDailySummary(todayInputs, kandangList){
       // Water intake ml/ekor
       const airMl=parseFloat(d.air_liter)*1000||0;
       if(sisa>0&&airMl>0){waterMlSum+=(airMl/sisa);waterCount++;}
-      // Rasio air:pakan
-      const rasio=parseFloat(d.air_rasio)||0;
-      if(rasio>0){rasioSum+=rasio;rasioCount++;}
+      // Rasio air:pakan — hitung langsung dari data
+      if(pakanRow>0&&parseFloat(d.air_liter)>0){
+        rasioSum+=(parseFloat(d.air_liter)/pakanRow);
+        rasioCount++;
+      }
     });
   }
 
@@ -2370,7 +2434,20 @@ function _loadEditToForm(d,id){
     document.getElementById('p_retak_butir').value=d.produksi?d.produksi.retak.butir:0;
     document.getElementById('p_retak_kilo').value=d.produksi?d.produksi.retak.kilo:0;
     document.getElementById('catatan').value=d.catatan||'';
-    document.getElementById('harga_pasar').value=d.harga_pasar||'';
+    const hpEl = document.getElementById('harga_pasar');
+    if(hpEl) {
+      hpEl.value = d.harga_pasar || '';
+      // Jika sudah ada harga pasar, set readonly sebagai review
+      if(d.harga_pasar && parseFloat(d.harga_pasar) > 0) {
+        hpEl.readOnly = true;
+        hpEl.style.opacity = '0.7';
+        hpEl.title = 'Sudah diinput sebelumnya';
+      } else {
+        hpEl.readOnly = false;
+        hpEl.style.opacity = '';
+        hpEl.title = '';
+      }
+    }
 
     // Load pakan rows
     const pakanList=document.getElementById('pakan-list');
@@ -2615,11 +2692,14 @@ async function exportRiwayat(){
 let currentLTab='rekap';
 function switchLTab(tab){
   currentLTab=tab;
-  ['rekap','labarugi','grafik','fcr'].forEach(t=>{
-    document.getElementById('ltab-'+t).classList.toggle('active',t===tab);
-    document.getElementById('ltab-content-'+t).style.display=t===tab?'block':'none';
+  ['rekap','labarugi','kemitraan','grafik','fcr'].forEach(t=>{
+    const tabEl=document.getElementById('ltab-'+t);
+    const contentEl=document.getElementById('ltab-content-'+t);
+    if(tabEl) tabEl.classList.toggle('active',t===tab);
+    if(contentEl) contentEl.style.display=t===tab?'block':'none';
   });
-  renderLaporan();
+  if(tab==='kemitraan') initRekapKemitraan();
+  else renderLaporan();
 }
 
 // ═══ HARGA PASAR HARIAN ═══
@@ -2707,7 +2787,8 @@ function populateLaporanKandang(){
     document.getElementById('l-dari').style.display=show?'':'none';
     document.getElementById('l-sampai').style.display=show?'':'none';
   };
-  document.getElementById('fcr-periode').onchange=function(){
+  const fcrPeriodeEl=document.getElementById('fcr-periode');
+  if(fcrPeriodeEl) fcrPeriodeEl.onchange=function(){
     const show=this.value==='custom';
     document.getElementById('fcr-dari').style.display=show?'':'none';
     document.getElementById('fcr-sampai').style.display=show?'':'none';
@@ -4549,6 +4630,7 @@ async function saveNpKiriman() {
   const supplier = document.getElementById('npk-supplier').value.trim();
   const keterangan = document.getElementById('npk-ket').value.trim();
   const kandang  = document.getElementById('npk-kandang').value;
+  const sumber = document.getElementById('npk-sumber').value || 'inti';
 
   if(!tanggal)    { showToast('⚠️ Tanggal wajib diisi!'); return; }
   if(!nama_item)  { showToast('⚠️ Nama item wajib diisi!'); return; }
@@ -4564,6 +4646,7 @@ async function saveNpKiriman() {
       jumlah_kemasan: jumlahKemasan,
       isi_per_kemasan: isiKemasan,
       jenis_kemasan: satuan,        // botol/vial/sachet/kaleng
+      sumber,                       // 'inti' atau 'sendiri'
       harga_satuan, harga_total, supplier: supplier||null,
       keterangan: keterangan||null, kandang: kandang||null,
       user_input: currentUser?.username || ''
@@ -4867,6 +4950,180 @@ async function _updateNpPakai(id, kategori) {
     const btnSave = document.querySelector('#modal-np-pakai .btn-primary');
     if(btnSave) btnSave.onclick = saveNpPakai;
   } catch(e) { showToast('❌ Gagal: ' + e.message); }
+}
+
+// ═══ MONITORING BW (Body Weight) ═══
+// Lihat file: bw-module.js
+
+// ═══ REKAP KEMITRAAN ═══
+
+function showKemitraanTab(){
+  const list=cache.get('kandang_list')||[];
+  const hasKemitraan=list.some(k=>k.sistem==='kemitraan');
+  const tab=document.getElementById('ltab-kemitraan');
+  if(tab) tab.style.display=hasKemitraan?'':'none';
+}
+
+async function initRekapKemitraan(){
+  const list=cache.get('kandang_list')||await dbGetKandang();
+  const kemitraanList=list.filter(k=>k.sistem==='kemitraan');
+  const sel=document.getElementById('km-kandang');
+  if(!sel)return;
+  sel.innerHTML='';
+  kemitraanList.forEach(k=>{
+    const o=document.createElement('option');
+    o.value=k.nama;o.textContent=k.nama+' ('+k.nama_inti+')';
+    o.dataset.chickin=k.chickin||'';
+    o.dataset.kontrak=k.harga_kontrak||0;
+    o.dataset.mitra=k.persen_mitra||30;
+    o.dataset.inti=k.persen_inti||70;
+    sel.appendChild(o);
+  });
+  // Auto-set periode dari chickin sampai hari ini
+  if(kemitraanList.length){
+    const k=kemitraanList[0];
+    document.getElementById('km-dari').value=k.chickin||'';
+    document.getElementById('km-sampai').value=new Date().toISOString().split('T')[0];
+  }
+}
+
+async function renderRekapKemitraan(){
+  const kandangNama=document.getElementById('km-kandang').value;
+  const dari=document.getElementById('km-dari').value;
+  const sampai=document.getElementById('km-sampai').value;
+  const el=document.getElementById('km-rekap-content');
+  if(!kandangNama||!dari||!sampai){el.innerHTML='<div style="color:#aaa;text-align:center;padding:20px">Lengkapi filter di atas.</div>';return;}
+
+  el.innerHTML='<div style="color:#aaa;text-align:center;padding:20px">⏳ Menghitung...</div>';
+
+  const list=cache.get('kandang_list')||await dbGetKandang();
+  const kandang=list.find(k=>k.nama===kandangNama);
+  if(!kandang){el.innerHTML='<div style="color:#dc2626;text-align:center;padding:20px">Kandang tidak ditemukan.</div>';return;}
+
+  const hargaKontrak=parseFloat(kandang.harga_kontrak)||0;
+  const pctMitra=parseFloat(kandang.persen_mitra)||30;
+  const pctInti=parseFloat(kandang.persen_inti)||70;
+
+  // 1. Ambil data produksi (dari input_harian)
+  const inputs=await dbGetInput({kandang:kandangNama,dari,sampai});
+  let totalNormalKg=0,totalCreamKg=0,totalRetakKg=0;
+  inputs.forEach(r=>{
+    const d=r.data;if(!d||!d.produksi)return;
+    totalNormalKg+=parseFloat(d.produksi.normal?.kilo)||0;
+    totalCreamKg+=parseFloat(d.produksi.cream?.kilo)||0;
+    totalRetakKg+=parseFloat(d.produksi.retak?.kilo)||0;
+  });
+  const totalKg=totalNormalKg+totalCreamKg+totalRetakKg;
+
+  // 2. Ambil data penjualan (untuk harga jual cream/retak)
+  const penjualanAll=await dbGetPenjualan({dari,sampai});
+  let creamRevenue=0,retakRevenue=0;
+  penjualanAll.forEach(p=>{
+    (p.rows||[]).forEach(r=>{
+      if(r.grade==='Cream') creamRevenue+=(parseFloat(r.kilo)||0)*(parseFloat(r.harga)||0);
+      if(r.grade==='Retak') retakRevenue+=(parseFloat(r.kilo)||0)*(parseFloat(r.harga)||0);
+    });
+  });
+
+  // 3. Bagi hasil dari pengambilan inti
+  const pengambilan=await dbGetPengambilanInti({kandang:kandangNama});
+  const pengambilanPeriode=pengambilan.filter(p=>p.tanggal_ambil>=dari&&p.tanggal_ambil<=sampai);
+  let bagiHasilInti=0;
+  pengambilanPeriode.forEach(p=>{
+    (p.detail_harian||[]).forEach(d=>{bagiHasilInti+=(d.mitra_30||0);});
+  });
+
+  // 4. Bagi hasil jual kandang (Normal saja): kg × (harga pasar+500 - kontrak) × 30%
+  let bagiHasilKandang=0;
+  penjualanAll.forEach(p=>{
+    (p.rows||[]).forEach(r=>{
+      if(r.grade==='Normal'){
+        const hargaJual=parseFloat(r.harga)||0;
+        const selisih=Math.max(0,hargaJual-hargaKontrak);
+        bagiHasilKandang+=((parseFloat(r.kilo)||0)*selisih*(pctMitra/100));
+      }
+    });
+  });
+
+  // 5. Biaya operasional dari inti (kas masuk)
+  const kasAll=await dbGetKas({dari,sampai,kandang:kandangNama});
+  const opsFromInti=kasAll.filter(k=>k.jenis==='masuk').reduce((s,k)=>s+(parseFloat(k.jumlah)||0),0);
+
+  // 6. Pendapatan kontrak
+  const kontrakNormal=totalNormalKg*hargaKontrak;
+
+  // SUBTOTAL PENDAPATAN
+  const totalPendapatan=kontrakNormal+bagiHasilKandang+bagiHasilInti+creamRevenue+retakRevenue+opsFromInti;
+
+  // 7. Pengeluaran — pakan dari inti
+  const kirimanPakan=await dbGetKiriman({dari,sampai});
+  const pakanInti=kirimanPakan.filter(k=>(k.sumber||'inti')==='inti');
+  let totalPakanInti=0;
+  let pakanDetail='';
+  pakanInti.forEach(k=>{
+    const total=parseFloat(k.harga_total)||0;
+    totalPakanInti+=total;
+    pakanDetail+=`<tr><td style="padding-left:20px">- ${esc(k.nama_pakan)}</td><td>${k.jumlah} kg</td><td style="text-align:right">Rp ${total.toLocaleString('id-ID')}</td></tr>`;
+  });
+
+  // 8. Pengeluaran — obat/vaksin/vitamin dari inti
+  const kirimanNp=await dbGetKirimanNonPakan({});
+  const npInti=kirimanNp.filter(k=>(k.sumber||'inti')==='inti'&&k.tanggal>=dari&&k.tanggal<=sampai);
+  let totalNpInti=0;
+  let npDetail='';
+  npInti.forEach(k=>{
+    const total=parseFloat(k.harga_total)||0;
+    totalNpInti+=total;
+    npDetail+=`<tr><td style="padding-left:20px">- ${esc(k.nama_item)} (${k.kategori})</td><td>${k.jumlah_kemasan||k.jumlah} ${k.jenis_kemasan||k.satuan}</td><td style="text-align:right">Rp ${total.toLocaleString('id-ID')}</td></tr>`;
+  });
+
+  // SUBTOTAL PENGELUARAN
+  const totalPengeluaran=totalPakanInti+totalNpInti;
+
+  // SALDO
+  const saldo=totalPendapatan-totalPengeluaran;
+
+  // Render
+  el.innerHTML=`
+  <div style="border:2px solid #2d6a4f;border-radius:12px;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#1b4332,#2d6a4f);color:#fff;padding:14px 16px">
+      <div style="font-size:1rem;font-weight:700">🤝 Rekap Kemitraan</div>
+      <div style="font-size:.78rem;opacity:.85;margin-top:4px">${esc(kandangNama)} · ${esc(kandang.nama_inti||'—')}</div>
+      <div style="font-size:.72rem;opacity:.7">Periode: ${dari} s.d. ${sampai} · Kontrak: Rp ${hargaKontrak.toLocaleString('id-ID')}/kg</div>
+    </div>
+
+    <div style="padding:14px 16px">
+      <table class="tbl" style="font-size:.82rem;margin-bottom:16px">
+        <tr class="section-head"><td colspan="3">📦 PRODUKSI & PENJUALAN</td></tr>
+        <tr><td>Normal</td><td>${totalNormalKg.toFixed(2)} kg × Rp ${hargaKontrak.toLocaleString('id-ID')}</td><td style="text-align:right;font-weight:700">Rp ${kontrakNormal.toLocaleString('id-ID')}</td></tr>
+        <tr><td></td><td>+ Bagi hasil ${pctMitra}%</td><td style="text-align:right;color:#2d6a4f">Rp ${Math.round(bagiHasilKandang+bagiHasilInti).toLocaleString('id-ID')}</td></tr>
+        <tr><td>Cream</td><td>${totalCreamKg.toFixed(2)} kg (100% mitra)</td><td style="text-align:right">Rp ${creamRevenue.toLocaleString('id-ID')}</td></tr>
+        <tr><td>Retak</td><td>${totalRetakKg.toFixed(2)} kg (100% mitra)</td><td style="text-align:right">Rp ${retakRevenue.toLocaleString('id-ID')}</td></tr>
+
+        <tr class="section-head"><td colspan="3">💰 PENDAPATAN MITRA (saldo di Inti)</td></tr>
+        <tr><td>Kontrak Normal</td><td></td><td style="text-align:right">Rp ${kontrakNormal.toLocaleString('id-ID')}</td></tr>
+        <tr><td>Bagi hasil jual kandang (${pctMitra}%)</td><td></td><td style="text-align:right">Rp ${Math.round(bagiHasilKandang).toLocaleString('id-ID')}</td></tr>
+        <tr><td>Bagi hasil pengambilan inti (${pctMitra}%)</td><td></td><td style="text-align:right">Rp ${Math.round(bagiHasilInti).toLocaleString('id-ID')}</td></tr>
+        <tr><td>Penjualan Cream</td><td></td><td style="text-align:right">Rp ${creamRevenue.toLocaleString('id-ID')}</td></tr>
+        <tr><td>Penjualan Retak</td><td></td><td style="text-align:right">Rp ${retakRevenue.toLocaleString('id-ID')}</td></tr>
+        <tr><td>Biaya operasional dari inti</td><td></td><td style="text-align:right">Rp ${opsFromInti.toLocaleString('id-ID')}</td></tr>
+        <tr class="total-row" style="font-weight:700"><td>SUBTOTAL PENDAPATAN</td><td></td><td style="text-align:right">Rp ${Math.round(totalPendapatan).toLocaleString('id-ID')}</td></tr>
+
+        <tr class="section-head"><td colspan="3">💸 PENGELUARAN (dipotong dari saldo)</td></tr>
+        <tr><td colspan="2" style="font-weight:600">Pakan dari Inti</td><td style="text-align:right;font-weight:600">Rp ${totalPakanInti.toLocaleString('id-ID')}</td></tr>
+        ${pakanDetail}
+        <tr><td colspan="2" style="font-weight:600">Obat/Vaksin/Vitamin dari Inti</td><td style="text-align:right;font-weight:600">Rp ${totalNpInti.toLocaleString('id-ID')}</td></tr>
+        ${npDetail}
+        <tr style="font-weight:700;color:#dc2626"><td>SUBTOTAL PENGELUARAN</td><td></td><td style="text-align:right">Rp ${Math.round(totalPengeluaran).toLocaleString('id-ID')}</td></tr>
+      </table>
+
+      <div style="background:linear-gradient(135deg,#1b4332,#2d6a4f);color:#fff;border-radius:10px;padding:14px 16px;text-align:center">
+        <div style="font-size:.75rem;opacity:.8;margin-bottom:4px">SALDO MITRA DI INTI</div>
+        <div style="font-size:1.4rem;font-weight:800">Rp ${Math.round(saldo).toLocaleString('id-ID')}</div>
+        <div style="font-size:.72rem;opacity:.7;margin-top:4px">${saldo>=0?'✅ Mitra masih punya saldo':'⚠️ Mitra ada kekurangan'}</div>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ═══ BOOT ═══

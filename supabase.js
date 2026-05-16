@@ -26,6 +26,8 @@ const TB = {
   pemakaian_nonpakan: 'pemakaian_nonpakan_tf_ub',
   app_config:         'app_config_tf_ub',
   pengambilan_inti:   'pengambilan_inti_tf_ub',
+  sessions_bw:        'sessions_bw_tf_ub',
+  timbang:            'timbang_tf_ub',
 };
 
 // ═══════════════════════════════════════════════════

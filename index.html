@@ -50,7 +50,7 @@
   </script>
   <script>
     (function(){
-      const m = localStorage.getItem('DB_MODE') || 'local';
+      const m = localStorage.getItem('DB_MODE') || 'supabase';
       window.DB_MODE = m;
       const s = document.createElement('script');
       s.src = (m === 'supabase') ? 'supabase.js' : 'db_local.js';
@@ -249,6 +249,10 @@
           <span class="qa-icon">🗂️</span>
           <span class="qa-label">Riwayat</span>
         </button>
+        <button class="qa-btn" id="nav-bw" onclick="switchPage('bw')">
+          <span class="qa-icon">⚖️</span>
+          <span class="qa-label">BW</span>
+        </button>
       </div>
 
       <!-- Daily Performance Summary -->
@@ -433,6 +437,20 @@
         <div class="card-header"><div class="num">📦</div><h2>Stok Telur Tersedia</h2></div>
         <div class="card-body" id="stok-telur-body">
           <div style="color:#aaa;font-size:.85rem;text-align:center;padding:8px 0">Pilih tanggal untuk melihat stok.</div>
+        </div>
+      </div>
+
+      <!-- Harga Pasar Hari Ini -->
+      <div class="card">
+        <div class="card-header"><div class="num">💰</div><h2>Harga Pasar Hari Ini</h2></div>
+        <div class="card-body" style="padding:10px 14px">
+          <div class="row" style="align-items:center;gap:8px">
+            <div class="field" style="flex:1">
+              <label>Harga (Rp/kg)</label>
+              <input type="number" id="jual-harga-pasar" min="0" step="100" placeholder="Mis. 24000" onchange="saveHargaPasarFromJual()"/>
+            </div>
+            <div id="jual-hp-status" style="font-size:.75rem;color:#888;flex:1;padding-top:16px">—</div>
+          </div>
         </div>
       </div>
 
@@ -825,6 +843,106 @@
     </div>
   </div>
 
+  <!-- ══ PAGE: MONITORING BW ══ -->
+  <div class="page" id="page-bw">
+    <div class="page-inner">
+
+      <!-- Tab BW -->
+      <div class="tab-bar">
+        <button class="tab-btn active" id="bwtab-input" onclick="switchBwTab('input')">⚖️ Input</button>
+        <button class="tab-btn" id="bwtab-sebaran" onclick="switchBwTab('sebaran')">📊 Sebaran</button>
+        <button class="tab-btn" id="bwtab-dashboard" onclick="switchBwTab('dashboard')">📈 Dashboard</button>
+      </div>
+
+      <!-- Tab: Input -->
+      <div id="bwtab-content-input">
+        <!-- Step 1: Pilih kandang (muncul awal) -->
+        <div id="bw-step-select" class="card">
+          <div class="card-header"><div class="num">⚖️</div><h2>Timbang Ayam</h2></div>
+          <div class="card-body">
+            <div class="field" style="margin-bottom:12px">
+              <label>Kandang</label>
+              <select id="bw-kandang" onchange="updateBwUmur()"></select>
+            </div>
+            <div class="row" style="gap:10px;margin-bottom:12px">
+              <div class="field" style="flex:1"><label>Umur (minggu)</label><input type="number" id="bw-umur" readonly style="font-weight:700"/></div>
+              <div class="field" style="flex:1"><label>Jumlah Sample</label><input type="number" id="bw-sample" value="30" min="5" max="200"/></div>
+            </div>
+            <button class="btn-primary" onclick="startBwSession()" style="width:100%">▶️ Mulai Timbang</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Input berat (muncul setelah mulai) -->
+        <div id="bw-step-input" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div class="num">⚖️</div>
+              <h2 id="bw-session-title">Kandang TF - Minggu 17</h2>
+            </div>
+            <div class="card-body">
+              <div style="font-size:.78rem;color:#888;margin-bottom:10px">
+                <span id="bw-info-count">Jumlah Data: 0 Ekor</span> · <span id="bw-info-kapasitas"></span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+                <input type="number" id="bw-berat-input" min="100" max="5000" step="1" placeholder="Berat (gram)" style="flex:1;font-size:1.1rem;padding:12px;text-align:center;font-weight:700;border-radius:10px"/>
+                <button class="btn-primary" onclick="addBwEntry()" style="padding:12px 18px;font-size:1.2rem;border-radius:10px">＋</button>
+              </div>
+              <!-- Tabel data timbang -->
+              <div style="font-size:.82rem;font-weight:700;margin-bottom:6px">Data Timbang <span style="float:right;color:#888;font-weight:400" id="bw-entry-count">0 ekor</span></div>
+              <div style="max-height:250px;overflow-y:auto">
+                <table class="tbl" style="font-size:.82rem">
+                  <thead><tr><th>No</th><th>Berat (gr)</th><th>Aksi</th></tr></thead>
+                  <tbody id="bw-entries-tbody"></tbody>
+                </table>
+              </div>
+              <button class="btn-primary" onclick="reviewBwSession()" style="width:100%;margin-top:14px;padding:12px">📋 Review & Simpan</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Review hasil (muncul setelah klik Review) -->
+        <div id="bw-step-review" style="display:none">
+          <div class="card">
+            <div class="card-header"><div class="num">📋</div><h2>Hasil Analisa</h2></div>
+            <div class="card-body" id="bw-review-content"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Sebaran -->
+      <div id="bwtab-content-sebaran" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="num">📊</div><h2>Sebaran Berat Timbang</h2></div>
+          <div class="card-body">
+            <div style="font-size:.78rem;color:#888;margin-bottom:12px">Pilih kandang dan sesi untuk melihat grafik distribusi berat</div>
+            <div class="field" style="margin-bottom:10px"><label>Kandang</label><select id="bw-seb-kandang" onchange="loadBwSesiList()"></select></div>
+            <div class="field" style="margin-bottom:10px"><label>Sesi Timbang</label><select id="bw-seb-sesi" onchange="renderBwSebaran()"></select></div>
+            <div style="margin-bottom:12px">
+              <label style="font-size:.72rem;font-weight:700;color:#888;text-transform:uppercase">Interval Grafik</label>
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <button class="tab-btn" onclick="setBwInterval(5)">5 gr</button>
+                <button class="tab-btn active" id="bw-int-10" onclick="setBwInterval(10)">10 gr</button>
+                <button class="tab-btn" onclick="setBwInterval(15)">15 gr</button>
+                <button class="tab-btn" onclick="setBwInterval(20)">20 gr</button>
+              </div>
+            </div>
+            <div id="bw-sebaran-content">
+              <div style="color:#aaa;text-align:center;padding:20px;font-size:.85rem">Pilih sesi timbang untuk melihat sebaran.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Dashboard -->
+      <div id="bwtab-content-dashboard" style="display:none">
+        <div id="bw-dashboard-content">
+          <div style="color:#aaa;text-align:center;padding:20px;font-size:.85rem">Memuat dashboard...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ══ PAGE: MASTER DATA ══ -->
   <div class="page" id="page-master">
     <div class="page-inner">
@@ -1168,6 +1286,7 @@
       <div class="tab-bar">
         <button class="tab-btn active" id="ltab-rekap" onclick="switchLTab('rekap')">📈 Rekap</button>
         <button class="tab-btn" id="ltab-labarugi" onclick="switchLTab('labarugi')">💰 Laba Rugi</button>
+        <button class="tab-btn" id="ltab-kemitraan" onclick="switchLTab('kemitraan')" style="display:none">🤝 Kemitraan</button>
         <button class="tab-btn" id="ltab-grafik" onclick="switchLTab('grafik')">📊 Grafik</button>
         <button class="tab-btn" id="ltab-fcr" onclick="switchLTab('fcr')" style="display:none">🌾 FCR</button>
       </div>
@@ -1189,8 +1308,8 @@
         <button class="btn-export" onclick="exportLaporan('pdf')" style="border-color:#c0392b;color:#c0392b">📄 PDF</button>
       </div>
 
-      <!-- Harga Pasar Harian -->
-      <div class="card" id="card-harga-pasar" style="margin-bottom:10px">
+      <!-- Harga Pasar Harian (dipindah ke halaman Input & Jual) -->
+      <div class="card" id="card-harga-pasar" style="display:none">
         <div class="card-header" style="padding:10px 14px">
           <div class="num">🏷️</div>
           <h2 style="font-size:.9rem">Harga Pasar Telur</h2>
@@ -1254,6 +1373,35 @@
         <div class="card">
           <div class="card-header"><div class="num">📊</div><h2>Performa Rata-rata per Minggu (Umur Ayam)</h2><span style="margin-left:auto;font-size:.7rem;color:#888;font-weight:400">— — Standar HY-Line</span></div>
           <div class="card-body"><div class="chart-wrap"><canvas id="chart-performa"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- Tab: Kemitraan -->
+      <div id="ltab-content-kemitraan" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="num">🤝</div><h2>Rekap Kemitraan</h2></div>
+          <div class="card-body">
+            <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap">
+              <div class="field" style="flex:1;min-width:120px">
+                <label>Kandang</label>
+                <select id="km-kandang" onchange="renderRekapKemitraan()"></select>
+              </div>
+              <div class="field" style="flex:1;min-width:110px">
+                <label>Dari Tanggal</label>
+                <input type="date" id="km-dari" onchange="renderRekapKemitraan()"/>
+              </div>
+              <div class="field" style="flex:1;min-width:110px">
+                <label>Sampai Tanggal</label>
+                <input type="date" id="km-sampai" onchange="renderRekapKemitraan()"/>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:6px">
+                <button class="btn-primary" style="padding:8px 14px;font-size:.82rem" onclick="renderRekapKemitraan()">📊 Tampilkan</button>
+              </div>
+            </div>
+            <div id="km-rekap-content">
+              <div style="color:#aaa;font-size:.85rem;text-align:center;padding:20px">Pilih kandang kemitraan dan periode untuk melihat rekap.</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1406,6 +1554,13 @@
     <div class="modal-body">
       <input type="hidden" id="mk2-id"/>
       <div class="field" style="margin-bottom:12px"><label>Tanggal Kiriman</label><input type="date" id="mk2-tgl"/></div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Sumber</label>
+        <select id="mk2-sumber" style="border:1.5px solid #b7e4c7;border-radius:7px;padding:8px 10px;font-size:.9rem;width:100%">
+          <option value="inti">🤝 Dari Inti (tagihan)</option>
+          <option value="sendiri">💰 Beli Sendiri (tunai)</option>
+        </select>
+      </div>
       <div class="field" style="margin-bottom:12px"><label>Pakan</label><select id="mk2-pakan"></select></div>
       <div class="field" style="margin-bottom:12px"><label>Jumlah (kg)</label><input type="number" id="mk2-jumlah" min="0" step="0.1" placeholder="0" oninput="calcKirimanTotal()"/></div>
       <div class="field" style="margin-bottom:12px"><label>Harga per kg (Rp)</label><input type="number" id="mk2-harga" min="0" step="100" placeholder="0" oninput="calcKirimanTotal()"/></div>
@@ -1433,6 +1588,13 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="npk-kategori"/>
+      <div class="field" style="margin-bottom:12px">
+        <label>Sumber</label>
+        <select id="npk-sumber" style="border:1.5px solid #b7e4c7;border-radius:7px;padding:8px 10px;font-size:.9rem;width:100%">
+          <option value="inti">🤝 Dari Inti (tagihan)</option>
+          <option value="sendiri">💰 Beli Sendiri (tunai)</option>
+        </select>
+      </div>
       <div class="row">
         <div class="field">
           <label>Tanggal <span style="color:#dc2626">*</span></label>
@@ -1804,6 +1966,7 @@
 <script src="auth.js"></script>
 <script src="input_harian.js"></script>
 <script src="app.js"></script>
+<script src="bw-module.js"></script>
 
 
 

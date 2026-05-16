@@ -164,6 +164,7 @@
     .tbl th{background:#f0fdf4;color:#1b4332;font-weight:700;padding:9px 10px;text-align:left;border-bottom:2px solid #b7e4c7;}
     .tbl td{padding:9px 10px;border-bottom:1px solid #f0f4f8;vertical-align:middle;}
     .tbl tr:last-child td{border-bottom:none;}
+    .tbl tr.total-row td{background:#d8f3dc;font-weight:700;}
     .tbl tr:hover td{background:#f9fafb;}
 
     /* BADGES */
@@ -326,6 +327,7 @@
     body.dark .tbl th{background:#1b4332;color:#86efac;}
     body.dark .tbl td{border-bottom-color:#1e293b;}
     body.dark .tbl td[style*="color:#1b4332"],body.dark .tbl td[style*="color: #1b4332"]{color:#86efac !important;}
+    body.dark .tbl tr.total-row td{background:#1b4332 !important;color:#86efac;font-weight:700;}
     body.dark .tbl tr:hover td{background:#1e293b;}
     body.dark .stat-card{background:#1e293b;}
     body.dark .stat-card .sc-val{color:#86efac;}
