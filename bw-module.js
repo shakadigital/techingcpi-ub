@@ -119,7 +119,11 @@ function calcBwStats(entries) {
   const zonaMax = Math.round(mean * 1.1);
   const uniform = entries.filter(v => v >= zonaMin && v <= zonaMax).length;
   const uniformity = (uniform / n) * 100;
-  return { n, mean, stdDev: Math.round(stdDev), cv, uniformity, min: Math.min(...entries), max: Math.max(...entries), zonaMin, zonaMax };
+  const belowZona = entries.filter(v => v < zonaMin).length;
+  const aboveZona = entries.filter(v => v > zonaMax).length;
+  const belowPct = (belowZona / n) * 100;
+  const abovePct = (aboveZona / n) * 100;
+  return { n, mean, stdDev: Math.round(stdDev), cv, uniformity, min: Math.min(...entries), max: Math.max(...entries), zonaMin, zonaMax, belowPct, abovePct };
 }
 
 function reviewBwSession() {
@@ -144,12 +148,16 @@ function reviewBwSession() {
     </div>
     <div style="margin-bottom:16px">
       <div style="font-size:.78rem;font-weight:600;margin-bottom:6px">🎯 Zona Keseragaman (±10% dari rata-rata)</div>
-      <div style="font-size:.75rem;color:#555;margin-bottom:4px">● Dalam zona: ${stats.zonaMin} – ${stats.zonaMax} gr</div>
+      <div style="font-size:.75rem;color:#16a34a;margin-bottom:4px;font-weight:600">● Dalam zona: ${stats.zonaMin} – ${stats.zonaMax} gr</div>
       <div style="background:#e2e8f0;border-radius:20px;height:20px;position:relative;overflow:hidden">
         <div style="background:linear-gradient(90deg,#16a34a,#22c55e);height:100%;width:${Math.min(stats.uniformity,100)}%;border-radius:20px"></div>
         <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:.7rem;font-weight:700">${stats.uniformity.toFixed(1)}%</span>
       </div>
       <div style="font-size:.72rem;color:${uniColor};margin-top:4px;font-weight:600">${stats.uniformity>=85?'✅ Keseragaman Baik':stats.uniformity>=75?'⚠️ Keseragaman Cukup':'❌ Keseragaman Kurang'}</div>
+      <div style="font-size:.72rem;margin-top:4px;font-weight:600;display:flex;gap:12px">
+        <span style="color:#dc2626">▼ Di bawah: ${stats.belowPct.toFixed(1)}%</span>
+        <span style="color:#2563eb">▲ Di atas: ${stats.abovePct.toFixed(1)}%</span>
+      </div>
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn-secondary" onclick="backToInput()" style="flex:1;padding:12px">← Kembali Edit</button>
@@ -259,24 +267,63 @@ async function renderBwSebaran() {
       </div>
       <div style="margin-bottom:14px">
         <div style="font-size:.78rem;font-weight:600;margin-bottom:4px">🎯 Zona Keseragaman (±10% dari rata-rata)</div>
-        <div style="font-size:.72rem;color:#555">● Dalam zona: ${stats.zonaMin} – ${stats.zonaMax} gr</div>
+        <div style="font-size:.72rem;color:#16a34a;font-weight:600">● Dalam zona: ${stats.zonaMin} – ${stats.zonaMax} gr</div>
         <div style="background:#e2e8f0;border-radius:20px;height:18px;position:relative;overflow:hidden;margin-top:4px">
           <div style="background:linear-gradient(90deg,#16a34a,#22c55e);height:100%;width:${Math.min(stats.uniformity,100)}%;border-radius:20px"></div>
           <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:.65rem;font-weight:700">${stats.uniformity.toFixed(1)}%</span>
         </div>
         <div style="font-size:.7rem;color:${uniColor};margin-top:3px;font-weight:600">${stats.uniformity>=85?'✅ Keseragaman Baik':stats.uniformity>=75?'⚠️ Keseragaman Cukup':'❌ Keseragaman Kurang'}</div>
+        <div style="font-size:.7rem;margin-top:3px;font-weight:600;display:flex;gap:12px">
+          <span style="color:#dc2626">▼ Di bawah: ${stats.belowPct.toFixed(1)}%</span>
+          <span style="color:#2563eb">▲ Di atas: ${stats.abovePct.toFixed(1)}%</span>
+        </div>
       </div>
       <div style="margin-bottom:14px">
         <div style="font-size:.78rem;font-weight:600;margin-bottom:8px">📊 Distribusi Berat (interval ${interval} gr)</div>
-        <div style="max-height:220px;overflow-y:auto">
-          ${bins.map(b => `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:.72rem">
-            <span style="width:70px;text-align:right;color:#555">${b.range}</span>
-            <div style="flex:1;background:#e2e8f0;border-radius:4px;height:14px;overflow:hidden"><div style="background:${b.count>0?'#2d6a4f':'transparent'};height:100%;width:${maxCount?(b.count/maxCount*100):0}%"></div></div>
-            <span style="width:25px;font-weight:600">${b.count}</span>
-            <span style="width:35px;color:#888">${b.pct}%</span>
-          </div>`).join('')}
+        <div class="chart-wrap" style="margin-bottom:10px"><canvas id="chart-bw-dist"></canvas></div>
+        <div style="font-size:.72rem;color:#888;text-align:center;margin-bottom:10px">🟢 Dalam zona ±10% &nbsp; ⬜ Di luar zona</div>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:6px">📋 Tabel Distribusi</div>
+        <div style="max-height:200px;overflow-y:auto">
+        <table class="tbl" style="font-size:.75rem">
+          <thead><tr><th>Rentang (gr)</th><th>Jumlah</th><th>%</th><th>Bar</th></tr></thead>
+          <tbody>${bins.map(b => `<tr><td>${b.range} gr</td><td>${b.count}</td><td>${b.pct}%</td><td><div style="background:#2d6a4f;height:8px;width:${maxCount?(b.count/maxCount*100):0}%;border-radius:4px"></div></td></tr>`).join('')}</tbody>
+        </table>
         </div>
       </div>`;
+
+    // Render histogram chart
+    setTimeout(() => {
+      const ctx = document.getElementById('chart-bw-dist');
+      if(!ctx || typeof Chart === 'undefined') return;
+      if(window._chartBwDist) window._chartBwDist.destroy();
+      const zonaMin = stats.zonaMin;
+      const zonaMax = stats.zonaMax;
+      window._chartBwDist = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: bins.map(b => b.range),
+          datasets: [{
+            label: 'Jumlah Ayam',
+            data: bins.map(b => b.count),
+            backgroundColor: bins.map(b => {
+              const mid = parseInt(b.range.split('\u2013')[0]) + interval/2;
+              return (mid >= zonaMin && mid <= zonaMax) ? '#2d6a4f' : '#94a3b8';
+            }),
+            borderRadius: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { font: { size: 7 }, maxRotation: 90 } },
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }, 150);
   } catch(e) { el.innerHTML=`<div style="color:#dc2626;text-align:center;padding:20px">Error: ${e.message}</div>`; }
 }
 
@@ -316,11 +363,14 @@ async function renderBwDashboard() {
         </div></div>
       </div>`;
 
-    // Chart
+    // Chart — delay sedikit agar DOM ready
     if(typeof Chart!=='undefined'&&sortedUmur.length>1) {
-      const ctx=document.getElementById('chart-bw-trend');
-      if(window._chartBwTrend) window._chartBwTrend.destroy();
-      window._chartBwTrend=new Chart(ctx,{type:'line',data:{labels:sortedUmur.map(u=>'Minggu '+u),datasets:[{label:'Rata-rata (gr)',data:sortedUmur.map(u=>byUmur[u].rata_rata),borderColor:'#2d6a4f',backgroundColor:'rgba(45,106,79,.1)',fill:true,tension:0.3,pointRadius:5}]},options:{responsive:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:false}}}});
+      setTimeout(() => {
+        const ctx=document.getElementById('chart-bw-trend');
+        if(!ctx) return;
+        if(window._chartBwTrend) window._chartBwTrend.destroy();
+        window._chartBwTrend=new Chart(ctx,{type:'line',data:{labels:sortedUmur.map(u=>'Minggu '+u),datasets:[{label:'Rata-rata (gr)',data:sortedUmur.map(u=>byUmur[u].rata_rata),borderColor:'#2d6a4f',backgroundColor:'rgba(45,106,79,.1)',fill:true,tension:0.3,pointRadius:5}]},options:{responsive:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:false}}}});
+      }, 100);
     }
   } catch(e) { el.innerHTML=`<div style="color:#dc2626;text-align:center;padding:20px">Error: ${e.message}</div>`; }
 }

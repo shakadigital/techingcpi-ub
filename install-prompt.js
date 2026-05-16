@@ -2,7 +2,7 @@
 // INSTALL PROMPT - Teaching Farm UB V2.9.0
 // ═══════════════════════════════════════════════════
 
-const APP_VERSION = '2.9.0'; // Naikkan ini setiap ada update besar
+const APP_VERSION = '4.0.0'; // Naikkan ini setiap ada update besar
 
 class InstallPrompt {
   constructor() {

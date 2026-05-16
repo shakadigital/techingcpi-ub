@@ -1100,7 +1100,7 @@ async function renderHome(){
   if(!last5.length){actEl.innerHTML='<div style="color:#aaa;font-size:.85rem;text-align:center;padding:12px 0">Belum ada data tersimpan.</div>';}
   else{
     actEl.innerHTML='<table class="tbl"><thead><tr><th>Tanggal</th><th>Kandang</th><th>Produksi</th><th>HDP</th></tr></thead><tbody>'+
-    last5.map(row=>{const d=row.data;if(!d)return'';return'<tr><td>'+fmtTgl(d.tanggal)+'</td><td>'+esc(d.kandang)+'</td><td>'+(d.produksi?d.produksi.total.butir+' butir':'—')+'</td><td>'+(d.produksi?d.produksi.hdp:'—')+'</td></tr>';}).join('')+
+    last5.map(row=>{const d=row.data;if(!d)return'';return`<tr style="cursor:pointer" onclick="openDailySummaryFor('${d.tanggal}','${esc(d.kandang)}')"><td>${fmtTgl(d.tanggal)}</td><td>${esc(d.kandang)}</td><td>${d.produksi?d.produksi.total.butir+' butir':'—'}</td><td>${d.produksi?d.produksi.hdp:'—'}</td></tr>`;}).join('')+
     '</tbody></table>';
   }
   // Status kandang
@@ -1116,11 +1116,116 @@ async function renderHome(){
   // Render daily summary & alerts (async, tidak block render utama)
   renderDailySummary(todayInputs, list);
   renderHomeAlerts();
+  renderHargaPasarChart();
+}
+
+// ═══ GRAFIK HARGA PASAR DI HOME ═══
+async function renderHargaPasarChart() {
+  const ctx = document.getElementById('chart-harga-pasar');
+  if(!ctx || typeof Chart === 'undefined') return;
+
+  // Ambil 14 hari terakhir harga pasar dari input_harian
+  const sampai = new Date().toISOString().split('T')[0];
+  const dari = new Date(Date.now() - 14*86400000).toISOString().split('T')[0];
+  const inputs = await dbGetInput({dari, sampai});
+
+  // Kumpulkan harga pasar per tanggal
+  const hargaMap = {};
+  inputs.forEach(r => {
+    const hp = parseFloat(r.data?.harga_pasar) || 0;
+    if(hp > 0 && !hargaMap[r.tanggal]) hargaMap[r.tanggal] = hp;
+  });
+
+  const dates = Object.keys(hargaMap).sort();
+  if(dates.length < 2) {
+    document.getElementById('home-harga-info').textContent = 'Belum cukup data harga pasar (min. 2 hari)';
+    return;
+  }
+
+  const labels = dates.map(d => d.slice(5)); // MM-DD
+  const data = dates.map(d => hargaMap[d]);
+  const lastHarga = data[data.length-1];
+  const prevHarga = data[data.length-2];
+  const diff = lastHarga - prevHarga;
+
+  document.getElementById('home-harga-info').textContent =
+    `Terakhir: Rp ${lastHarga.toLocaleString('id-ID')}/kg ${diff>0?'▲':'▼'} ${Math.abs(diff).toLocaleString('id-ID')}`;
+
+  if(window._chartHargaPasar) window._chartHargaPasar.destroy();
+  window._chartHargaPasar = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Harga Pasar (Rp/kg)',
+        data,
+        borderColor: '#2d6a4f',
+        backgroundColor: 'rgba(45,106,79,.1)',
+        fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#2d6a4f'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: false, ticks: { callback: v => 'Rp '+v.toLocaleString('id-ID') } },
+        x: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+// ═══ BUKA DAILY SUMMARY FULLSCREEN PER TANGGAL ═══
+async function openDailySummaryFor(tanggal, kandang) {
+  const overlay = document.getElementById('fs-summary-overlay');
+  const container = document.getElementById('fs-summary-content');
+  if(!overlay || !container) return;
+
+  container.innerHTML = '<div style="color:#aaa;text-align:center;padding:40px">⏳ Memuat data...</div>';
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  // Temporarily override renderDailySummary to use specific date
+  const inputs = await dbGetInput({tanggal, kandang});
+  const kList = cache.get('kandang_list') || await dbGetKandang();
+
+  // Set selector ke kandang yang diklik
+  const dsSel = document.getElementById('ds-kandang-sel');
+  if(dsSel) {
+    // Populate jika belum
+    if(dsSel.options.length <= 1) {
+      dsSel.innerHTML = '<option value="">Semua Kandang</option>';
+      kList.filter(k=>k.status==='Aktif').forEach(k=>{
+        const o=document.createElement('option');o.value=k.nama;o.textContent=k.nama;dsSel.appendChild(o);
+      });
+    }
+    dsSel.value = kandang;
+  }
+
+  // Override tanggal di renderDailySummary
+  const origSummary = document.getElementById('daily-summary');
+  origSummary.style.display = '';
+
+  // Patch: temporarily set date for renderDailySummary
+  window._overrideSummaryDate = tanggal;
+  await renderDailySummary(inputs, kList);
+  window._overrideSummaryDate = null;
+
+  // Clone ke fullscreen
+  container.innerHTML = '';
+  const clone = origSummary.cloneNode(true);
+  clone.id = 'fs-daily-summary';
+  clone.style.display = '';
+  clone.querySelectorAll('.btn-capture').forEach(b => b.style.display = 'none');
+  container.appendChild(clone);
+
+  // Hide original again
+  origSummary.style.display = 'none';
 }
 
 // ═══ DAILY PERFORMANCE SUMMARY ═══
 async function renderDailySummary(todayInputs, kandangList){
-  const today=new Date().toISOString().split('T')[0];
+  const today = window._overrideSummaryDate || new Date().toISOString().split('T')[0];
   const kList=kandangList||cache.get('kandang_list')||await dbGetKandang();
 
   // Populate selector kandang

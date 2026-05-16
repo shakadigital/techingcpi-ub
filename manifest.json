@@ -1,8 +1,8 @@
 {
-  "name": "Teaching Farm UB V2.9.0",
+  "name": "TF-UB 4.0",
   "short_name": "TF-UB",
-  "description": "Sistem Manajemen Terpadu Peternakan Ayam Petelur - Teaching Farm UB V2.9.0 dengan fitur Offline, Mobile UX, dan Real-time Updates",
-  "version": "2.9.0",
+  "description": "Sistem Manajemen Terpadu Peternakan Ayam Petelur - TF-UB 4.0 dengan fitur Offline, Mobile UX, dan Real-time Updates",
+  "version": "4.0.0",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
@@ -13,31 +13,19 @@
   "categories": ["productivity", "utilities", "business"],
   "icons": [
     {
-      "src": "icon/icon-96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon/icon-512.png",
+      "src": "icon/logo-app.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon/icon-192.png",
+      "src": "icon/logo-app.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     },
     {
-      "src": "icon/icon-512.png",
+      "src": "icon/logo-app.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -72,7 +60,7 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Teaching Farm UB V2.9.0 Dashboard"
+      "label": "TF-UB 4.0 Dashboard"
     }
   ],
   "features": [
