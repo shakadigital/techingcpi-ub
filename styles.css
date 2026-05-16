@@ -94,6 +94,7 @@
     .qa-btn.active .qa-label{color:#2d6a4f;}
     .qa-icon{font-size:1.6rem;line-height:1;}
     .qa-label{font-size:.72rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.03em;}
+    .qa-info{font-size:.62rem;color:#6b7280;margin-top:2px;font-weight:500;}
     body.dark .qa-btn{background:rgba(30,41,59,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-color:rgba(51,65,85,.6);}
     body.dark .qa-btn.active{background:#1b4332;border-color:#40916c;}
     body.dark .qa-label{color:#94a3b8;}

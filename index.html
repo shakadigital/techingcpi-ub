@@ -517,15 +517,43 @@
   <div class="page" id="page-gudang">
     <div class="page-inner">
 
-      <!-- Tab Bar Gudang -->
-      <div class="tab-bar">
-        <button class="tab-btn active" id="gtab-pakan"       onclick="switchGTab('pakan')">🌾 Pakan</button>
-        <button class="tab-btn"        id="gtab-vitamin"     onclick="switchGTab('vitamin')">💊 Vitamin</button>
-        <button class="tab-btn"        id="gtab-obat"        onclick="switchGTab('obat')">🩺 Obat</button>
-        <button class="tab-btn"        id="gtab-vaksin"      onclick="switchGTab('vaksin')">💉 Vaksin</button>
-        <button class="tab-btn"        id="gtab-desinfektan" onclick="switchGTab('desinfektan')">🧴 Desinfektan</button>
-        <button class="tab-btn"        id="gtab-lainnya"     onclick="switchGTab('lainnya')">📦 Lainnya</button>
+      <!-- Quick Action Cards Gudang (tampil awal) -->
+      <div class="quick-actions" id="gudang-qa" style="grid-template-columns:repeat(3,1fr)">
+        <button class="qa-btn" id="gtab-pakan" onclick="switchGTab('pakan')">
+          <span class="qa-icon">🌾</span>
+          <span class="qa-label">Pakan</span>
+          <span class="qa-info" id="gtab-pakan-info">—</span>
+        </button>
+        <button class="qa-btn" id="gtab-vitamin" onclick="switchGTab('vitamin')">
+          <span class="qa-icon">💊</span>
+          <span class="qa-label">Vitamin</span>
+          <span class="qa-info" id="gtab-vitamin-info">—</span>
+        </button>
+        <button class="qa-btn" id="gtab-obat" onclick="switchGTab('obat')">
+          <span class="qa-icon">🩺</span>
+          <span class="qa-label">Obat</span>
+          <span class="qa-info" id="gtab-obat-info">—</span>
+        </button>
+        <button class="qa-btn" id="gtab-vaksin" onclick="switchGTab('vaksin')">
+          <span class="qa-icon">💉</span>
+          <span class="qa-label">Vaksin</span>
+          <span class="qa-info" id="gtab-vaksin-info">—</span>
+        </button>
+        <button class="qa-btn" id="gtab-desinfektan" onclick="switchGTab('desinfektan')">
+          <span class="qa-icon">🧴</span>
+          <span class="qa-label">Desinfektan</span>
+          <span class="qa-info" id="gtab-desinfektan-info">—</span>
+        </button>
+        <button class="qa-btn" id="gtab-lainnya" onclick="switchGTab('lainnya')">
+          <span class="qa-icon">📦</span>
+          <span class="qa-label">Lainnya</span>
+          <span class="qa-info" id="gtab-lainnya-info">—</span>
+        </button>
       </div>
+
+      <!-- Konten tabel (tersembunyi sampai card diklik) -->
+      <div id="gudang-content-area" style="display:none">
+        <button class="btn-secondary" onclick="showGudangCards()" style="margin-bottom:12px;display:flex;align-items:center;gap:6px">‹ Kembali ke Gudang</button>
 
       <!-- ══ TAB: PAKAN ══ -->
       <div id="gtab-content-pakan">
@@ -675,6 +703,8 @@
         </div>
 
       </div><!-- end gtab-content-nonpakan -->
+
+      </div><!-- end gudang-content-area -->
 
     </div>
   </div>

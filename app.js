@@ -121,7 +121,7 @@ function switchPage(name, _fromBack=false){
   if(name==='kandang')renderKandangTable();
   if(name==='user')renderUserTable();
   if(name==='master')renderMaster();
-  if(name==='gudang') { _currentGTab='pakan'; switchGTab('pakan'); }
+  if(name==='gudang') { showGudangCards(); }
   if(name==='penjualan'){populateAllPelangganSelects();renderStokTelur();renderRiwayatJual();showPengambilanIntiSection();}
   if(name==='biaya'){initBiayaPage();}
   if(name==='riwayat')renderRiwayat();
@@ -4197,6 +4197,13 @@ function switchGTab(tab) {
   ['pakan','vitamin','obat','vaksin','desinfektan','lainnya'].forEach(t => {
     document.getElementById(`gtab-${t}`).classList.toggle('active', t === tab);
   });
+
+  // Tampilkan konten tabel, sembunyikan cards overview
+  const qaCards = document.getElementById('gudang-qa');
+  if(qaCards) qaCards.style.display = 'none';
+  const contentArea = document.getElementById('gudang-content-area');
+  if(contentArea) contentArea.style.display = '';
+
   const isPakan = tab === 'pakan';
   document.getElementById('gtab-content-pakan').style.display    = isPakan ? '' : 'none';
   document.getElementById('gtab-content-nonpakan').style.display = isPakan ? 'none' : '';
@@ -4205,6 +4212,54 @@ function switchGTab(tab) {
     renderGudangPakan();
   } else {
     renderGudangNonPakan(tab);
+  }
+}
+
+// Kembali ke tampilan cards gudang
+function showGudangCards() {
+  const qaCards = document.getElementById('gudang-qa');
+  if(qaCards) qaCards.style.display = '';
+  const contentArea = document.getElementById('gudang-content-area');
+  if(contentArea) contentArea.style.display = 'none';
+  // Reset active state
+  ['pakan','vitamin','obat','vaksin','desinfektan','lainnya'].forEach(t => {
+    document.getElementById(`gtab-${t}`).classList.remove('active');
+  });
+  // Refresh stok info di cards
+  loadGudangCardStok();
+}
+
+// Load info stok ringkas ke dalam cards
+async function loadGudangCardStok() {
+  // Pakan
+  try {
+    const pakans = await dbGetDaftarPakan();
+    const kiriman = await dbGetKiriman({});
+    let totalStokPakan = 0;
+    pakans.forEach(p => {
+      const masuk = kiriman.filter(k => k.nama_pakan === p.nama).reduce((s, k) => s + (parseFloat(k.jumlah) || 0), 0);
+      totalStokPakan += masuk;
+    });
+    const elPakan = document.getElementById('gtab-pakan-info');
+    if(elPakan) elPakan.textContent = pakans.length ? `${pakans.length} jenis · ${totalStokPakan.toLocaleString('id-ID')} kg` : 'Belum ada data';
+  } catch(e) {}
+
+  // Non-pakan categories
+  const categories = ['vitamin','obat','vaksin','desinfektan','lainnya'];
+  for(const cat of categories) {
+    try {
+      const stok = await dbGetStokNonPakan(cat);
+      const el = document.getElementById(`gtab-${cat}-info`);
+      if(el) {
+        if(stok.length) {
+          const totalItems = stok.length;
+          const lowItems = stok.filter(s => s.stok <= 0).length;
+          el.textContent = `${totalItems} item` + (lowItems ? ` · ⚠️ ${lowItems} habis` : ' · ✅');
+        } else {
+          el.textContent = 'Belum ada stok';
+        }
+      }
+    } catch(e) {}
   }
 }
 
