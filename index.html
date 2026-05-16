@@ -122,7 +122,7 @@
   <header>
     <div class="hdr-left">
       <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none" title="Kembali">‹</button>
-      <span style="font-size:1.5rem">🐔</span>
+      <span style="font-size:1.5rem;cursor:pointer" onclick="switchPage('home')" title="Kembali ke Home">🐔</span>
       <div>
         <h1>Teaching Farm UB <span style="font-size:0.6rem;background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">V2.9.0</span></h1>
         <div class="sub" id="hdr-kandang">—</div>
@@ -1422,21 +1422,33 @@
       </div>
       <div class="row">
         <div class="field">
-          <label>Jumlah <span style="color:#dc2626">*</span></label>
-          <input type="number" id="npk-jumlah" min="0" step="0.001" placeholder="0" oninput="calcNpTotal();calcNpConversion()"/>
+          <label>Jumlah Kemasan <span style="color:#dc2626">*</span></label>
+          <input type="number" id="npk-jumlah" min="0" step="1" placeholder="Mis. 2 (sachet/botol)" oninput="calcNpKirimanTotal()"/>
         </div>
         <div class="field">
-          <label>Satuan</label>
-          <select id="npk-satuan" onchange="calcNpTotal();calcNpConversion()">
-            <!-- Diisi JS berdasarkan category -->
+          <label>Jenis Kemasan</label>
+          <select id="npk-satuan" onchange="calcNpKirimanTotal()">
+            <!-- Diisi JS berdasarkan kategori -->
           </select>
         </div>
       </div>
-      <div id="npk-conversion-info" style="display:none;font-size:.75rem;color:#2d6a4f;background:#f0fdf4;border-radius:6px;padding:6px 10px;margin-bottom:10px"></div>
       <div class="row">
         <div class="field">
-          <label>Harga/Satuan (Rp)</label>
-          <input type="number" id="npk-harga" min="0" step="100" placeholder="0" oninput="calcNpTotal()"/>
+          <label>Isi per Kemasan <span style="color:#dc2626">*</span></label>
+          <input type="number" id="npk-isi-kemasan" min="0" step="0.1" placeholder="Mis. 1000" oninput="calcNpKirimanTotal()"/>
+        </div>
+        <div class="field">
+          <label>Satuan Isi</label>
+          <select id="npk-base-unit" onchange="calcNpKirimanTotal()" style="font-weight:700;color:#2d6a4f;background:#f0fdf4">
+            <!-- Diisi JS: gram/ml/dosis -->
+          </select>
+        </div>
+      </div>
+      <div id="npk-conversion-info" style="display:none;font-size:.78rem;color:#2d6a4f;background:#f0fdf4;border-radius:6px;padding:8px 10px;margin-bottom:10px;font-weight:600"></div>
+      <div class="row">
+        <div class="field">
+          <label>Harga/Kemasan (Rp)</label>
+          <input type="number" id="npk-harga" min="0" step="100" placeholder="0" oninput="calcNpKirimanTotal()"/>
         </div>
         <div class="field">
           <label>Total (Rp)</label>
@@ -1492,13 +1504,13 @@
       </div>
       <div class="row">
         <div class="field">
-          <label>Jumlah <span style="color:#dc2626">*</span></label>
-          <input type="number" id="npp-jumlah" min="0" step="0.001" placeholder="0" oninput="calcNpPakaiConversion()"/>
+          <label>Jumlah Pemakaian <span style="color:#dc2626">*</span></label>
+          <input type="number" id="npp-jumlah" min="0" step="0.1" placeholder="0"/>
         </div>
         <div class="field">
           <label>Satuan</label>
-          <select id="npp-satuan" onchange="calcNpPakaiConversion()">
-            <!-- Diisi JS berdasarkan category -->
+          <select id="npp-satuan" disabled>
+            <!-- Diisi JS: base_unit (ml/gram/dosis) -->
           </select>
         </div>
       </div>

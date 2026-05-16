@@ -269,7 +269,12 @@ class RealtimeManager {
           if (typeof renderHome === 'function') await renderHome();
           break;
         case 'input':
-          if (typeof autoLoadInputHarian === 'function') await autoLoadInputHarian();
+          // Jangan reload form jika user sedang mengetik (ada focus di input)
+          const activeEl = document.activeElement;
+          const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT' || activeEl.tagName === 'TEXTAREA');
+          if(!isTyping) {
+            if (typeof autoLoadInputHarian === 'function') await autoLoadInputHarian();
+          }
           break;
         case 'penjualan':
           if (typeof renderStokTelur === 'function') await renderStokTelur();

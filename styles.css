@@ -1,4 +1,8 @@
     *{box-sizing:border-box;margin:0;padding:0;}
+    /* Hide number input spinners (panah atas/bawah) */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+    input[type="number"]{-moz-appearance:textfield;}
     body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh;}
 
     /* ── GLASSMORPHISM BACKGROUND ── */
@@ -314,9 +318,13 @@
     body.dark .field input[readonly]{background:#1b4332;color:#86efac;}
     body.dark .date-bar{background:#1e293b;}
     body.dark .date-bar input,body.dark .date-bar select{background:#0f172a;border-color:#334155;color:#e2e8f0;}
+    body.dark select,body.dark input[type="text"],body.dark input[type="number"],body.dark input[type="date"],body.dark textarea{background:#0f172a !important;border-color:#334155 !important;color:#e2e8f0 !important;}
+    body.dark input[readonly]{background:#1b4332 !important;color:#86efac !important;}
+    body.dark input[type="text"][readonly]{background:#1b4332 !important;color:#86efac !important;}
     body.dark .bottom-nav{display:none;}
     body.dark .tbl th{background:#1b4332;color:#86efac;}
     body.dark .tbl td{border-bottom-color:#1e293b;}
+    body.dark .tbl td[style*="color:#1b4332"],body.dark .tbl td[style*="color: #1b4332"]{color:#86efac !important;}
     body.dark .tbl tr:hover td{background:#1e293b;}
     body.dark .stat-card{background:#1e293b;}
     body.dark .stat-card .sc-val{color:#86efac;}

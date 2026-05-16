@@ -581,13 +581,13 @@ async function renderPembelian(){
     let statusBadge, statusClass;
     if(statusBayar === 'lunas') {
       statusBadge = '<span class="badge badge-green">✅ Lunas</span>';
-      statusClass = 'style="background:#f0fdf4"';
+      statusClass = '';
     } else if(statusBayar === 'sebagian') {
       statusBadge = `<span class="badge badge-orange">⏳ Sisa Rp ${sisa.toLocaleString('id-ID')}</span>`;
-      statusClass = 'style="background:#fef3c7"';
+      statusClass = '';
     } else {
       statusBadge = `<span class="badge badge-red">❌ Belum Bayar</span>`;
-      statusClass = 'style="background:#fee2e2"';
+      statusClass = '';
     }
     
     const tr = document.createElement('tr');
@@ -598,7 +598,7 @@ async function renderPembelian(){
       `<td>${esc(k.nama_pakan)} (${k.jumlah} kg)</td>` +
       `<td>${k.jumlah} kg</td>` +
       `<td style="font-weight:700;color:#1b4332">Rp ${total.toLocaleString('id-ID')}</td>` +
-      `<td ${statusClass}>${statusBadge}</td>` +
+      `<td>${statusBadge}</td>` +
       `<td>` +
         (statusBayar !== 'lunas' ? `<button class="btn-edit" onclick="openBayarModal('${k.id}')" title="Bayar">💳</button>` : '') +
         `<button class="btn-edit" onclick="editKiriman('${k.id}')" title="Edit" style="background:#ede9fe;color:#6d28d9;margin-left:4px">✏️</button>` +
@@ -1204,6 +1204,27 @@ async function renderDailySummary(todayInputs, kandangList){
     displayPopulasi = refKandang.populasi_awal;
   }
 
+  // ── Kumpulkan data kesehatan & catatan ──
+  let kesehatanHTML = '';
+  let catatanText = '';
+  if(hasData){
+    const vitList=[], obatList=[], vaksinList=[];
+    filtered.forEach(r=>{
+      const d=r.data;if(!d)return;
+      const kes=d.kesehatan||{};
+      (kes.vitamin||[]).forEach(v=>{ if(v.nama) vitList.push(v.nama+(v.jumlah?' ('+Math.round(parseFloat(v.jumlah)*100)/100+')':'')); });
+      (kes.obat||[]).forEach(v=>{ if(v.nama) obatList.push(v.nama+(v.jumlah?' ('+Math.round(parseFloat(v.jumlah)*100)/100+')':'')); });
+      (kes.vaksin||[]).forEach(v=>{ if(v.nama) vaksinList.push(v.nama+(v.jumlah?' ('+Math.round(parseFloat(v.jumlah)*100)/100+')':'')); });
+      if(d.catatan&&d.catatan.trim()) catatanText+=(catatanText?'; ':'')+d.catatan.trim();
+    });
+    if(vitList.length||obatList.length||vaksinList.length){
+      kesehatanHTML=`<tr class="section-head"><td colspan="3">💊 Kesehatan</td></tr>`;
+      if(vitList.length) kesehatanHTML+=`<tr><td>Vitamin</td><td colspan="2">${esc(vitList.join(', '))}</td></tr>`;
+      if(obatList.length) kesehatanHTML+=`<tr><td>Obat</td><td colspan="2">${esc(obatList.join(', '))}</td></tr>`;
+      if(vaksinList.length) kesehatanHTML+=`<tr><td>Vaksin</td><td colspan="2">${esc(vaksinList.join(', '))}</td></tr>`;
+    }
+  }
+
   // ── Render tabel ──
   bodyEl.innerHTML=`
   <table class="perf-table">
@@ -1226,6 +1247,8 @@ async function renderDailySummary(todayInputs, kandangList){
 
     <tr class="section-head"><td colspan="3">📊 Efisiensi</td></tr>
     <tr><td>FCR</td><td class="${fcrClass}">${fcr>0?fcr.toFixed(3):'—'}</td><td>${fcr>0?(fcr<=2.0?'✅ Baik':fcr<=2.5?'⚠️ Cukup':'❌ Buruk'):'—'}</td></tr>
+    ${kesehatanHTML}
+    ${catatanText?`<tr class="section-head"><td colspan="3">📝 Catatan</td></tr><tr><td colspan="3" style="font-size:.82rem;color:#555;font-style:italic;padding:8px 14px">${esc(catatanText)}</td></tr>`:''}
   </table>`;
 
   // Footer
@@ -4105,11 +4128,11 @@ async function loadCacheInfo() {
 
 // ═══ GUDANG — TAB NON-PAKAN ═══
 const NP_CONFIG = {
-  vitamin:     { icon:'💊', label:'Vitamin',     satuan:'botol',  category:'cair'  },
-  obat:        { icon:'🩺', label:'Obat',        satuan:'botol',  category:'cair'  },
-  vaksin:      { icon:'💉', label:'Vaksin',      satuan:'dosis',  category:'padat' },
-  desinfektan: { icon:'🧴', label:'Desinfektan', satuan:'liter',  category:'cair'  },
-  lainnya:     { icon:'📦', label:'Lainnya',     satuan:'pcs',    category:'padat' }
+  vitamin:     { icon:'💊', label:'Vitamin',     satuan:'botol',  category:'cair',  base_unit:'gram', kemasan:['sachet','botol','kaleng','pak','dus'] },
+  obat:        { icon:'🩺', label:'Obat',        satuan:'botol',  category:'cair',  base_unit:'ml',   kemasan:['botol','sachet','kaleng','ampul','vial','jerigen'] },
+  vaksin:      { icon:'💉', label:'Vaksin',      satuan:'dosis',  category:'padat', base_unit:'dosis',kemasan:['vial','botol','ampul'] },
+  desinfektan: { icon:'🧴', label:'Desinfektan', satuan:'liter',  category:'cair',  base_unit:'ml',   kemasan:['botol','jerigen','drum','liter'] },
+  lainnya:     { icon:'📦', label:'Lainnya',     satuan:'pcs',    category:'padat', base_unit:'pcs',  kemasan:['pcs','sachet','botol','kaleng','pak','dus'] }
 };
 
 // ── Unit helpers (padat & cair) ──
@@ -4241,19 +4264,23 @@ async function renderNpKiriman(kategori) {
   if(!list.length) { empty.style.display = 'block'; return; }
   empty.style.display = 'none';
   list.slice(0, 50).forEach(k => {
-    const total = (parseFloat(k.jumlah)||0) * (parseFloat(k.harga_satuan)||0);
+    const total = parseFloat(k.harga_total) || ((parseFloat(k.jumlah_kemasan)||0) * (parseFloat(k.harga_satuan)||0));
+    const displayJumlah = k.jumlah_kemasan
+      ? `${k.jumlah_kemasan} ${k.jenis_kemasan||''} (${k.jumlah} ${k.satuan})`
+      : `${k.jumlah} ${k.satuan||''}`;
     const tr = document.createElement('tr');
     tr.innerHTML =
       `<td>${fmtTgl(k.tanggal)}</td>`+
       `<td><strong>${esc(k.nama_item)}</strong></td>`+
-      `<td>${k.jumlah}</td>`+
+      `<td>${displayJumlah}</td>`+
       `<td>${esc(k.satuan||'—')}</td>`+
       `<td>${k.harga_satuan ? 'Rp '+parseFloat(k.harga_satuan).toLocaleString('id-ID') : '—'}</td>`+
       `<td>${total ? 'Rp '+total.toLocaleString('id-ID') : '—'}</td>`+
       `<td>${esc(k.supplier||'—')}</td>`+
       `<td>${esc(k.kandang||'Semua')}</td>`+
       `<td>`+
-        (can('BIAYA') ? `<button class="btn-del" onclick="deleteNpKiriman('${k.id}','${kategori}')">🗑</button>` : '')+
+        (can('BIAYA') ? `<button class="btn-edit" onclick="editNpKiriman('${k.id}','${kategori}')" title="Edit">✏️</button>` : '')+
+        (can('BIAYA') ? `<button class="btn-del" onclick="deleteNpKiriman('${k.id}','${kategori}')" style="margin-left:4px">🗑</button>` : '')+
       `</td>`;
     tbody.appendChild(tr);
   });
@@ -4276,7 +4303,8 @@ async function renderNpPakai(kategori) {
       `<td>${esc(p.kandang||'Semua')}</td>`+
       `<td>${esc(p.keterangan||'—')}</td>`+
       `<td>`+
-        (can('BIAYA') ? `<button class="btn-del" onclick="deleteNpPakai('${p.id}','${kategori}')">🗑</button>` : '')+
+        (can('BIAYA') ? `<button class="btn-edit" onclick="editNpPakai('${p.id}','${kategori}')" title="Edit">✏️</button>` : '')+
+        (can('BIAYA') ? `<button class="btn-del" onclick="deleteNpPakai('${p.id}','${kategori}')" style="margin-left:4px">🗑</button>` : '')+
       `</td>`;
     tbody.appendChild(tr);
   });
@@ -4293,14 +4321,30 @@ async function openNpKirimanModal() {
   document.getElementById('npk-tgl').value = new Date().toISOString().split('T')[0];
   document.getElementById('npk-nama').value = '';
   document.getElementById('npk-jumlah').value = '';
+  document.getElementById('npk-isi-kemasan').value = '';
   document.getElementById('npk-harga').value = '';
   document.getElementById('npk-total').value = '';
   document.getElementById('npk-ket').value = '';
+  // Populate base_unit options — semua kategori bisa pilih satuan isi
+  const baseUnitSel = document.getElementById('npk-base-unit');
+  const baseUnitOpts = {
+    vitamin: ['gram','ml','kg'],
+    obat: ['ml','gram','liter','kg'],
+    vaksin: ['dosis','ml'],
+    desinfektan: ['ml','liter'],
+    lainnya: ['pcs','gram','ml','kg','liter']
+  };
+  baseUnitSel.innerHTML = (baseUnitOpts[kategori]||['pcs']).map(u =>
+    `<option value="${u}">${u}</option>`
+  ).join('');
   const convInfo = document.getElementById('npk-conversion-info');
   if(convInfo) convInfo.style.display = 'none';
 
-  // Populate satuan berdasarkan category (padat/cair)
-  populateUnitSelect('npk-satuan', cfg.category, cfg.satuan);
+  // Populate jenis kemasan dari config
+  const selSatuan = document.getElementById('npk-satuan');
+  selSatuan.innerHTML = (cfg.kemasan||['botol']).map(k =>
+    `<option value="${k}">${k}</option>`
+  ).join('');
 
   // Populate kandang
   const kandangList = cache.get('kandang_list') || await dbGetKandang();
@@ -4317,7 +4361,7 @@ async function openNpKirimanModal() {
     vitamin:     dbGetVitamin,
     obat:        dbGetObat,
     vaksin:      dbGetVaksin,
-    desinfektan: () => dbGetMaster('master_obat', { kategori: 'desinfektan' }),
+    desinfektan: () => dbGetMaster(typeof TB!=='undefined'?TB.master_obat:'master_obat_tf_ub', { kategori: 'desinfektan' }),
     lainnya:     null
   };
   const selNama = document.getElementById('npk-nama-select');
@@ -4345,6 +4389,28 @@ async function openNpKirimanModal() {
   setSupplierValue('npk-supplier-select','npk-supplier-text','npk-supplier','');
 
   document.getElementById('modal-np-kiriman').style.display = 'flex';
+}
+
+function calcNpKirimanTotal() {
+  const jumlah = parseFloat(document.getElementById('npk-jumlah').value) || 0;
+  const isiKemasan = parseFloat(document.getElementById('npk-isi-kemasan').value) || 0;
+  const harga = parseFloat(document.getElementById('npk-harga').value) || 0;
+  const baseUnit = document.getElementById('npk-base-unit').value || 'pcs';
+
+  // Hitung total base unit
+  const totalBase = jumlah * isiKemasan;
+  const convInfo = document.getElementById('npk-conversion-info');
+
+  if(jumlah > 0 && isiKemasan > 0) {
+    const kemasan = document.getElementById('npk-satuan').value;
+    convInfo.style.display = 'block';
+    convInfo.textContent = `📦 ${jumlah} ${kemasan} × ${isiKemasan} ${baseUnit} = ${totalBase.toLocaleString('id-ID')} ${baseUnit} total masuk`;
+  } else {
+    convInfo.style.display = 'none';
+  }
+
+  // Hitung total harga: jumlah kemasan × harga per kemasan
+  document.getElementById('npk-total').value = jumlah && harga ? 'Rp ' + (jumlah * harga).toLocaleString('id-ID') : '';
 }
 
 function onNpkNamaChange() {
@@ -4418,33 +4484,41 @@ async function saveNpKiriman() {
   const nama_item = (selNama.value === '__lainnya__' || selNama.value === '')
     ? document.getElementById('npk-nama').value.trim()
     : selNama.value;
-  const jumlah   = parseFloat(document.getElementById('npk-jumlah').value) || 0;
+  const jumlahKemasan = parseFloat(document.getElementById('npk-jumlah').value) || 0;
+  const isiKemasan    = parseFloat(document.getElementById('npk-isi-kemasan').value) || 0;
   const satuan   = document.getElementById('npk-satuan').value;
+  const baseUnit = document.getElementById('npk-base-unit').value || 'pcs';
+  const jumlahBase = jumlahKemasan * isiKemasan; // total dalam base_unit
   const harga_satuan = parseFloat(document.getElementById('npk-harga').value) || 0;
-  const harga_total  = jumlah * harga_satuan;
+  const harga_total  = jumlahKemasan * harga_satuan;
   const supplier = document.getElementById('npk-supplier').value.trim();
   const keterangan = document.getElementById('npk-ket').value.trim();
   const kandang  = document.getElementById('npk-kandang').value;
 
   if(!tanggal)    { showToast('⚠️ Tanggal wajib diisi!'); return; }
   if(!nama_item)  { showToast('⚠️ Nama item wajib diisi!'); return; }
-  if(jumlah <= 0) { showToast('⚠️ Jumlah harus lebih dari 0!'); return; }
+  if(jumlahKemasan <= 0) { showToast('⚠️ Jumlah kemasan harus lebih dari 0!'); return; }
+  if(isiKemasan <= 0) { showToast('⚠️ Isi per kemasan wajib diisi!'); return; }
 
   showToast('⏳ Menyimpan...');
   try {
     await dbSaveKirimanNonPakan({
-      tanggal, kategori, nama_item, jumlah, satuan,
-      category: NP_CONFIG[kategori]?.category || 'padat',
+      tanggal, kategori, nama_item,
+      jumlah: jumlahBase,           // simpan dalam base_unit
+      satuan: baseUnit,             // base_unit (ml/gram/dosis)
+      jumlah_kemasan: jumlahKemasan,
+      isi_per_kemasan: isiKemasan,
+      jenis_kemasan: satuan,        // botol/vial/sachet/kaleng
       harga_satuan, harga_total, supplier: supplier||null,
       keterangan: keterangan||null, kandang: kandang||null,
       user_input: currentUser?.username || ''
     });
     await dbSaveLog('TAMBAH','kiriman_nonpakan',null,null,
-      {tanggal,kategori,nama_item,jumlah,satuan},
-      `Kiriman ${kategori}: ${nama_item} ${jumlah} ${satuan}`);
+      {tanggal,kategori,nama_item,jumlah:jumlahBase,satuan:baseUnit,kemasan:`${jumlahKemasan} ${satuan} @${isiKemasan}${baseUnit}`},
+      `Kiriman ${kategori}: ${nama_item} ${jumlahKemasan} ${satuan} × ${isiKemasan}${baseUnit} = ${jumlahBase}${baseUnit}`);
     closeModal('modal-np-kiriman');
     renderGudangNonPakan(kategori);
-    showToast(`✅ Kiriman ${NP_CONFIG[kategori]?.label} disimpan!`);
+    showToast(`✅ Kiriman ${NP_CONFIG[kategori]?.label} disimpan! (${jumlahBase} ${baseUnit})`);
   } catch(e) { showToast('❌ Gagal: ' + e.message); }
 }
 
@@ -4463,8 +4537,13 @@ async function openNpPakaiModal() {
   const convInfoP = document.getElementById('npp-conversion-info');
   if(convInfoP) convInfoP.style.display = 'none';
 
-  // Populate satuan berdasarkan category (padat/cair)
-  populateUnitSelect('npp-satuan', cfg.category, cfg.satuan);
+  // Set satuan — akan di-update saat user pilih item
+  const selSatuanP = document.getElementById('npp-satuan');
+  const defaultBaseUnits = {vitamin:['gram','ml','kg'], obat:['ml','gram','liter','kg'], vaksin:['dosis','ml'], desinfektan:['ml','liter'], lainnya:['pcs','gram','ml','kg','liter']};
+  selSatuanP.innerHTML = (defaultBaseUnits[kategori]||['pcs']).map(u =>
+    `<option value="${u}">${u}</option>`
+  ).join('');
+  selSatuanP.disabled = false;
 
   // Populate kandang
   const kandangList = cache.get('kandang_list') || await dbGetKandang();
@@ -4531,7 +4610,8 @@ async function saveNpPakai() {
     ? document.getElementById('npp-nama').value.trim()
     : selNama.value;
   const jumlah    = parseFloat(document.getElementById('npp-jumlah').value) || 0;
-  const satuan    = document.getElementById('npp-satuan').value;
+  const cfg = NP_CONFIG[kategori];
+  const satuan    = cfg?.base_unit || document.getElementById('npp-satuan').value;
   const keterangan = document.getElementById('npp-ket').value.trim();
   const kandang   = document.getElementById('npp-kandang').value;
 
@@ -4539,23 +4619,18 @@ async function saveNpPakai() {
   if(!nama_item)  { showToast('⚠️ Nama item wajib diisi!'); return; }
   if(jumlah <= 0) { showToast('⚠️ Jumlah harus lebih dari 0!'); return; }
 
-  // Cek stok cukup — bandingkan dalam base unit
+  // Cek stok cukup — sudah dalam base_unit
   const stokList = await dbGetStokNonPakan(kategori);
   const stokItem = stokList.find(s => s.nama === nama_item);
-  if(stokItem) {
-    const cfg = NP_CONFIG[kategori];
-    const qtyBase = toBase(jumlah, satuan, cfg?.category || 'padat');
-    if(qtyBase > stokItem.stok_base) {
-      showToast(`⚠️ Stok ${nama_item} tidak cukup! Tersedia: ${stokItem.stok.toFixed(2)} ${stokItem.satuan}`);
-      return;
-    }
+  if(stokItem && jumlah > stokItem.stok) {
+    showToast(`⚠️ Stok ${nama_item} tidak cukup! Tersedia: ${stokItem.stok.toLocaleString('id-ID')} ${satuan}`);
+    return;
   }
 
   showToast('⏳ Menyimpan...');
   try {
     await dbSavePemakaianNonPakan({
       tanggal, kategori, nama_item, jumlah, satuan,
-      category: NP_CONFIG[kategori]?.category || 'padat',
       keterangan: keterangan||null, kandang: kandang||null,
       user_input: currentUser?.username || ''
     });
@@ -4587,6 +4662,155 @@ async function deleteNpPakai(id, kategori) {
     await dbSaveLog('HAPUS','pemakaian_nonpakan',id,null,null,`Hapus pemakaian ${kategori}`);
     renderGudangNonPakan(kategori);
     showToast('🗑 Pemakaian dihapus.');
+  } catch(e) { showToast('❌ Gagal: ' + e.message); }
+}
+
+// ── Edit Kiriman Non-Pakan ──
+async function editNpKiriman(id, kategori) {
+  if(!can('BIAYA')) { showToast('⚠️ Tidak ada akses!'); return; }
+  const list = await dbGetKirimanNonPakan({ kategori });
+  const item = list.find(k => k.id === id);
+  if(!item) { showToast('❌ Data tidak ditemukan!'); return; }
+
+  // Buka modal kiriman dan isi data
+  _currentGTab = kategori;
+  await openNpKirimanModal();
+
+  // Isi form dengan data existing
+  document.getElementById('npk-tgl').value = item.tanggal || '';
+  document.getElementById('npk-kandang').value = item.kandang || '';
+  const selNama = document.getElementById('npk-nama-select');
+  if(selNama) {
+    const opt = [...selNama.options].find(o => o.value === item.nama_item);
+    if(opt) { selNama.value = item.nama_item; }
+    else { selNama.value = '__lainnya__'; document.getElementById('npk-nama').style.display=''; document.getElementById('npk-nama').value = item.nama_item; }
+  }
+  document.getElementById('npk-jumlah').value = item.jumlah_kemasan || item.jumlah || '';
+  document.getElementById('npk-isi-kemasan').value = item.isi_per_kemasan || '';
+  if(item.jenis_kemasan) document.getElementById('npk-satuan').value = item.jenis_kemasan;
+  const baseUnitSel = document.getElementById('npk-base-unit');
+  if(baseUnitSel && item.satuan) baseUnitSel.value = item.satuan;
+  document.getElementById('npk-harga').value = item.harga_satuan || '';
+  setSupplierValue('npk-supplier-select','npk-supplier-text','npk-supplier', item.supplier||'');
+  document.getElementById('npk-ket').value = item.keterangan || '';
+  calcNpKirimanTotal();
+
+  // Override save agar update bukan insert
+  const btnSave = document.querySelector('#modal-np-kiriman .btn-primary');
+  if(btnSave) {
+    btnSave.onclick = async function() {
+      await _updateNpKiriman(id, kategori);
+    };
+  }
+}
+
+async function _updateNpKiriman(id, kategori) {
+  const tanggal = document.getElementById('npk-tgl').value;
+  const selNama = document.getElementById('npk-nama-select');
+  const nama_item = (selNama.value === '__lainnya__' || selNama.value === '')
+    ? document.getElementById('npk-nama').value.trim() : selNama.value;
+  const jumlahKemasan = parseFloat(document.getElementById('npk-jumlah').value) || 0;
+  const isiKemasan = parseFloat(document.getElementById('npk-isi-kemasan').value) || 0;
+  const satuan = document.getElementById('npk-satuan').value;
+  const baseUnit = document.getElementById('npk-base-unit').value || 'pcs';
+  const jumlahBase = jumlahKemasan * isiKemasan;
+  const harga_satuan = parseFloat(document.getElementById('npk-harga').value) || 0;
+  const harga_total = jumlahKemasan * harga_satuan;
+  const supplier = document.getElementById('npk-supplier').value.trim();
+  const keterangan = document.getElementById('npk-ket').value.trim();
+  const kandang = document.getElementById('npk-kandang').value;
+
+  if(!tanggal || !nama_item || jumlahKemasan <= 0 || isiKemasan <= 0) {
+    showToast('⚠️ Lengkapi semua field wajib!'); return;
+  }
+
+  showToast('⏳ Menyimpan...');
+  try {
+    const obj = {
+      id, tanggal, kategori, nama_item,
+      jumlah: jumlahBase, satuan: baseUnit,
+      jumlah_kemasan: jumlahKemasan, isi_per_kemasan: isiKemasan, jenis_kemasan: satuan,
+      harga_satuan, harga_total, supplier: supplier||null,
+      keterangan: keterangan||null, kandang: kandang||null,
+      user_input: currentUser?.username || ''
+    };
+    // Hapus lama, simpan baru (works for both Supabase & local)
+    await dbDeleteKirimanNonPakan(id, kategori);
+    await dbSaveKirimanNonPakan(obj);
+    await dbSaveLog('EDIT','kiriman_nonpakan',id,null,obj,`Edit kiriman ${kategori}: ${nama_item}`);
+    closeModal('modal-np-kiriman');
+    renderGudangNonPakan(kategori);
+    showToast('✅ Kiriman diperbarui!');
+    // Reset onclick ke default
+    const btnSave = document.querySelector('#modal-np-kiriman .btn-primary');
+    if(btnSave) btnSave.onclick = saveNpKiriman;
+  } catch(e) { showToast('❌ Gagal: ' + e.message); }
+}
+
+// ── Edit Pemakaian Non-Pakan ──
+async function editNpPakai(id, kategori) {
+  if(!can('BIAYA')) { showToast('⚠️ Tidak ada akses!'); return; }
+  const list = await dbGetPemakaianNonPakan({ kategori });
+  const item = list.find(p => p.id === id);
+  if(!item) { showToast('❌ Data tidak ditemukan!'); return; }
+
+  _currentGTab = kategori;
+  await openNpPakaiModal();
+
+  // Isi form
+  document.getElementById('npp-tgl').value = item.tanggal || '';
+  document.getElementById('npp-kandang').value = item.kandang || '';
+  const selNama = document.getElementById('npp-nama-select');
+  if(selNama) {
+    const opt = [...selNama.options].find(o => o.value === item.nama_item);
+    if(opt) { selNama.value = item.nama_item; }
+    else { selNama.value = '__lainnya__'; document.getElementById('npp-nama').style.display=''; document.getElementById('npp-nama').value = item.nama_item; }
+  }
+  document.getElementById('npp-jumlah').value = item.jumlah || '';
+  const selSatuan = document.getElementById('npp-satuan');
+  if(selSatuan && item.satuan) selSatuan.value = item.satuan;
+  document.getElementById('npp-ket').value = item.keterangan || '';
+
+  // Override save
+  const btnSave = document.querySelector('#modal-np-pakai .btn-primary');
+  if(btnSave) {
+    btnSave.onclick = async function() {
+      await _updateNpPakai(id, kategori);
+    };
+  }
+}
+
+async function _updateNpPakai(id, kategori) {
+  const tanggal = document.getElementById('npp-tgl').value;
+  const selNama = document.getElementById('npp-nama-select');
+  const nama_item = (selNama.value === '__lainnya__' || selNama.value === '')
+    ? document.getElementById('npp-nama').value.trim() : selNama.value;
+  const jumlah = parseFloat(document.getElementById('npp-jumlah').value) || 0;
+  const satuan = document.getElementById('npp-satuan').value;
+  const keterangan = document.getElementById('npp-ket').value.trim();
+  const kandang = document.getElementById('npp-kandang').value;
+
+  if(!tanggal || !nama_item || jumlah <= 0) {
+    showToast('⚠️ Lengkapi semua field wajib!'); return;
+  }
+
+  showToast('⏳ Menyimpan...');
+  try {
+    const obj = {
+      id, tanggal, kategori, nama_item, jumlah, satuan,
+      keterangan: keterangan||null, kandang: kandang||null,
+      user_input: currentUser?.username || ''
+    };
+    // Hapus lama, simpan baru
+    await dbDeletePemakaianNonPakan(id);
+    await dbSavePemakaianNonPakan(obj);
+    await dbSaveLog('EDIT','pemakaian_nonpakan',id,null,obj,`Edit pemakaian ${kategori}: ${nama_item}`);
+    closeModal('modal-np-pakai');
+    renderGudangNonPakan(kategori);
+    showToast('✅ Pemakaian diperbarui!');
+    // Reset onclick
+    const btnSave = document.querySelector('#modal-np-pakai .btn-primary');
+    if(btnSave) btnSave.onclick = saveNpPakai;
   } catch(e) { showToast('❌ Gagal: ' + e.message); }
 }
 

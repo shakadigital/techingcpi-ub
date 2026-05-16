@@ -93,6 +93,7 @@ async function populateAllPakanSelects(){
   });
 }
 function autoResetInputForm(){
+  _lastLoadedInputHash = ''; // Reset hash agar bisa load data baru
   // Reset input fields ke 0
   ['mati','afkir','air_liter',
    'p_normal_butir','p_normal_kilo','p_cream_butir','p_cream_kilo','p_retak_butir','p_retak_kilo'
@@ -167,24 +168,24 @@ function addKesRow(type, namaItem = '', jumlah = 1) {
   const row = document.createElement('div');
   row.className = 'kes-row';
 
-  // Build options
+  // Build options — simpan base_unit di data attribute
   const opts = items.length
-    ? items.map(m =>
-        `<option value="${esc(m.nama)}" data-supplier="${esc(m.supplier_id||'')}" data-satuan="${esc(m.satuan||'botol')}">${esc(m.nama)}</option>`
-      ).join('')
+    ? items.map(m => {
+        const bu = m.base_unit || (type==='vaksin'?'dosis': (m.satuan==='sachet'||m.satuan==='kaleng'?'gram':'ml'));
+        return `<option value="${esc(m.nama)}" data-supplier="${esc(m.supplier_id||'')}" data-baseunit="${esc(bu)}">${esc(m.nama)}</option>`;
+      }).join('')
     : `<option value="">-- Belum ada data di Master --</option>`;
 
-  // Cari satuan default dari item yang dipilih
-  const selectedItem = items.find(m => m.nama === namaItem);
-  const satuan = selectedItem?.satuan || (type === 'vaksin' ? 'dosis' : 'botol');
+  // Default base_unit
+  const defaultUnit = type==='vaksin'?'dosis':'gram';
 
   row.innerHTML = `
     <select class="kes-select" onchange="onKesItemChange(this,'${type}')">
       <option value="">-- Pilih ${type} --</option>
       ${opts}
     </select>
-    <input type="number" class="kes-jumlah" value="${jumlah}" min="0.1" step="0.1" placeholder="1"/>
-    <span class="kes-satuan">${esc(satuan)}</span>
+    <input type="number" class="kes-jumlah" value="${jumlah}" min="0.1" step="1" placeholder="1"/>
+    <span class="kes-satuan">${esc(defaultUnit)}</span>
     <span class="kes-supplier" title="Supplier">—</span>
     <button class="btn-del" onclick="this.closest('.kes-row').remove()" style="flex-shrink:0">✕</button>
   `;
@@ -213,8 +214,9 @@ async function onKesItemChange(sel, type) {
   // Cari dari cache master
   const item = (_kesMaster[type] || []).find(m => m.nama === nama);
   if(item) {
-    // Update satuan
-    if(item.satuan) satuanEl.textContent = item.satuan;
+    // Update satuan berdasarkan base_unit item
+    const bu = item.base_unit || (type==='vaksin'?'dosis': (item.satuan==='sachet'||item.satuan==='kaleng'?'gram':'ml'));
+    satuanEl.textContent = bu;
 
     // Cari nama supplier
     if(item.supplier_id) {
@@ -396,6 +398,8 @@ async function doSaveInput(data, dataLama){
 
 // ═══ AUTO-LOAD INPUT HARIAN ═══
 // Dipanggil saat buka halaman Input — load data hari ini jika sudah ada
+let _lastLoadedInputHash = '';
+
 async function autoLoadInputHarian(){
   const tgl  = document.getElementById('tanggal').value || new Date().toISOString().split('T')[0];
   const knd  = document.getElementById('kandang').value;
@@ -415,11 +419,19 @@ async function autoLoadInputHarian(){
     const existing = await dbGetInput({tanggal:tgl, kandang:knd});
     if(!existing || existing.length === 0){
       // Belum ada data — form kosong
+      if(_lastLoadedInputHash === tgl+'_'+knd+'_empty') return; // sudah kosong, skip
+      _lastLoadedInputHash = tgl+'_'+knd+'_empty';
       updatePeriodBar();
       return;
     }
 
     const d = existing[0].data;
+
+    // Skip reload jika data tidak berubah (cegah kedip)
+    const dataHash = tgl+'_'+knd+'_'+(existing[0].updated_at||existing[0].created_at||'');
+    if(_lastLoadedInputHash === dataHash) return;
+    _lastLoadedInputHash = dataHash;
+
     const prevUser = d?.user || existing[0].user_input || '—';
     const lastEditor = d?.last_editor || prevUser;
     const lastTime = d?.last_edit_time || existing[0].updated_at || existing[0].created_at || '';
