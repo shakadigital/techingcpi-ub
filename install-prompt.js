@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// INSTALL PROMPT - Teaching Farm UB V2.1
+// INSTALL PROMPT - Teaching Farm UB V2.9.0
 // ═══════════════════════════════════════════════════
 
 const APP_VERSION = '2.9.0'; // Naikkan ini setiap ada update besar
@@ -174,7 +174,7 @@ class InstallPrompt {
           </div>
           <div class="version-features">
             <div class="version-feature">📱 Shortcut home screen sekarang tampil sebagai "TF-UB"</div>
-            <div class="version-feature">🔄 Update versi aplikasi ke V2.1</div>
+            <div class="version-feature">🔄 Update versi aplikasi ke V2.9.0</div>
             <div class="version-feature">⚡ Peningkatan cache untuk performa lebih cepat</div>
           </div>
           <div class="version-tip">💡 Swipe kiri/kanan untuk navigasi cepat antar halaman!</div>

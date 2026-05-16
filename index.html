@@ -13,7 +13,7 @@
   <link rel="icon" type="image/svg+xml" href="icon/icon.svg"/>
   <link rel="icon" type="image/png" sizes="96x96" href="icon/icon-96.png"/>
   <link rel="shortcut icon" href="icon/favicon.ico"/>
-  <title>Teaching Farm UB</title>
+  <title>Teaching Farm UB V2.9.0 - Teaching Farm UB</title>
   <script>
     // ── GRACEFUL SERVICE WORKER REGISTRATION ──
     if ('serviceWorker' in navigator) {
@@ -124,7 +124,7 @@
       <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none" title="Kembali">‹</button>
       <span style="font-size:1.5rem">🐔</span>
       <div>
-        <h1>Teaching Farm UB <span style="font-size:0.6rem;background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">V2.8.2</span></h1>
+        <h1>Teaching Farm UB <span style="font-size:0.6rem;background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">V2.9.0</span></h1>
         <div class="sub" id="hdr-kandang">—</div>
       </div>
       <span id="offline-badge" class="offline-badge" style="display:none">OFFLINE</span>
@@ -274,7 +274,10 @@
         </div>
         <div class="ds-footer">
           <div class="df-note" id="ds-footer-note">—</div>
-          <button class="btn-capture" onclick="captureSummary()">📸 Capture</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn-capture" onclick="openFullscreenSummary()">🔲 Full</button>
+            <button class="btn-capture" onclick="captureSummary()">📸 Capture</button>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -368,6 +371,10 @@
             <div class="field"><label>HDP (%)</label><input type="text" id="hdp" readonly/></div>
             <div class="field"><label>Berat Rata-rata/butir (gram)</label><input type="text" id="berat_rata" readonly/></div>
           </div>
+          <!-- Harga Pasar Harian -->
+          <div id="harga-pasar-section" class="row" style="margin-top:12px;padding-top:12px;border-top:1px dashed #b7e4c7">
+            <div class="field" style="flex:1"><label>💰 Harga Pasar Hari Ini (Rp/kg)</label><input type="number" id="harga_pasar" min="0" step="100" placeholder="Mis. 24000"/></div>
+          </div>
         </div>
       </div>
       <!-- 6. Kesehatan -->
@@ -437,7 +444,10 @@
             <div class="sale-card sale-row">
               <button class="btn-del-card" onclick="removeSaleRow(this)">✕</button>
               <div class="sc-row">
-                <div class="sc-field" style="grid-column:1/-1"><label>Pelanggan</label><input type="text" placeholder="Nama pelanggan"/></div>
+                <div class="sc-field" style="grid-column:1/-1"><label>Pelanggan</label>
+                  <select class="pelanggan-select" onchange="onPelangganChange(this)"><option value="">-- Pilih Pelanggan --</option></select>
+                  <input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>
+                </div>
               </div>
               <div class="sc-row three">
                 <div class="sc-field"><label>Grade</label>
@@ -474,6 +484,26 @@
             <tbody id="riwayat-jual-tbody"></tbody></table>
           </div>
           <div id="riwayat-jual-empty" class="info-box" style="display:none">Belum ada riwayat penjualan.</div>
+        </div>
+      </div>
+
+      <!-- Section Pengambilan Inti (hanya tampil untuk kandang kemitraan) -->
+      <div id="section-pengambilan-inti" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="num">🤝</div><h2>Pengambilan Telur oleh Inti</h2></div>
+          <div class="card-body">
+            <div style="font-size:.78rem;color:#555;margin-bottom:12px;background:#f0fdf4;padding:8px 12px;border-radius:6px;border:1px solid #b7e4c7">
+              📋 Catat setiap kali inti mengambil telur. Bagi hasil dihitung otomatis berdasarkan rata-rata harian × selisih harga pasar - kontrak.
+            </div>
+            <button class="btn-add" onclick="openPengambilanIntiModal()">＋ Catat Pengambilan Inti</button>
+            <div style="overflow-x:auto;margin-top:12px">
+              <table class="tbl">
+                <thead><tr><th>Tgl Ambil</th><th>Periode</th><th>Total Kg</th><th>Rata-rata/hari</th><th>Total Bagi Hasil</th><th>Mitra</th><th>Inti</th><th></th></tr></thead>
+                <tbody id="pengambilan-inti-tbody"></tbody>
+              </table>
+            </div>
+            <div id="pengambilan-inti-empty" class="info-box" style="display:none">Belum ada data pengambilan.</div>
+          </div>
         </div>
       </div>
 
@@ -768,7 +798,7 @@
   <!-- ══ PAGE: MASTER DATA ══ -->
   <div class="page" id="page-master">
     <div class="page-inner">
-      <div class="info-box" style="margin-bottom:14px">🗃️ Data master digunakan sebagai referensi di seluruh aplikasi. Hanya Manager ke atas yang dapat mengelola data ini.</div>
+      <div class="info-box" style="margin-bottom:14px;display:none">🗃️ Data master digunakan sebagai referensi di seluruh aplikasi. Hanya Manager ke atas yang dapat mengelola data ini.</div>
 
       <!-- Sub-tab Master -->
       <div class="tab-bar" style="margin-bottom:12px">
@@ -1238,6 +1268,40 @@
   </div>
 </div>
 
+<!-- MODAL PENGAMBILAN INTI -->
+<div class="modal-overlay" id="modal-pengambilan-inti" style="display:none" onclick="if(event.target===this)closeModal('modal-pengambilan-inti')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><h3>🤝 Catat Pengambilan Inti</h3><button class="modal-close" onclick="closeModal('modal-pengambilan-inti')">×</button></div>
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:12px">
+        <label>Kandang</label>
+        <select id="pi-kandang" onchange="onPiKandangChange()"></select>
+      </div>
+      <div class="row" style="gap:10px;margin-bottom:12px">
+        <div class="field"><label>Tanggal Terakhir Ambil</label><input type="date" id="pi-tgl-terakhir" onchange="calcPiHari()"/></div>
+        <div class="field"><label>Tanggal Ambil Sekarang</label><input type="date" id="pi-tgl-ambil" onchange="calcPiHari()"/></div>
+      </div>
+      <div class="row" style="gap:10px;margin-bottom:12px">
+        <div class="field"><label>Jumlah Hari</label><input type="number" id="pi-jumlah-hari" readonly/></div>
+        <div class="field"><label>Total Kg Diambil</label><input type="number" id="pi-total-kg" min="0" step="0.01" placeholder="0" oninput="calcPiRataRata()"/></div>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Rata-rata Kg/Hari</label>
+        <input type="text" id="pi-rata-rata" readonly style="font-weight:700;color:#2d6a4f"/>
+      </div>
+      <div id="pi-detail-harian" style="max-height:250px;overflow-y:auto;margin-bottom:12px"></div>
+      <div id="pi-summary" style="background:#f0fdf4;border:1px solid #b7e4c7;border-radius:8px;padding:12px;display:none">
+        <div style="font-size:.78rem;font-weight:700;color:#2d6a4f;margin-bottom:8px">📊 Ringkasan Bagi Hasil</div>
+        <div id="pi-summary-content" style="font-size:.82rem"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-pengambilan-inti')">Batal</button>
+      <button class="btn-primary" onclick="savePengambilanInti()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL KANDANG -->
 <div class="modal-overlay" id="modal-kandang" style="display:none" onclick="if(event.target===this)closeModal('modal-kandang')">
   <div class="modal">
@@ -1254,6 +1318,22 @@
       </div>
       <div class="field" style="margin-bottom:12px"><label>Populasi Masuk (ekor)</label><input type="number" id="mk-populasi" min="0" placeholder="0"/></div>
       <div class="field" style="margin-bottom:12px"><label>Harga Pullet per Ekor (Rp)</label><input type="number" id="mk-harga-pullet" min="0" step="100" placeholder="0"/></div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Sistem Usaha</label>
+        <select id="mk-sistem" onchange="toggleKemitraanFields()">
+          <option value="mandiri">🏠 Mandiri</option>
+          <option value="kemitraan">🤝 Kemitraan</option>
+        </select>
+      </div>
+      <div id="mk-kemitraan-fields" style="display:none;background:rgba(45,106,79,.06);border:1px solid #b7e4c7;border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="font-size:.75rem;font-weight:700;color:#2d6a4f;margin-bottom:10px">📋 Detail Kemitraan</div>
+        <div class="field" style="margin-bottom:10px"><label>Nama Perusahaan Inti</label><input type="text" id="mk-nama-inti" placeholder="Mis. PT Japfa, Charoen Pokphand"/></div>
+        <div class="field" style="margin-bottom:10px"><label>Harga Kontrak (Rp/kg)</label><input type="number" id="mk-harga-kontrak" min="0" step="100" placeholder="Mis. 22000"/></div>
+        <div class="row" style="gap:10px">
+          <div class="field"><label>% Mitra</label><input type="number" id="mk-persen-mitra" min="0" max="100" value="30"/></div>
+          <div class="field"><label>% Inti</label><input type="number" id="mk-persen-inti" min="0" max="100" value="70"/></div>
+        </div>
+      </div>
       <div class="field"><label>Status</label><select id="mk-status"><option value="Aktif">Aktif</option><option value="Selesai">Selesai</option></select></div>
     </div>
     <div class="modal-footer"><button class="btn-secondary" onclick="closeModal('modal-kandang')">Batal</button><button class="btn-primary" onclick="saveKandang()">💾 Simpan</button></div>
@@ -1665,6 +1745,20 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- FULLSCREEN DAILY SUMMARY OVERLAY -->
+<div class="fs-overlay" id="fs-summary-overlay">
+  <div class="fs-container">
+    <div class="fs-topbar">
+      <button class="fs-close-btn" onclick="closeFullscreenSummary()">✕ Tutup</button>
+      <button class="btn-capture" onclick="captureSummaryFullscreen()">📸 Capture</button>
+    </div>
+    <div class="fs-content" id="fs-summary-content">
+      <!-- Konten daily summary akan di-clone ke sini -->
+    </div>
+  </div>
+</div>
+
 <script src="auth.js"></script>
 <script src="input_harian.js"></script>
 <script src="app.js"></script>

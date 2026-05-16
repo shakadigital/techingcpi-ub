@@ -122,7 +122,7 @@ function switchPage(name, _fromBack=false){
   if(name==='user')renderUserTable();
   if(name==='master')renderMaster();
   if(name==='gudang') { _currentGTab='pakan'; switchGTab('pakan'); }
-  if(name==='penjualan'){renderStokTelur();renderRiwayatJual();}
+  if(name==='penjualan'){populateAllPelangganSelects();renderStokTelur();renderRiwayatJual();showPengambilanIntiSection();}
   if(name==='biaya'){initBiayaPage();}
   if(name==='riwayat')renderRiwayat();
   if(name==='laporan'){populateLaporanKandang();renderLaporan();initHargaPasarUI();}
@@ -139,6 +139,7 @@ async function initApp(){
   if(!document.getElementById('jual-tanggal').value)document.getElementById('jual-tanggal').value=new Date().toISOString().split('T')[0];
   await populateKandangSelects();
   await populateAllPakanSelects();
+  await populateAllPelangganSelects();
   await loadKesMaster(); // Load master vitamin/obat/vaksin untuk dropdown
   updatePeriodBar();
   calcSisa();calcSaleTotal();
@@ -158,12 +159,64 @@ async function populateKandangSelects(){
   });
 }
 
+// ═══ PELANGGAN DROPDOWN (Flexible: master + ketik manual) ═══
+async function populatePelangganSelect(sel){
+  if(!sel) return;
+  const pelanggan = await dbGetPelanggan();
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">-- Pilih Pelanggan --</option>';
+  pelanggan.filter(p => p.active !== false).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.nama;
+    o.textContent = p.nama + (p.tipe ? ` (${p.tipe})` : '');
+    sel.appendChild(o);
+  });
+  // Opsi ketik manual
+  const oManual = document.createElement('option');
+  oManual.value = '__manual__';
+  oManual.textContent = '✏️ Ketik nama lain...';
+  sel.appendChild(oManual);
+  if(prev) sel.value = prev;
+}
+
+function onPelangganChange(sel){
+  const card = sel.closest('.sale-row') || sel.closest('.sale-card');
+  const txt = card.querySelector('.pelanggan-text');
+  if(sel.value === '__manual__'){
+    txt.style.display = 'block';
+    txt.value = '';
+    txt.focus();
+  } else {
+    txt.style.display = 'none';
+    txt.value = '';
+  }
+}
+
+function getSalePelanggan(card){
+  const sel = card.querySelector('.pelanggan-select');
+  const txt = card.querySelector('.pelanggan-text');
+  if(!sel) return txt ? txt.value.trim() : '';
+  if(sel.value === '__manual__') return txt ? txt.value.trim() : '';
+  if(sel.value) return sel.value;
+  return txt ? txt.value.trim() : '';
+}
+
+async function populateAllPelangganSelects(){
+  const selects = document.querySelectorAll('.pelanggan-select');
+  for(const sel of selects){
+    await populatePelangganSelect(sel);
+  }
+}
+
 function addSaleRow(){
   const card=document.createElement('div');
   card.className='sale-card sale-row';
   card.innerHTML=
     '<button class="btn-del-card" onclick="removeSaleRow(this)">✕</button>'+
-    '<div class="sc-row"><div class="sc-field" style="grid-column:1/-1"><label>Pelanggan</label><input type="text" placeholder="Nama pelanggan"/></div></div>'+
+    '<div class="sc-row"><div class="sc-field" style="grid-column:1/-1"><label>Pelanggan</label>'+
+      '<select class="pelanggan-select" onchange="onPelangganChange(this)"><option value="">-- Pilih Pelanggan --</option></select>'+
+      '<input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>'+
+    '</div></div>'+
     '<div class="sc-row three">'+
       '<div class="sc-field"><label>Grade</label><select><option value="">-- Grade --</option><option>Normal</option><option>Cream</option><option>Retak</option></select></div>'+
       '<div class="sc-field"><label>Butir</label><input type="number" min="0" placeholder="0" oninput="calcTotal(this)"/></div>'+
@@ -172,6 +225,7 @@ function addSaleRow(){
     '<div class="sc-row"><div class="sc-field"><label>Harga/kg (Rp)</label><input type="number" min="0" step="100" placeholder="0" oninput="calcTotal(this)"/></div></div>'+
     '<div class="sc-total"><span>Total</span><strong class="total-col">Rp 0</strong></div>';
   document.getElementById('sale-tbody').appendChild(card);
+  populatePelangganSelect(card.querySelector('.pelanggan-select'));
 }
 function removeSaleRow(btn){
   if(document.querySelectorAll('.sale-row').length<=1)return;
@@ -241,14 +295,14 @@ async function savePenjualan(){
   const tgl=document.getElementById('jual-tanggal').value;
   if(!tgl){showToast('⚠️ Pilih tanggal!');return;}
   const rows=[...document.querySelectorAll('.sale-row')].map(r=>{
-    const inp=r.querySelectorAll('input[type="text"],input[type="number"]');
-    const sel=r.querySelector('select');
+    const nums=r.querySelectorAll('input[type="number"]');
+    const gradeSel=r.querySelector('.sc-row.three select');
     return{
-      pelanggan:inp[0]?.value.trim()||'',
-      grade:sel?.value||'',
-      butir:parseFloat(inp[1]?.value)||0,
-      kilo:parseFloat(inp[2]?.value)||0,
-      harga:parseFloat(inp[3]?.value)||0,
+      pelanggan:getSalePelanggan(r),
+      grade:gradeSel?.value||'',
+      butir:parseFloat(nums[0]?.value)||0,
+      kilo:parseFloat(nums[1]?.value)||0,
+      harga:parseFloat(nums[2]?.value)||0,
       total:r.querySelector('.total-col')?.textContent||'Rp 0'
     };
   }).filter(r=>r.pelanggan||r.kilo||r.butir);
@@ -291,7 +345,12 @@ function resetPenjualan(){
   const first=sb.querySelector('.sale-row');
   if(first){
     first.querySelectorAll('input').forEach(i=>i.value='');
-    first.querySelectorAll('select').forEach(s=>s.value='');
+    const pelSel=first.querySelector('.pelanggan-select');
+    if(pelSel) pelSel.value='';
+    const pelTxt=first.querySelector('.pelanggan-text');
+    if(pelTxt){pelTxt.value='';pelTxt.style.display='none';}
+    const gradeSel=first.querySelector('.sc-row.three select');
+    if(gradeSel) gradeSel.value='';
     const tc=first.querySelector('.total-col');
     if(tc)tc.textContent='Rp 0';
   }
@@ -1209,6 +1268,285 @@ async function captureSummary(){
   }
 }
 
+// ═══ FULLSCREEN DAILY SUMMARY ═══
+function openFullscreenSummary(){
+  const overlay=document.getElementById('fs-summary-overlay');
+  const container=document.getElementById('fs-summary-content');
+  const source=document.getElementById('daily-summary');
+  if(!overlay||!container||!source)return;
+  // Clone daily summary ke fullscreen
+  container.innerHTML='';
+  const clone=source.cloneNode(true);
+  clone.id='fs-daily-summary';
+  // Hapus tombol fullscreen dari clone
+  const fullBtns=clone.querySelectorAll('.btn-capture');
+  fullBtns.forEach(b=>b.style.display='none');
+  container.appendChild(clone);
+  overlay.classList.add('show');
+  document.body.style.overflow='hidden';
+}
+
+function closeFullscreenSummary(){
+  const overlay=document.getElementById('fs-summary-overlay');
+  if(overlay)overlay.classList.remove('show');
+  document.body.style.overflow='';
+}
+
+// Escape key untuk tutup fullscreen summary
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    const overlay=document.getElementById('fs-summary-overlay');
+    if(overlay&&overlay.classList.contains('show')){
+      closeFullscreenSummary();
+    }
+  }
+});
+
+async function captureSummaryFullscreen(){
+  if(typeof html2canvas==='undefined'){
+    showToast('⏳ Memuat library capture...');
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      s.onload=res;s.onerror=rej;
+      document.head.appendChild(s);
+    });
+  }
+  showToast('📸 Mengambil screenshot...');
+  const el=document.getElementById('fs-daily-summary');
+  if(!el){showToast('❌ Tidak ada data summary');return;}
+  try{
+    const canvas=await html2canvas(el,{
+      backgroundColor:document.body.classList.contains('dark')?'#1e293b':'#ffffff',
+      scale:2,useCORS:true,logging:false
+    });
+    const a=document.createElement('a');
+    a.download='performa_harian_'+new Date().toISOString().split('T')[0]+'.png';
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+    showToast('✅ Screenshot tersimpan!');
+  }catch(e){
+    showToast('❌ Gagal capture: '+e.message);
+  }
+}
+
+// ═══ PENGAMBILAN INTI (KEMITRAAN) ═══
+
+function showPengambilanIntiSection(){
+  // Tampilkan section pengambilan inti jika ada kandang kemitraan
+  const list=cache.get('kandang_list')||[];
+  const hasKemitraan=list.some(k=>k.sistem==='kemitraan'&&k.status==='Aktif');
+  const section=document.getElementById('section-pengambilan-inti');
+  if(section) section.style.display=hasKemitraan?'block':'none';
+  if(hasKemitraan) renderPengambilanIntiTable();
+}
+
+async function renderPengambilanIntiTable(){
+  const rows=await dbGetPengambilanInti({});
+  const tbody=document.getElementById('pengambilan-inti-tbody');
+  const empty=document.getElementById('pengambilan-inti-empty');
+  if(!tbody)return;
+  tbody.innerHTML='';
+  if(!rows.length){if(empty)empty.style.display='block';return;}
+  if(empty)empty.style.display='none';
+  rows.slice(0,30).forEach(r=>{
+    const tr=document.createElement('tr');
+    const totalBH=(r.detail_harian||[]).reduce((s,d)=>s+(d.bagi_hasil||0),0);
+    const totalMitra=(r.detail_harian||[]).reduce((s,d)=>s+(d.mitra_30||0),0);
+    const totalInti=(r.detail_harian||[]).reduce((s,d)=>s+(d.inti_70||0),0);
+    tr.innerHTML=`<td>${fmtTgl(r.tanggal_ambil)}</td><td style="font-size:.75rem">${fmtTgl(r.tanggal_terakhir)} — ${fmtTgl(r.tanggal_ambil)}</td><td>${r.total_kg} kg</td><td>${(r.total_kg/r.jumlah_hari).toFixed(1)} kg</td><td style="font-weight:700">Rp ${totalBH.toLocaleString('id-ID')}</td><td style="color:#2d6a4f">Rp ${totalMitra.toLocaleString('id-ID')}</td><td style="color:#b45309">Rp ${totalInti.toLocaleString('id-ID')}</td><td><button class="btn-del" onclick="deletePengambilanInti('${r.id}')">🗑</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function openPengambilanIntiModal(){
+  const list=cache.get('kandang_list')||[];
+  const kemitraanList=list.filter(k=>k.sistem==='kemitraan'&&k.status==='Aktif');
+  if(!kemitraanList.length){showToast('⚠️ Tidak ada kandang kemitraan aktif!');return;}
+
+  const sel=document.getElementById('pi-kandang');
+  sel.innerHTML='';
+  kemitraanList.forEach(k=>{
+    const o=document.createElement('option');
+    o.value=k.nama;o.textContent=k.nama+' ('+k.nama_inti+')';
+    o.dataset.kontrak=k.harga_kontrak||0;
+    o.dataset.mitra=k.persen_mitra||30;
+    o.dataset.inti=k.persen_inti||70;
+    sel.appendChild(o);
+  });
+
+  document.getElementById('pi-tgl-ambil').value=new Date().toISOString().split('T')[0];
+  document.getElementById('pi-tgl-terakhir').value='';
+  document.getElementById('pi-jumlah-hari').value='';
+  document.getElementById('pi-total-kg').value='';
+  document.getElementById('pi-rata-rata').value='';
+  document.getElementById('pi-detail-harian').innerHTML='';
+  document.getElementById('pi-summary').style.display='none';
+
+  // Auto-detect tanggal terakhir ambil
+  await autoDetectLastPickup();
+
+  document.getElementById('modal-pengambilan-inti').style.display='flex';
+}
+
+async function autoDetectLastPickup(){
+  const kandang=document.getElementById('pi-kandang').value;
+  const existing=await dbGetPengambilanInti({kandang});
+  if(existing.length>0){
+    document.getElementById('pi-tgl-terakhir').value=existing[0].tanggal_ambil;
+    calcPiHari();
+  }
+}
+
+function onPiKandangChange(){
+  autoDetectLastPickup();
+  document.getElementById('pi-detail-harian').innerHTML='';
+  document.getElementById('pi-summary').style.display='none';
+}
+
+function calcPiHari(){
+  const tglTerakhir=document.getElementById('pi-tgl-terakhir').value;
+  const tglAmbil=document.getElementById('pi-tgl-ambil').value;
+  if(!tglTerakhir||!tglAmbil)return;
+  const d1=new Date(tglTerakhir);d1.setHours(0,0,0,0);
+  const d2=new Date(tglAmbil);d2.setHours(0,0,0,0);
+  const hari=Math.round((d2-d1)/86400000);
+  if(hari<=0){showToast('⚠️ Tanggal ambil harus setelah tanggal terakhir!');return;}
+  document.getElementById('pi-jumlah-hari').value=hari;
+  calcPiRataRata();
+}
+
+async function calcPiRataRata(){
+  const hari=parseInt(document.getElementById('pi-jumlah-hari').value)||0;
+  const totalKg=parseFloat(document.getElementById('pi-total-kg').value)||0;
+  if(!hari||!totalKg){
+    document.getElementById('pi-rata-rata').value='';
+    document.getElementById('pi-detail-harian').innerHTML='';
+    document.getElementById('pi-summary').style.display='none';
+    return;
+  }
+  const rataRata=totalKg/hari;
+  document.getElementById('pi-rata-rata').value=rataRata.toFixed(2)+' kg/hari';
+
+  // Ambil harga pasar per hari dari input_harian
+  const tglTerakhir=document.getElementById('pi-tgl-terakhir').value;
+  const kandang=document.getElementById('pi-kandang').value;
+  const sel=document.getElementById('pi-kandang');
+  const opt=sel.options[sel.selectedIndex];
+  const hargaKontrak=parseFloat(opt?.dataset.kontrak)||0;
+  const pctMitra=parseFloat(opt?.dataset.mitra)||30;
+  const pctInti=parseFloat(opt?.dataset.inti)||70;
+
+  const allInputs=await dbGetInput({kandang});
+  const detailEl=document.getElementById('pi-detail-harian');
+  let html='<table class="tbl" style="font-size:.78rem"><thead><tr><th>Tanggal</th><th>Rata-rata</th><th>H.Pasar</th><th>Kontrak</th><th>Selisih</th><th>Bagi Hasil</th><th>Mitra '+pctMitra+'%</th><th>Inti '+pctInti+'%</th></tr></thead><tbody>';
+
+  let totalBH=0,totalMitra=0,totalInti=0;
+  const d1=new Date(tglTerakhir);d1.setHours(0,0,0,0);
+
+  for(let i=1;i<=hari;i++){
+    const dt=new Date(d1.getTime()+i*86400000);
+    const tglStr=dt.toISOString().split('T')[0];
+    // Cari harga pasar dari input_harian
+    const inputHari=allInputs.find(r=>r.data?.tanggal===tglStr&&r.data?.kandang===kandang);
+    const hargaPasar=inputHari?.data?.harga_pasar||0;
+    const selisih=Math.max(0,hargaPasar-hargaKontrak);
+    const bagiHasil=rataRata*selisih;
+    const mitra=bagiHasil*(pctMitra/100);
+    const inti=bagiHasil*(pctInti/100);
+    totalBH+=bagiHasil;totalMitra+=mitra;totalInti+=inti;
+
+    const cls=hargaPasar?'':'style="color:#dc2626"';
+    html+=`<tr><td>${tglStr.slice(5)}</td><td>${rataRata.toFixed(1)}</td><td ${cls}>${hargaPasar?'Rp '+hargaPasar.toLocaleString('id-ID'):'⚠️ Belum diisi'}</td><td>Rp ${hargaKontrak.toLocaleString('id-ID')}</td><td>Rp ${selisih.toLocaleString('id-ID')}</td><td>Rp ${Math.round(bagiHasil).toLocaleString('id-ID')}</td><td>Rp ${Math.round(mitra).toLocaleString('id-ID')}</td><td>Rp ${Math.round(inti).toLocaleString('id-ID')}</td></tr>`;
+  }
+  html+='</tbody></table>';
+  detailEl.innerHTML=html;
+
+  // Summary
+  const summaryEl=document.getElementById('pi-summary');
+  summaryEl.style.display='block';
+  document.getElementById('pi-summary-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div><strong>Total Bagi Hasil:</strong></div><div style="text-align:right;font-weight:700">Rp ${Math.round(totalBH).toLocaleString('id-ID')}</div>
+      <div>Mitra (${pctMitra}%):</div><div style="text-align:right;color:#2d6a4f;font-weight:700">Rp ${Math.round(totalMitra).toLocaleString('id-ID')}</div>
+      <div>Inti (${pctInti}%):</div><div style="text-align:right;color:#b45309;font-weight:700">Rp ${Math.round(totalInti).toLocaleString('id-ID')}</div>
+    </div>`;
+}
+
+async function savePengambilanInti(){
+  const kandang=document.getElementById('pi-kandang').value;
+  const tglTerakhir=document.getElementById('pi-tgl-terakhir').value;
+  const tglAmbil=document.getElementById('pi-tgl-ambil').value;
+  const hari=parseInt(document.getElementById('pi-jumlah-hari').value)||0;
+  const totalKg=parseFloat(document.getElementById('pi-total-kg').value)||0;
+
+  if(!kandang||!tglTerakhir||!tglAmbil){showToast('⚠️ Lengkapi semua field!');return;}
+  if(hari<=0){showToast('⚠️ Jumlah hari tidak valid!');return;}
+  if(totalKg<=0){showToast('⚠️ Total kg harus lebih dari 0!');return;}
+
+  const sel=document.getElementById('pi-kandang');
+  const opt=sel.options[sel.selectedIndex];
+  const hargaKontrak=parseFloat(opt?.dataset.kontrak)||0;
+  const pctMitra=parseFloat(opt?.dataset.mitra)||30;
+  const pctInti=parseFloat(opt?.dataset.inti)||70;
+  const rataRata=totalKg/hari;
+
+  // Build detail harian
+  const allInputs=await dbGetInput({kandang});
+  const d1=new Date(tglTerakhir);d1.setHours(0,0,0,0);
+  const detail=[];
+
+  for(let i=1;i<=hari;i++){
+    const dt=new Date(d1.getTime()+i*86400000);
+    const tglStr=dt.toISOString().split('T')[0];
+    const inputHari=allInputs.find(r=>r.data?.tanggal===tglStr&&r.data?.kandang===kandang);
+    const hargaPasar=inputHari?.data?.harga_pasar||0;
+    const selisih=Math.max(0,hargaPasar-hargaKontrak);
+    const bagiHasil=rataRata*selisih;
+    detail.push({
+      tanggal:tglStr,
+      rata_kg:rataRata,
+      harga_pasar:hargaPasar,
+      harga_kontrak:hargaKontrak,
+      selisih,
+      bagi_hasil:Math.round(bagiHasil),
+      mitra_30:Math.round(bagiHasil*(pctMitra/100)),
+      inti_70:Math.round(bagiHasil*(pctInti/100))
+    });
+  }
+
+  const obj={
+    tanggal_ambil:tglAmbil,
+    tanggal_terakhir:tglTerakhir,
+    jumlah_hari:hari,
+    total_kg:totalKg,
+    kandang,
+    nama_inti:opt?.textContent||'',
+    harga_kontrak:hargaKontrak,
+    persen_mitra:pctMitra,
+    persen_inti:pctInti,
+    detail_harian:detail
+  };
+
+  try{
+    await dbSavePengambilanInti(obj);
+    await dbSaveLog('TAMBAH','pengambilan_inti',obj.id,null,obj,
+      `Pengambilan inti ${kandang} tgl ${tglAmbil}: ${totalKg}kg`);
+    closeModal('modal-pengambilan-inti');
+    renderPengambilanIntiTable();
+    showToast('✅ Pengambilan inti disimpan!');
+  }catch(e){showToast('❌ Gagal: '+e.message);}
+}
+
+async function deletePengambilanInti(id){
+  if(!confirm('Hapus data pengambilan ini?'))return;
+  try{
+    await dbDeletePengambilanInti(id);
+    renderPengambilanIntiTable();
+    showToast('🗑 Data dihapus.');
+  }catch(e){showToast('❌ Gagal: '+e.message);}
+}
+
 // ═══ SETTINGS — KANDANG ═══
 function renderSettings(){
   const isSuperadmin = currentUser?.role === 'superadmin';
@@ -1250,7 +1588,7 @@ async function renderKandangTable(){
     const days=cin?Math.floor((new Date()-cin)/86400000):0;
     const periode=k.chickin?(k.status==='Aktif'?'Hari ke-'+(days+1)+' (berjalan)':days+' hari'):'—';
     const tr=document.createElement('tr');
-    tr.innerHTML='<td><strong>'+esc(k.nama)+'</strong></td><td>'+(k.kapasitas||'—')+' ekor</td><td>'+fmtTgl(k.chickin)+'</td><td>'+(k.umur_masuk?k.umur_masuk+' hari':'—')+'</td><td>'+(k.populasi||'—')+' ekor</td><td style="font-size:.8rem">'+periode+'</td><td>'+(k.status==='Aktif'?'<span class="badge badge-green">Aktif</span>':'<span class="badge badge-gray">Selesai</span>')+'</td><td style="white-space:nowrap">'+
+    tr.innerHTML='<td><strong>'+esc(k.nama)+'</strong>'+(k.sistem==='kemitraan'?'<br><span style="font-size:.65rem;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px">🤝 '+esc(k.nama_inti||'Kemitraan')+'</span>':'')+'</td><td>'+(k.kapasitas||'—')+' ekor</td><td>'+fmtTgl(k.chickin)+'</td><td>'+(k.umur_masuk?k.umur_masuk+' hari':'—')+'</td><td>'+(k.populasi||'—')+' ekor</td><td style="font-size:.8rem">'+periode+'</td><td>'+(k.status==='Aktif'?'<span class="badge badge-green">Aktif</span>':'<span class="badge badge-gray">Selesai</span>')+'</td><td style="white-space:nowrap">'+
       '<button class="btn-edit" onclick="openKandangModal(\''+k.id+'\')">✏️</button>'+
       (can('KEUANGAN')
         ?'<button class="btn-del" onclick="deleteKandang(\''+k.id+'\')" title="Hapus Kandang">🗑</button>'
@@ -1272,9 +1610,20 @@ function openKandangModal(id){
   document.getElementById('mk-umur').value=k?(k.umur_masuk||0):0;
   document.getElementById('mk-populasi').value=k?k.populasi:'';
   document.getElementById('mk-harga-pullet').value=k?(k.harga_pullet||0):0;
+  document.getElementById('mk-sistem').value=k?(k.sistem||'mandiri'):'mandiri';
+  document.getElementById('mk-nama-inti').value=k?(k.nama_inti||''):'';
+  document.getElementById('mk-harga-kontrak').value=k?(k.harga_kontrak||''):'';
+  document.getElementById('mk-persen-mitra').value=k?(k.persen_mitra||30):30;
+  document.getElementById('mk-persen-inti').value=k?(k.persen_inti||70):70;
   document.getElementById('mk-status').value=k?k.status:'Aktif';
+  toggleKemitraanFields();
   document.getElementById('modal-kandang').style.display='flex';
   calcUmurKandang();
+}
+
+function toggleKemitraanFields(){
+  const sistem=document.getElementById('mk-sistem').value;
+  document.getElementById('mk-kemitraan-fields').style.display=sistem==='kemitraan'?'block':'none';
 }
 
 function calcUmurKandang(){
@@ -1296,6 +1645,7 @@ async function saveKandang(){
   const kapasitas=parseInt(document.getElementById('mk-kapasitas').value)||0;
   const populasi=parseInt(document.getElementById('mk-populasi').value)||0;
   const chickin=document.getElementById('mk-chickin').value||null;
+  const sistem=document.getElementById('mk-sistem').value||'mandiri';
 
   if(!nama){showToast('⚠️ Nama kandang wajib diisi!');return;}
   if(kapasitas<=0){showToast('⚠️ Kapasitas harus lebih dari 0!');return;}
@@ -1306,6 +1656,14 @@ async function saveKandang(){
     if(chickin>today){showToast('⚠️ Tanggal Periode tidak boleh di masa depan!');return;}
   }
 
+  // Validasi kemitraan
+  if(sistem==='kemitraan'){
+    const namaInti=document.getElementById('mk-nama-inti').value.trim();
+    const hargaKontrak=parseFloat(document.getElementById('mk-harga-kontrak').value)||0;
+    if(!namaInti){showToast('⚠️ Nama perusahaan inti wajib diisi!');return;}
+    if(hargaKontrak<=0){showToast('⚠️ Harga kontrak wajib diisi!');return;}
+  }
+
   const id=document.getElementById('mk-id').value;
   const obj={
     nama,
@@ -1314,6 +1672,11 @@ async function saveKandang(){
     umur_masuk:parseInt(document.getElementById('mk-umur').value)||null,
     populasi,
     harga_pullet:parseFloat(document.getElementById('mk-harga-pullet').value)||null,
+    sistem,
+    nama_inti:sistem==='kemitraan'?document.getElementById('mk-nama-inti').value.trim():'',
+    harga_kontrak:sistem==='kemitraan'?parseFloat(document.getElementById('mk-harga-kontrak').value)||0:0,
+    persen_mitra:sistem==='kemitraan'?parseFloat(document.getElementById('mk-persen-mitra').value)||30:0,
+    persen_inti:sistem==='kemitraan'?parseFloat(document.getElementById('mk-persen-inti').value)||70:0,
     status:document.getElementById('mk-status').value
   };
   if(id)obj.id=id;
@@ -1984,6 +2347,7 @@ function _loadEditToForm(d,id){
     document.getElementById('p_retak_butir').value=d.produksi?d.produksi.retak.butir:0;
     document.getElementById('p_retak_kilo').value=d.produksi?d.produksi.retak.kilo:0;
     document.getElementById('catatan').value=d.catatan||'';
+    document.getElementById('harga_pasar').value=d.harga_pasar||'';
 
     // Load pakan rows
     const pakanList=document.getElementById('pakan-list');

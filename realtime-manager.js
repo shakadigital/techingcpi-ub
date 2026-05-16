@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// REAL-TIME MANAGER - Teaching Farm UB V2.1
+// REAL-TIME MANAGER - Teaching Farm UB V2.9.0
 // ═══════════════════════════════════════════════════
 // Fixed: Removed dependency on window.supabase (not used in this app)
 // Uses smart polling with actual server timestamp checks

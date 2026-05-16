@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 const LOCAL_DB_NAME = 'teaching_farm_ub';
-const LOCAL_DB_VERSION = 3;
+const LOCAL_DB_VERSION = 4;
 
 function _idbOpen() {
   return new Promise((resolve, reject) => {
@@ -48,6 +48,9 @@ function _idbOpen() {
       // v3: products & units (sistem konversi satuan)
       ensureStore('products', { keyPath: 'id' });
       ensureStore('units',    { keyPath: 'id' });
+
+      // v4: pengambilan telur oleh inti (kemitraan)
+      ensureStore('pengambilan_inti', { keyPath: 'id' });
     };
 
     req.onsuccess = () => resolve(req.result);
@@ -823,3 +826,30 @@ async function _seedUnitsAndProducts() {
 
 // Jalankan seed units saat script dimuat
 _seedUnitsAndProducts().catch(e => console.warn('[db_local] Seed units error:', e));
+
+
+// ── PENGAMBILAN INTI (Kemitraan) ───────────────────
+// Record: { id, tanggal_ambil, tanggal_terakhir, jumlah_hari, total_kg, kandang, nama_inti, detail_harian[], created_at }
+// detail_harian: [{ tanggal, rata_kg, harga_pasar, harga_kontrak, selisih, bagi_hasil, mitra_30, inti_70 }]
+
+async function dbGetPengambilanInti(filters = {}) {
+  try {
+    let rows = await _getAll('pengambilan_inti');
+    if (filters.kandang) rows = rows.filter(r => r.kandang === filters.kandang);
+    rows.sort((a, b) => (b.tanggal_ambil || '').localeCompare(a.tanggal_ambil || ''));
+    return rows;
+  } catch { return []; }
+}
+
+async function dbSavePengambilanInti(obj) {
+  if (!obj.id) {
+    obj.id = crypto.randomUUID();
+    obj.created_at = new Date().toISOString();
+  }
+  obj.updated_at = new Date().toISOString();
+  await _put('pengambilan_inti', obj);
+}
+
+async function dbDeletePengambilanInti(id) {
+  await _del('pengambilan_inti', id);
+}

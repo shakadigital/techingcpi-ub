@@ -104,6 +104,9 @@ function autoResetInputForm(){
   document.getElementById('pct_deplesi').value='';
   // Reset catatan
   document.getElementById('catatan').value='';
+  // Reset harga pasar
+  const hpEl=document.getElementById('harga_pasar');
+  if(hpEl) hpEl.value='';
   // Reset tags kesehatan → reset rows baru
   resetKesRows();
   // Sembunyikan status bar
@@ -294,6 +297,7 @@ function collectInputData(){
       total:{butir:document.getElementById('p_total_butir').value,kilo:document.getElementById('p_total_kilo').value},
       hdp:document.getElementById('hdp').value,berat_rata:document.getElementById('berat_rata').value
     },
+    harga_pasar:parseFloat(document.getElementById('harga_pasar').value)||0,
     kesehatan: collectKesehatan(),
     catatan:document.getElementById('catatan').value
   };
@@ -363,6 +367,7 @@ async function doSaveInput(data, dataLama){
         pakan:      hasArr(data.pakan)       ? data.pakan      : dataLama.pakan,
         air_liter:  hasVal(data.air_liter)   ? data.air_liter  : dataLama.air_liter,
         produksi:   prodDiisi                ? data.produksi   : dataLama.produksi,
+        harga_pasar:hasVal(data.harga_pasar) ? data.harga_pasar: (dataLama.harga_pasar||0),
         kesehatan:  kesDiisi                 ? data.kesehatan  : dataLama.kesehatan,
         catatan:    data.catatan?.trim()     ? data.catatan    : (dataLama.catatan||''),
       };

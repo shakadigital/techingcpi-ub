@@ -1,8 +1,32 @@
 // ═══════════════════════════════════════════════════
-//  SUPABASE CONFIG
+//  SUPABASE CONFIG - Teaching Farm UB V2.9.0
 // ═══════════════════════════════════════════════════
 const SUPA_URL = 'https://rzzqbxusiipltswdfnbq.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6enFieHVzaWlwbHRzd2RmbmJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MDM4NDEsImV4cCI6MjA4NzQ3OTg0MX0.IPKo1CwZARk1bfaOeSK50BW8lC11pyVo9jJyjiY8LGg';
+
+// ═══════════════════════════════════════════════════
+//  TABLE NAMES (dengan akhiran _tf_ub)
+// ═══════════════════════════════════════════════════
+const TB = {
+  users:              'users_tf_ub',
+  kandang:            'kandang_tf_ub',
+  input_harian:       'input_harian_tf_ub',
+  penjualan:          'penjualan_tf_ub',
+  daftar_pakan:       'daftar_pakan_tf_ub',
+  kiriman_pakan:      'kiriman_pakan_tf_ub',
+  kas_operasional:    'kas_operasional_tf_ub',
+  pembayaran:         'pembayaran_tf_ub',
+  activity_log:       'activity_log_tf_ub',
+  master_supplier:    'master_supplier_tf_ub',
+  master_vitamin:     'master_vitamin_tf_ub',
+  master_obat:        'master_obat_tf_ub',
+  master_vaksin:      'master_vaksin_tf_ub',
+  master_pelanggan:   'master_pelanggan_tf_ub',
+  kiriman_nonpakan:   'kiriman_nonpakan_tf_ub',
+  pemakaian_nonpakan: 'pemakaian_nonpakan_tf_ub',
+  app_config:         'app_config_tf_ub',
+  pengambilan_inti:   'pengambilan_inti_tf_ub',
+};
 
 // ═══════════════════════════════════════════════════
 //  HTTP HELPER
@@ -55,7 +79,7 @@ const cache = {
 // ── USERS ──────────────────────────────────────────
 async function dbGetUsers() {
   try {
-    const rows = await SB.select('users', '?select=*&order=created_at.asc');
+    const rows = await SB.select(TB.users, '?select=*&order=created_at.asc');
     cache.set('users', rows);
     return rows;
   } catch { return cache.get('users') || []; }
@@ -63,24 +87,22 @@ async function dbGetUsers() {
 
 async function dbSaveUser(obj) {
   if (obj.id) {
-    await SB.update('users', obj, `?id=eq.${obj.id}`);
+    await SB.update(TB.users, obj, `?id=eq.${obj.id}`);
   } else {
     obj.id = crypto.randomUUID();
-    await SB.insert('users', obj);
+    await SB.insert(TB.users, obj);
   }
   cache.del('users');
 }
 
 async function dbDeleteUser(id) {
-  await SB.delete('users', `?id=eq.${id}`);
+  await SB.delete(TB.users, `?id=eq.${id}`);
   cache.del('users');
 }
 
 async function dbFindUser(username, password) {
   try {
-    // Fetch by username only, then filter active + password in JS
-    // (avoids issues with boolean vs text 'active' column type)
-    const rows = await SB.select('users', `?select=*&username=eq.${encodeURIComponent(username)}`);
+    const rows = await SB.select(TB.users, `?select=*&username=eq.${encodeURIComponent(username)}`);
     return (rows || []).find(u =>
       u.password === password &&
       (u.active === true || u.active === 'true' || u.active === 1)
@@ -91,7 +113,7 @@ async function dbFindUser(username, password) {
 // ── KANDANG ────────────────────────────────────────
 async function dbGetKandang() {
   try {
-    const rows = await SB.select('kandang', '?select=*&order=created_at.asc');
+    const rows = await SB.select(TB.kandang, '?select=*&order=created_at.asc');
     cache.set('kandang_list', rows);
     return rows;
   } catch { return cache.get('kandang_list') || []; }
@@ -99,27 +121,26 @@ async function dbGetKandang() {
 
 async function dbSaveKandang(obj) {
   if (obj.id) {
-    await SB.update('kandang', obj, `?id=eq.${obj.id}`);
+    await SB.update(TB.kandang, obj, `?id=eq.${obj.id}`);
   } else {
     obj.id = crypto.randomUUID();
-    await SB.insert('kandang', obj);
+    await SB.insert(TB.kandang, obj);
   }
   cache.del('kandang_list');
 }
 
 async function dbDeleteKandang(id) {
-  await SB.delete('kandang', `?id=eq.${id}`);
+  await SB.delete(TB.kandang, `?id=eq.${id}`);
   cache.del('kandang_list');
 }
 
 // ── INPUT HARIAN ───────────────────────────────────
 async function dbSaveInput(tanggal, kandang, data) {
-  // Upsert berdasarkan tanggal + kandang
-  const existing = await SB.select('input_harian', `?tanggal=eq.${tanggal}&kandang=eq.${encodeURIComponent(kandang)}`);
+  const existing = await SB.select(TB.input_harian, `?tanggal=eq.${tanggal}&kandang=eq.${encodeURIComponent(kandang)}`);
   if (existing && existing.length > 0) {
-    await SB.update('input_harian', { data, user_input: data.user }, `?tanggal=eq.${tanggal}&kandang=eq.${encodeURIComponent(kandang)}`);
+    await SB.update(TB.input_harian, { data, user_input: data.user }, `?tanggal=eq.${tanggal}&kandang=eq.${encodeURIComponent(kandang)}`);
   } else {
-    await SB.insert('input_harian', {
+    await SB.insert(TB.input_harian, {
       id: crypto.randomUUID(),
       tanggal,
       kandang,
@@ -138,29 +159,28 @@ async function dbGetInput(filters = {}) {
     if (filters.kandang) q += `&kandang=eq.${encodeURIComponent(filters.kandang)}`;
     if (filters.dari) q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
-    // Gunakan cache untuk query tanpa filter (all data)
     const isAll = !filters.tanggal && !filters.kandang && !filters.dari && !filters.sampai;
     if (isAll && cache.get('_all_inputs')) return cache.get('_all_inputs');
-    const rows = await SB.select('input_harian', q);
+    const rows = await SB.select(TB.input_harian, q);
     if (isAll) cache.set('_all_inputs', rows || []);
     return rows || [];
   } catch { return []; }
 }
 
 async function dbDeleteInput(id) {
-  await SB.delete('input_harian', `?id=eq.${id}`);
+  await SB.delete(TB.input_harian, `?id=eq.${id}`);
   cache.del('_all_inputs');
 }
 
 // ── PENJUALAN ──────────────────────────────────────
 async function dbSavePenjualan(obj) {
   obj.id = crypto.randomUUID();
-  await SB.insert('penjualan', obj);
+  await SB.insert(TB.penjualan, obj);
   cache.del('penjualan_list');
 }
 
 async function dbDeletePenjualan(id) {
-  await SB.delete('penjualan', `?id=eq.${id}`);
+  await SB.delete(TB.penjualan, `?id=eq.${id}`);
   cache.del('penjualan_list');
 }
 
@@ -169,7 +189,7 @@ async function dbGetPenjualan(filters = {}) {
     let q = '?select=*&order=tanggal.desc';
     if (filters.dari) q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
-    const rows = await SB.select('penjualan', q);
+    const rows = await SB.select(TB.penjualan, q);
     cache.set('penjualan_list', rows);
     return rows || [];
   } catch { return cache.get('penjualan_list') || []; }
@@ -178,7 +198,7 @@ async function dbGetPenjualan(filters = {}) {
 // ── DAFTAR PAKAN ───────────────────────────────────
 async function dbGetDaftarPakan() {
   try {
-    const rows = await SB.select('daftar_pakan', '?select=*&order=nama.asc');
+    const rows = await SB.select(TB.daftar_pakan, '?select=*&order=nama.asc');
     cache.set('daftar_pakan', rows);
     return rows;
   } catch { return cache.get('daftar_pakan') || []; }
@@ -186,16 +206,16 @@ async function dbGetDaftarPakan() {
 
 async function dbSaveDaftarPakan(obj) {
   if (obj.id) {
-    await SB.update('daftar_pakan', obj, `?id=eq.${obj.id}`);
+    await SB.update(TB.daftar_pakan, obj, `?id=eq.${obj.id}`);
   } else {
     obj.id = crypto.randomUUID();
-    await SB.insert('daftar_pakan', obj);
+    await SB.insert(TB.daftar_pakan, obj);
   }
   cache.del('daftar_pakan');
 }
 
 async function dbDeleteDaftarPakan(id) {
-  await SB.delete('daftar_pakan', `?id=eq.${id}`);
+  await SB.delete(TB.daftar_pakan, `?id=eq.${id}`);
   cache.del('daftar_pakan');
 }
 
@@ -205,7 +225,7 @@ async function dbGetKiriman(filters = {}) {
     let q = '?select=*&order=tanggal.desc';
     if (filters.dari) q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
-    const rows = await SB.select('kiriman_pakan', q);
+    const rows = await SB.select(TB.kiriman_pakan, q);
     cache.set('kiriman_pakan', rows);
     return rows || [];
   } catch { return cache.get('kiriman_pakan') || []; }
@@ -213,12 +233,12 @@ async function dbGetKiriman(filters = {}) {
 
 async function dbSaveKiriman(obj) {
   obj.id = crypto.randomUUID();
-  await SB.insert('kiriman_pakan', obj);
+  await SB.insert(TB.kiriman_pakan, obj);
   cache.del('kiriman_pakan');
 }
 
 async function dbDeleteKiriman(id) {
-  await SB.delete('kiriman_pakan', `?id=eq.${id}`);
+  await SB.delete(TB.kiriman_pakan, `?id=eq.${id}`);
   cache.del('kiriman_pakan');
 }
 
@@ -229,7 +249,7 @@ async function dbGetKas(filters = {}) {
     if (filters.dari)   q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
     if (filters.kandang) q += `&kandang=eq.${encodeURIComponent(filters.kandang)}`;
-    const rows = await SB.select('kas_operasional', q);
+    const rows = await SB.select(TB.kas_operasional, q);
     cache.set('kas_list', rows);
     return rows || [];
   } catch { return cache.get('kas_list') || []; }
@@ -237,16 +257,15 @@ async function dbGetKas(filters = {}) {
 
 async function dbSaveKas(obj) {
   obj.id = crypto.randomUUID();
-  await SB.insert('kas_operasional', obj);
+  await SB.insert(TB.kas_operasional, obj);
   cache.del('kas_list');
 }
 
 async function dbDeleteKas(id) {
-  await SB.delete('kas_operasional', `?id=eq.${id}`);
+  await SB.delete(TB.kas_operasional, `?id=eq.${id}`);
   cache.del('kas_list');
 }
 
-// Hitung saldo kas: total masuk - total keluar
 async function dbGetSaldoKas(kandang) {
   const list = await dbGetKas(kandang ? { kandang } : {});
   const masuk  = list.filter(k => k.jenis === 'masuk') .reduce((s, k) => s + (parseFloat(k.jumlah) || 0), 0);
@@ -257,11 +276,11 @@ async function dbGetSaldoKas(kandang) {
 // ── ACTIVITY LOG ───────────────────────────────────
 async function dbSaveLog(aksi, tabel, recordId, dataLama, dataBaru, keterangan = '') {
   try {
-    await SB.insert('activity_log', {
+    await SB.insert(TB.activity_log, {
       id: crypto.randomUUID(),
       user_input: window.currentUser?.username || '—',
-      aksi,       // 'EDIT' | 'HAPUS' | 'TAMBAH'
-      tabel,      // 'input_harian' | 'penjualan' | dst
+      aksi,
+      tabel,
       record_id: recordId || null,
       data_lama: dataLama || null,
       data_baru: dataBaru || null,
@@ -279,7 +298,7 @@ async function dbGetLog(filters = {}) {
     if (filters.tabel) q += `&tabel=eq.${encodeURIComponent(filters.tabel)}`;
     if (filters.dari)  q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai)q += `&tanggal=lte.${filters.sampai}`;
-    return await SB.select('activity_log', q) || [];
+    return await SB.select(TB.activity_log, q) || [];
   } catch { return []; }
 }
 
@@ -291,7 +310,7 @@ async function dbGetPembayaran(filters = {}) {
     if (filters.sampai)  q += `&tanggal=lte.${filters.sampai}`;
     if (filters.jenis)   q += `&jenis=eq.${filters.jenis}`;
     if (filters.kandang) q += `&kandang=eq.${encodeURIComponent(filters.kandang)}`;
-    const rows = await SB.select('pembayaran', q);
+    const rows = await SB.select(TB.pembayaran, q);
     cache.set('pembayaran_list', rows);
     return rows || [];
   } catch { return cache.get('pembayaran_list') || []; }
@@ -299,38 +318,33 @@ async function dbGetPembayaran(filters = {}) {
 
 async function dbSavePembayaran(obj) {
   obj.id = crypto.randomUUID();
-  await SB.insert('pembayaran', obj);
+  await SB.insert(TB.pembayaran, obj);
   cache.del('pembayaran_list');
 }
 
 async function dbDeletePembayaran(id) {
-  await SB.delete('pembayaran', `?id=eq.${id}`);
+  await SB.delete(TB.pembayaran, `?id=eq.${id}`);
   cache.del('pembayaran_list');
 }
 
-// Update status_bayar & sisa_tagihan di kiriman_pakan setelah pembayaran
 async function dbUpdateStatusTagihan(kirimanId, jumlahBayar) {
   try {
-    const rows = await SB.select('kiriman_pakan', `?id=eq.${kirimanId}`);
+    const rows = await SB.select(TB.kiriman_pakan, `?id=eq.${kirimanId}`);
     if (!rows || !rows.length) return;
     const k = rows[0];
     const totalTagihan = parseFloat(k.harga_total) || 0;
-    // Hitung total yang sudah dibayar sebelumnya
-    const bayarList = await SB.select('pembayaran', `?referensi_id=eq.${kirimanId}`);
+    const bayarList = await SB.select(TB.pembayaran, `?referensi_id=eq.${kirimanId}`);
     const totalBayar = (bayarList || []).reduce((s, b) => s + (parseFloat(b.jumlah_bayar) || 0), 0);
     const sisa = Math.max(0, totalTagihan - totalBayar);
     const status = sisa <= 0 ? 'lunas' : totalBayar > 0 ? 'sebagian' : 'belum';
-    await SB.update('kiriman_pakan', { status_bayar: status, sisa_tagihan: sisa }, `?id=eq.${kirimanId}`);
+    await SB.update(TB.kiriman_pakan, { status_bayar: status, sisa_tagihan: sisa }, `?id=eq.${kirimanId}`);
     cache.del('kiriman_pakan');
   } catch (e) { console.warn('updateStatusTagihan error:', e); }
 }
 
 // ── MASTER TABLES ──────────────────────────────────
-
-// Helper generic untuk master tables
 async function dbGetMaster(table, filters = {}) {
   try {
-    // Hanya tampilkan yang aktif di UI, tapi semua kode tetap dihitung untuk generate
     let q = '?select=*&active=eq.true&order=kode.asc';
     if (filters.kategori) q += `&kategori=eq.${encodeURIComponent(filters.kategori)}`;
     const rows = await SB.select(table, q);
@@ -352,56 +366,44 @@ async function dbSaveMaster(table, obj) {
 }
 
 async function dbDeleteMaster(table, id) {
-  // Soft delete — set active = false
   await SB.update(table, { active: false, updated_at: new Date().toISOString() }, `?id=eq.${id}`);
   cache.del(table);
 }
 
-// Auto-generate kode berdasarkan prefix dan data existing
 async function dbGenerateKode(table, prefix) {
   try {
-    // Gunakan ilike dengan % (bukan *) untuk Supabase REST API
-    // Ambil SEMUA kode dengan prefix ini (termasuk nonaktif) untuk hindari duplikat
     const rows = await SB.select(table, `?select=kode&kode=ilike.${prefix}-%25&order=kode.desc&limit=1`);
     if (!rows || !rows.length) return `${prefix}-001`;
     const lastKode = rows[0].kode;
     const lastNum = parseInt(lastKode.replace(prefix + '-', '')) || 0;
     return `${prefix}-${String(lastNum + 1).padStart(3, '0')}`;
   } catch {
-    // Fallback: timestamp-based untuk hindari collision
     return `${prefix}-${Date.now().toString().slice(-4)}`;
   }
 }
 
 // Specific getters
-const dbGetSupplier  = (f) => dbGetMaster('master_supplier', f);
-const dbGetVitamin   = (f) => dbGetMaster('master_vitamin', f);
-const dbGetObat      = (f) => dbGetMaster('master_obat', f);
-const dbGetVaksin    = (f) => dbGetMaster('master_vaksin', f);
-const dbGetPelanggan = (f) => dbGetMaster('master_pelanggan', f);
+const dbGetSupplier  = (f) => dbGetMaster(TB.master_supplier, f);
+const dbGetVitamin   = (f) => dbGetMaster(TB.master_vitamin, f);
+const dbGetObat      = (f) => dbGetMaster(TB.master_obat, f);
+const dbGetVaksin    = (f) => dbGetMaster(TB.master_vaksin, f);
+const dbGetPelanggan = (f) => dbGetMaster(TB.master_pelanggan, f);
 
-// Get all master data sekaligus (untuk dropdown)
 async function dbGetAllMaster() {
   const [supplier, vitamin, obat, vaksin, pelanggan, pakan] = await Promise.all([
-    dbGetSupplier(),
-    dbGetVitamin(),
-    dbGetObat(),
-    dbGetVaksin(),
-    dbGetPelanggan(),
-    dbGetDaftarPakan()
+    dbGetSupplier(), dbGetVitamin(), dbGetObat(), dbGetVaksin(), dbGetPelanggan(), dbGetDaftarPakan()
   ]);
   return { supplier, vitamin, obat, vaksin, pelanggan, pakan };
 }
 
-// ── STOK NON-PAKAN (Vitamin, Obat, Vaksin, Desinfektan, Lainnya) ──
-
+// ── STOK NON-PAKAN ────────────────────────────────
 async function dbGetKirimanNonPakan(filters = {}) {
   try {
     let q = '?select=*&order=tanggal.desc';
     if (filters.kategori) q += `&kategori=eq.${encodeURIComponent(filters.kategori)}`;
     if (filters.dari)     q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai)   q += `&tanggal=lte.${filters.sampai}`;
-    const rows = await SB.select('kiriman_nonpakan', q);
+    const rows = await SB.select(TB.kiriman_nonpakan, q);
     cache.set('kiriman_np_' + (filters.kategori || 'all'), rows);
     return rows || [];
   } catch { return cache.get('kiriman_np_' + (filters.kategori || 'all')) || []; }
@@ -409,13 +411,13 @@ async function dbGetKirimanNonPakan(filters = {}) {
 
 async function dbSaveKirimanNonPakan(obj) {
   obj.id = crypto.randomUUID();
-  await SB.insert('kiriman_nonpakan', obj);
+  await SB.insert(TB.kiriman_nonpakan, obj);
   cache.del('kiriman_np_' + obj.kategori);
   cache.del('kiriman_np_all');
 }
 
 async function dbDeleteKirimanNonPakan(id, kategori) {
-  await SB.delete('kiriman_nonpakan', `?id=eq.${id}`);
+  await SB.delete(TB.kiriman_nonpakan, `?id=eq.${id}`);
   cache.del('kiriman_np_' + (kategori || 'all'));
   cache.del('kiriman_np_all');
 }
@@ -426,27 +428,25 @@ async function dbGetPemakaianNonPakan(filters = {}) {
     if (filters.kategori) q += `&kategori=eq.${encodeURIComponent(filters.kategori)}`;
     if (filters.dari)     q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai)   q += `&tanggal=lte.${filters.sampai}`;
-    const rows = await SB.select('pemakaian_nonpakan', q);
+    const rows = await SB.select(TB.pemakaian_nonpakan, q);
     return rows || [];
   } catch { return []; }
 }
 
 async function dbSavePemakaianNonPakan(obj) {
   obj.id = crypto.randomUUID();
-  await SB.insert('pemakaian_nonpakan', obj);
+  await SB.insert(TB.pemakaian_nonpakan, obj);
 }
 
 async function dbDeletePemakaianNonPakan(id) {
-  await SB.delete('pemakaian_nonpakan', `?id=eq.${id}`);
+  await SB.delete(TB.pemakaian_nonpakan, `?id=eq.${id}`);
 }
 
-// Hitung stok non-pakan: total kiriman - total pemakaian
 async function dbGetStokNonPakan(kategori) {
   const [kiriman, pakai] = await Promise.all([
     dbGetKirimanNonPakan({ kategori }),
     dbGetPemakaianNonPakan({ kategori })
   ]);
-  // Group by nama_item
   const stokMap = {};
   kiriman.forEach(k => {
     if (!stokMap[k.nama_item]) stokMap[k.nama_item] = { masuk: 0, keluar: 0, satuan: k.satuan, harga: 0 };
@@ -458,39 +458,56 @@ async function dbGetStokNonPakan(kategori) {
     stokMap[p.nama_item].keluar += parseFloat(p.jumlah) || 0;
   });
   return Object.entries(stokMap).map(([nama, v]) => ({
-    nama,
-    stok: Math.max(0, v.masuk - v.keluar),
-    satuan: v.satuan,
-    harga: v.harga
+    nama, stok: Math.max(0, v.masuk - v.keluar), satuan: v.satuan, harga: v.harga
   }));
 }
 
+// ── PENGAMBILAN INTI (Kemitraan) ───────────────────
+async function dbGetPengambilanInti(filters = {}) {
+  try {
+    let q = '?select=*&order=tanggal_ambil.desc';
+    if (filters.kandang) q += `&kandang=eq.${encodeURIComponent(filters.kandang)}`;
+    const rows = await SB.select(TB.pengambilan_inti, q);
+    return rows || [];
+  } catch { return []; }
+}
+
+async function dbSavePengambilanInti(obj) {
+  if (!obj.id) {
+    obj.id = crypto.randomUUID();
+    obj.created_at = new Date().toISOString();
+  }
+  obj.updated_at = new Date().toISOString();
+  await SB.insert(TB.pengambilan_inti, obj);
+}
+
+async function dbDeletePengambilanInti(id) {
+  await SB.delete(TB.pengambilan_inti, `?id=eq.${id}`);
+}
+
 // ── STANDAR PERFORMA ───────────────────────────────
-// Disimpan sebagai satu record JSON di tabel app_config
 async function dbGetStandar() {
   try {
-    const rows = await SB.select('app_config', `?key=eq.standar_performa&select=value`);
+    const rows = await SB.select(TB.app_config, `?key=eq.standar_performa&select=value`);
     if(rows && rows.length && rows[0].value) return rows[0].value;
     return null;
   } catch {
-    // Fallback ke localStorage
     try { return JSON.parse(localStorage.getItem('standar_performa')); } catch { return null; }
   }
 }
 
 async function dbSaveStandar(data) {
   try {
-    const existing = await SB.select('app_config', `?key=eq.standar_performa`);
+    const existing = await SB.select(TB.app_config, `?key=eq.standar_performa`);
     if(existing && existing.length) {
-      await SB.update('app_config', { value: data, updated_at: new Date().toISOString() }, `?key=eq.standar_performa`);
+      await SB.update(TB.app_config, { value: data, updated_at: new Date().toISOString() }, `?key=eq.standar_performa`);
     } else {
-      await SB.insert('app_config', { id: crypto.randomUUID(), key: 'standar_performa', value: data, created_at: new Date().toISOString() });
+      await SB.insert(TB.app_config, { id: crypto.randomUUID(), key: 'standar_performa', value: data, created_at: new Date().toISOString() });
     }
     cache.del('standar_performa');
   } catch(e) {
-    // Fallback: simpan ke localStorage jika Supabase gagal
     localStorage.setItem('standar_performa', JSON.stringify(data));
     console.warn('dbSaveStandar fallback to localStorage:', e.message);
-    throw e; // re-throw agar UI tahu ada error
+    throw e;
   }
 }
