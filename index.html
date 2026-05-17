@@ -96,7 +96,8 @@
 <!-- LOGIN -->
 <div id="login-screen" style="display:none">
   <img src="icon/logo-app.png" alt="TF-UB" style="width:80px;height:80px;border-radius:16px"/>
-  <h1>TF-UB 4.0</h1>
+  <h1>Teaching Farm</h1>
+  <h1 style="font-size:1.1rem;margin-top:-4px;opacity:.9">4.0</h1>
   <p>Sistem Manajemen Terpadu</p>
   <div class="login-card">
     <label for="login-user">Username</label>
@@ -124,7 +125,7 @@
       <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none" title="Kembali">‹</button>
       <img src="icon/logo-app.png" alt="TF-UB" style="width:32px;height:32px;cursor:pointer;border-radius:6px" onclick="switchPage('home')" title="Kembali ke Home"/>
       <div>
-        <h1>TF-UB <span style="font-size:0.6rem;background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">4.0</span></h1>
+        <h1>Teaching Farm <span style="font-size:0.6rem;background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">4.0</span></h1>
         <div class="sub" id="hdr-kandang">—</div>
       </div>
       <span id="offline-badge" class="offline-badge" style="display:none">OFFLINE</span>
@@ -284,10 +285,6 @@
         </div>
         <div class="ds-footer">
           <div class="df-note" id="ds-footer-note">—</div>
-          <div style="display:flex;gap:6px">
-            <button class="btn-capture" onclick="openFullscreenSummary()">🔲 Full</button>
-            <button class="btn-capture" onclick="captureSummary()">📸 Capture</button>
-          </div>
         </div>
       </div>
       <div class="card">
@@ -1959,10 +1956,7 @@
 <!-- FULLSCREEN DAILY SUMMARY OVERLAY -->
 <div class="fs-overlay" id="fs-summary-overlay">
   <div class="fs-container">
-    <div class="fs-topbar">
-      <button class="fs-close-btn" onclick="closeFullscreenSummary()">✕ Tutup</button>
-      <button class="btn-capture" onclick="captureSummaryFullscreen()">📸 Capture</button>
-    </div>
+    <button class="fs-x-btn" onclick="closeFullscreenSummary()">✕</button>
     <div class="fs-content" id="fs-summary-content">
       <!-- Konten daily summary akan di-clone ke sini -->
     </div>
