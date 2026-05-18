@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════
 //  SUPABASE CONFIG - Teaching Farm UB V2.9.0
 // ═══════════════════════════════════════════════════
-const SUPA_URL = 'https://rzzqbxusiipltswdfnbq.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6enFieHVzaWlwbHRzd2RmbmJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MDM4NDEsImV4cCI6MjA4NzQ3OTg0MX0.IPKo1CwZARk1bfaOeSK50BW8lC11pyVo9jJyjiY8LGg';
+const SUPA_URL = 'https://clabeuujqzldkzqjfuil.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsYWJldXVqcXpsZGt6cWpmdWlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNjAyMDcsImV4cCI6MjA5NDYzNjIwN30.qCpaBmDl7r6V8rYSkstgzC4WFv3VCqcUjaTVILI1978';
 
 // ═══════════════════════════════════════════════════
 //  TABLE NAMES (dengan akhiran _tf_ub)
