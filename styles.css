@@ -198,12 +198,12 @@
 
     /* MODAL */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;}
-    .modal{background:rgba(255,255,255,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.5);border-radius:14px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.15);}
-    .modal-header{padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;}
+    .modal{background:rgba(255,255,255,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.5);border-radius:14px;width:100%;max-width:440px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.15);}
+    .modal-header{padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
     .modal-header h3{font-size:1rem;font-weight:700;color:#1b4332;}
     .modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;line-height:1;}
-    .modal-body{padding:20px;}
-    .modal-footer{padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px;}
+    .modal-body{padding:20px;overflow-y:auto;flex:1;min-height:0;}
+    .modal-footer{padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;}
 
     /* INFO BOX */
     .info-box{background:#f0fdf4;border:1px solid #b7e4c7;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:.85rem;color:#1b4332;}
@@ -624,10 +624,11 @@
         padding: 16px;
       }
       
-      /* Better sync button */
-      .sync-btn {
-        min-width: 44px;
-        min-height: 44px;
+      /* Better header buttons */
+      .sync-btn, .settings-btn {
+        min-width: 36px;
+        min-height: 36px;
+        padding: 4px 8px;
       }
     }
 
@@ -679,7 +680,6 @@
       
       .modal-body {
         padding: 20px;
-        max-height: calc(100vh - 200px);
         overflow-y: auto;
       }
       
@@ -1178,14 +1178,23 @@
     .btn-capture{background:linear-gradient(135deg,#2d6a4f,#40916c);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;}
     .btn-capture:active{opacity:.85;}
     /* Tabel performa industri */
-    .perf-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+    .perf-table{width:100%;border-collapse:collapse;font-size:.82rem;table-layout:fixed;}
     .perf-table tr{border-bottom:1px solid #f0f4f8;}
     .perf-table tr:last-child{border-bottom:none;}
-    .perf-table td{padding:7px 12px;vertical-align:middle;}
+    .perf-table td{padding:7px 12px;vertical-align:middle;word-break:break-word;overflow-wrap:anywhere;}
     .perf-table td:first-child{color:#666;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;width:38%;white-space:nowrap;}
-    .perf-table td:nth-child(2){font-weight:800;color:#1b4332;font-size:.92rem;text-align:right;}
-    .perf-table td:last-child{font-size:.72rem;color:#888;text-align:right;padding-left:4px;}
-    .perf-table tr.section-head td{background:#f0fdf4;color:#2d6a4f;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;padding:5px 12px;}
+    .perf-table td:nth-child(2){font-weight:800;color:#1b4332;font-size:.92rem;text-align:right;width:32%;}
+    .perf-table td:last-child{font-size:.72rem;color:#888;text-align:right;padding-left:4px;width:30%;}
+    .perf-table td[colspan="3"]{white-space:normal;}
+
+    /* Blok catatan terpisah agar tidak memaksa lebar tabel */
+    .ds-catatan{padding:10px 14px 12px 14px;border-top:1px solid #f0f4f8;background:#fafdfb;}
+    .ds-catatan-head{background:#f0fdf4;color:#2d6a4f;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;padding:5px 10px;border-radius:6px;display:inline-block;margin-bottom:6px;}
+    .ds-catatan-body{font-size:.82rem;color:#555;font-style:italic;line-height:1.45;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;}
+    body.dark .ds-catatan{background:rgba(15,23,42,.4);border-top-color:#334155;}
+    body.dark .ds-catatan-head{background:#1b4332;color:#86efac;}
+    body.dark .ds-catatan-body{color:#cbd5e1;}
+    .perf-table tr.section-head td{background:#f0fdf4;color:#2d6a4f;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;padding:5px 12px;text-align:left;}
     .perf-table .trend-up{color:#16a34a;font-weight:700;}
     .perf-table .trend-down{color:#dc2626;font-weight:700;}
     .perf-table .trend-flat{color:#888;}
@@ -1214,11 +1223,13 @@
     .fs-container{display:flex;flex-direction:column;height:100%;overflow:hidden;position:relative;}
     .fs-x-btn{
       position:absolute;top:10px;right:10px;z-index:10;
-      background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;
-      width:28px;height:28px;display:flex;align-items:center;justify-content:center;
-      border-radius:50%;transition:background .15s;
+      background:rgba(0,0,0,.45);border:none;color:#fff;font-size:1.2rem;cursor:pointer;
+      width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+      border-radius:50%;transition:background .15s;font-weight:700;
     }
-    .fs-x-btn:active{background:rgba(0,0,0,.1);}
+    .fs-x-btn:active{background:rgba(0,0,0,.65);}
+    body.dark .fs-x-btn{background:rgba(255,255,255,.25);color:#fff;}
+    body.dark .fs-x-btn:active{background:rgba(255,255,255,.4);}
     .fs-content{
       flex:1;overflow-y:auto;padding:12px;
       display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
@@ -1239,8 +1250,6 @@
     .fs-content .daily-summary .ds-footer{display:none;}
 
     body.dark .fs-overlay{background:#0f172a;}
-    body.dark .fs-x-btn{color:#94a3b8;}
-    body.dark .fs-x-btn:active{background:rgba(255,255,255,.1);}
 
     /* ── STANDAR PERFORMA TABLE ── */
     .sp-inp {

@@ -1679,30 +1679,27 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="npp-kategori"/>
-      <div class="row">
-        <div class="field">
-          <label>Tanggal <span style="color:#dc2626">*</span></label>
-          <input type="date" id="npp-tgl"/>
-        </div>
-        <div class="field">
-          <label>Kandang</label>
-          <select id="npp-kandang"><option value="">Semua Kandang</option></select>
-        </div>
+      <div class="field">
+        <label>Tanggal <span style="color:#dc2626">*</span></label>
+        <input type="date" id="npp-tgl"/>
       </div>
-      <div class="field" style="margin-bottom:12px">
+      <div class="field">
+        <label>Kandang</label>
+        <select id="npp-kandang"><option value="">Semua Kandang</option></select>
+      </div>
+      <div class="field">
         <label>Nama Item <span style="color:#dc2626">*</span></label>
         <select id="npp-nama-select" onchange="onNppNamaChange()" style="border:1.5px solid #bfdbfe;border-radius:7px;padding:8px 10px;font-size:.9rem;width:100%;background:#fff">
           <option value="">-- Pilih Item --</option>
         </select>
         <input type="text" id="npp-nama" placeholder="Ketik nama item..." style="display:none;margin-top:6px"/>
       </div>
-      </div>
       <div class="row">
-        <div class="field">
+        <div class="field" style="flex:2">
           <label>Jumlah Pemakaian <span style="color:#dc2626">*</span></label>
           <input type="number" id="npp-jumlah" min="0" step="0.1" placeholder="0"/>
         </div>
-        <div class="field">
+        <div class="field" style="flex:1">
           <label>Satuan</label>
           <select id="npp-satuan" disabled>
             <!-- Diisi JS: base_unit (ml/gram/dosis) -->

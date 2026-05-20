@@ -80,6 +80,8 @@ class InstallPrompt {
 
   async triggerInstall() {
     if (!this.deferredPrompt) {
+      // Sudah terinstall atau prompt tidak tersedia — tutup badge & tampilkan instruksi manual
+      this.dismissUpdate();
       this.showManualInstallInstructions();
       return;
     }
@@ -92,6 +94,8 @@ class InstallPrompt {
     } catch (e) {
       this.showManualInstallInstructions();
     }
+    // Selalu tutup badge setelah interaksi install
+    this.dismissUpdate();
   }
 
   showManualInstallInstructions() {
@@ -118,18 +122,19 @@ class InstallPrompt {
   }
 
   handleInstallAccepted() {
-    this.dismissBanner();
+    this.dismissUpdate();
     this.dismissModal();
     if (typeof showToast === 'function') showToast('🎉 App sedang diinstall...');
   }
 
   handleInstallDismissed() {
+    this.dismissUpdate();
     this.dismissModal();
   }
 
   handleAppInstalled() {
     this.isInstalled = true;
-    this.dismissBanner();
+    this.dismissUpdate();
     this.dismissModal();
     setTimeout(() => this.showVersionInfo(), 2000);
   }

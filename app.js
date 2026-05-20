@@ -1417,8 +1417,8 @@ async function renderDailySummary(todayInputs, kandangList){
     <tr class="section-head"><td colspan="3">📊 Efisiensi</td></tr>
     <tr><td>FCR</td><td class="${fcrClass}">${fcr>0?fcr.toFixed(3):'—'}</td><td>${fcr>0?(fcr<=2.0?'✅ Baik':fcr<=2.5?'⚠️ Cukup':'❌ Buruk'):'—'}</td></tr>
     ${kesehatanHTML}
-    ${catatanText?`<tr class="section-head"><td colspan="3">📝 Catatan</td></tr><tr><td colspan="3" style="font-size:.82rem;color:#555;font-style:italic;padding:8px 14px">${esc(catatanText)}</td></tr>`:''}
-  </table>`;
+  </table>
+  ${catatanText?`<div class="ds-catatan"><div class="ds-catatan-head">📝 Catatan</div><div class="ds-catatan-body">${esc(catatanText)}</div></div>`:''}`;
 
   // Footer
   const now=new Date();
@@ -2985,6 +2985,13 @@ async function renderLapRekap(){
   if(!rows.length){empty.style.display='block';return;}
   empty.style.display='none';
 
+  // Limit tampilan default 14 baris terbaru, scroll untuk data lama
+  const tableWrapper = tbody.closest('.overflow-x-auto') || tbody.closest('div[style*="overflow"]') || tbody.parentElement.parentElement;
+  if(tableWrapper){
+    tableWrapper.style.maxHeight = '520px';
+    tableWrapper.style.overflowY = 'auto';
+  }
+
   rows.forEach(d=>{
     const pakanKg = (d.pakan||[]).reduce((s,p)=>s+(parseFloat(p.jumlah)||0),0);
     const sisaAyam = d.sisa_ayam_calc;
@@ -3026,6 +3033,9 @@ async function renderLapRekap(){
       <td>${ew.toFixed(1)}</td>`;
     tbody.appendChild(tr);
   });
+
+  // Scroll ke atas (data terbaru) setelah render
+  if(tableWrapper) tableWrapper.scrollTop = 0;
 }
 
 async function renderLapLabaRugi(){
