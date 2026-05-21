@@ -354,15 +354,9 @@ END $$;
 -- PART 4: INSERT DATA
 -- ============================================================
 
--- users_tf_ub (7 rows)
-INSERT INTO users_tf_ub (id, username, password, role, active, created_at, updated_at) VALUES
-('7b287aa2-b898-49dc-9624-f9345693a134', 'admin', 'admin123', 'admin', true, '2026-05-16T04:38:12.755025+00:00', '2026-05-16T04:38:12.755025+00:00'),
-('9ceade26-a633-4bba-bc9d-42a47b629743', 'shakadigital', 'abrisam2554', 'superadmin', true, '2026-05-16T04:38:12.755025+00:00', '2026-05-16T04:38:12.755025+00:00'),
-('e9a648bf-feb9-4b28-8f17-45cae0d457e5', 'Frita', 'teachingfarm2026', 'manajer', true, '2026-04-20T08:38:15.79608+00:00', '2026-04-20T08:38:15.79608+00:00'),
-('2dac5668-2da6-4346-8457-368d7decaef8', 'Saiful', 'sa2345', 'supervisor', true, '2026-04-20T08:38:54.222407+00:00', '2026-04-20T08:38:54.222407+00:00'),
-('edfae8b5-7861-40db-9653-3527fb64f561', 'Afin', 'af2345', 'operator', true, '2026-04-20T08:39:15.820226+00:00', '2026-04-20T08:39:15.820226+00:00'),
-('2638a631-4abd-4dfb-91d2-19baaa83a60c', 'teachingub', 'ta2026', 'staff', true, '2026-04-20T08:40:03.959394+00:00', '2026-04-20T08:40:03.959394+00:00'),
-('ea4c6330-8a44-4995-9629-945147a64632', 'Dian_Riki', '123456', 'viewer', true, '2026-05-02T00:56:25.053631+00:00', '2026-05-02T00:56:25.053631+00:00');
+-- users_tf_ub
+-- ⚠️ CREDENTIALS DIHAPUS DARI REPO untuk keamanan.
+-- Migrate user data secara terpisah via script private atau dashboard Supabase.
 
 -- kandang_tf_ub (1 row)
 INSERT INTO kandang_tf_ub (id, nama, kapasitas, chickin, umur_masuk, populasi, harga_pullet, sistem, nama_inti, harga_kontrak, persen_mitra, persen_inti, status, keterangan, created_at, updated_at) VALUES

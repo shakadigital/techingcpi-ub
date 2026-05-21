@@ -591,9 +591,8 @@ async function _seedDefaultData() {
   const users = await _getAll('users');
   if (users && users.length > 0) return; // sudah ada data, skip
 
-  // Seed users
-  await _put('users', { id: crypto.randomUUID(), username: 'admin', password: 'admin123', role: 'admin', active: true, created_at: new Date().toISOString() });
-  await _put('users', { id: crypto.randomUUID(), username: 'shakadigital', password: 'abrisam2554', role: 'superadmin', active: true, created_at: new Date().toISOString() });
+  // Seed users — password harus diganti saat setup pertama kali
+  await _put('users', { id: crypto.randomUUID(), username: 'admin', password: 'GANTI_PASSWORD_INI', role: 'admin', active: true, created_at: new Date().toISOString() });
 
   // Seed kandang
   await _put('kandang', { id: crypto.randomUUID(), nama: 'Kandang 1', kapasitas: 5000, status: 'aktif', keterangan: 'Kandang utama', created_at: new Date().toISOString() });

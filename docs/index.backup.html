@@ -2642,7 +2642,7 @@ async function initUsers(){
   try{
     const users=await dbGetUsers();
     if(!users||users.length===0){
-      await dbSaveUser({username:'admin',password:'ab5678',role:'admin',active:true});
+      console.warn('⚠️ Belum ada user. Buat user pertama via dashboard.');
     }
   }catch(e){console.warn('initUsers error:',e);}
 }

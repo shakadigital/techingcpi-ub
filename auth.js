@@ -71,11 +71,12 @@ function applyRoleRestrictions() {
 let currentUser = null;
 
 async function initUsers() {
-  // Cek apakah tabel users sudah ada data, jika tidak insert default admin
+  // Cek apakah tabel users sudah ada data
+  // Jika kosong, tampilkan peringatan — user harus dibuat via dashboard
   try {
     const users = await dbGetUsers();
     if (!users || users.length === 0) {
-      await dbSaveUser({ username: 'admin', password: 'ab5678', role: 'admin', active: true });
+      console.warn('⚠️ Belum ada user. Buat user pertama via Supabase dashboard atau halaman setup.');
     }
   } catch (e) {
     console.warn('initUsers error:', e);

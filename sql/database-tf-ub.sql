@@ -379,10 +379,9 @@ CREATE POLICY "allow_all_pengambilan_inti_tf_ub" ON pengambilan_inti_tf_ub FOR A
 -- ══════════════════════════════════════════════════
 -- SEED DATA
 -- ══════════════════════════════════════════════════
-INSERT INTO users_tf_ub (username, password, role, active) VALUES
-  ('admin', 'admin123', 'admin', true),
-  ('shakadigital', 'abrisam2554', 'superadmin', true)
-ON CONFLICT (username) DO NOTHING;
+-- ⚠️ JANGAN hardcode credentials di repo!
+-- Buat user pertama via dashboard Supabase atau script terpisah yang tidak di-commit.
+-- Contoh: INSERT INTO users_tf_ub (username, password, role, active) VALUES ('admin', '<GANTI_PASSWORD>', 'admin', true);
 
 -- ══════════════════════════════════════════════════
 -- DONE

@@ -180,12 +180,8 @@ CREATE POLICY "Allow all on activity_log" ON activity_log FOR ALL USING (true) W
 CREATE POLICY "Allow all on pembayaran" ON pembayaran FOR ALL USING (true) WITH CHECK (true);
 
 -- ── STEP 5: SEED DATA ──────────────────────────────
-
-INSERT INTO users (username, password, role, active)
-VALUES ('admin', 'admin123', 'admin', true);
-
-INSERT INTO users (username, password, role, active)
-VALUES ('shakadigital', 'abrisam2554', 'superadmin', true);
+-- ⚠️ JANGAN hardcode credentials di repo!
+-- Buat user pertama via dashboard Supabase atau script terpisah yang tidak di-commit.
 
 INSERT INTO kandang (nama, kapasitas, status, keterangan)
 VALUES 
@@ -199,4 +195,3 @@ VALUES
   ('Pakan Layer', 'Konsentrat', 'kg', 7000, 1000);
 
 -- ── DONE ───────────────────────────────────────────
--- Login: username=admin, password=admin123
