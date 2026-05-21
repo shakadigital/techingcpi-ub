@@ -169,6 +169,19 @@ async function dbDeleteKandang(id) {
   cache.del('kandang_list');
 }
 
+// ── GENERIC UPSERT (untuk backup/restore & edit kiriman) ──
+async function dbUpsert(table, obj) {
+  const tableName = TB[table] || table;
+  if (!obj.id) obj.id = crypto.randomUUID();
+  // Try update first, if not exists then insert
+  const existing = await SB.select(tableName, `?id=eq.${obj.id}`);
+  if (existing && existing.length > 0) {
+    await SB.update(tableName, obj, `?id=eq.${obj.id}`);
+  } else {
+    await SB.insert(tableName, obj);
+  }
+}
+
 // ── INPUT HARIAN ───────────────────────────────────
 async function dbSaveInput(tanggal, kandang, data) {
   const existing = await SB.select(TB.input_harian, `?tanggal=eq.${tanggal}&kandang=eq.${encodeURIComponent(kandang)}`);
