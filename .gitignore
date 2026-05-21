@@ -1,0 +1,24 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# Node (jika nanti pakai build tools)
+node_modules/
+dist/
+
+# Supabase local
+supabase/.temp/
+
+# Logs
+*.log
