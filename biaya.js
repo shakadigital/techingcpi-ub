@@ -236,7 +236,7 @@ async function exportRekapBiaya(){
     if(keluar.length===0){showToast('⚠️ Tidak ada data untuk diekspor');return;}
     const headers=['Tanggal','Kategori','Keterangan','Kandang','Jumlah (Rp)'];
     const data=keluar.map(k=>[k.tanggal,k.kategori||'',k.keterangan||'',k.kandang||'',k.jumlah]);
-    exportExcel(`Rekap Biaya Operasional ${bulan}${kandang?' - '+kandang:''}`,headers,data,`Biaya_Operasional_${bulan}${kandang?'_'+kandang:''}.xlsx`);
+    await exportExcel(`Rekap Biaya Operasional ${bulan}${kandang?' - '+kandang:''}`,headers,data,`Biaya_Operasional_${bulan}${kandang?'_'+kandang:''}.xlsx`);
   }catch(e){showToast('❌ Gagal: '+e.message);}
 }
 
@@ -254,7 +254,7 @@ async function exportRiwayatJual(){
         data.push([p.tanggal,item.pelanggan||'',item.grade||'',item.butir||0,item.kilo||0,item.harga||0,item.total||0,p.user_input||'']);
       });
     });
-    exportExcel('Riwayat Penjualan Telur',headers,data,`Riwayat_Penjualan_${new Date().toISOString().slice(0,10)}.xlsx`);
+    await exportExcel('Riwayat Penjualan Telur',headers,data,`Riwayat_Penjualan_${new Date().toISOString().slice(0,10)}.xlsx`);
   }catch(e){
     console.error('Export error:',e);
     showToast('❌ Gagal export: '+e.message);

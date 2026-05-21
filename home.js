@@ -80,6 +80,7 @@ async function renderHome(){
 
 // ═══ GRAFIK HARGA PASAR DI HOME ═══
 async function renderHargaPasarChart() {
+  await ensureChartJS();
   const ctx = document.getElementById('chart-harga-pasar');
   if(!ctx || typeof Chart === 'undefined') return;
 

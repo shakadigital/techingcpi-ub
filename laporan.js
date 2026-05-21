@@ -410,13 +410,14 @@ async function exportLaporan(format='csv'){
     const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
     downloadCSV(csv,fname+'.csv');
   } else if(format==='excel'){
-    exportExcel(title,headers,rows,fname+'.xlsx');
+    await exportExcel(title,headers,rows,fname+'.xlsx');
   } else if(format==='pdf'){
-    exportPDF(title,headers,rows,fname+'.pdf',dari,sampai,kandang);
+    await exportPDF(title,headers,rows,fname+'.pdf',dari,sampai,kandang);
   }
 }
 
-function exportExcel(title, headers, rows, filename){
+async function exportExcel(title, headers, rows, filename){
+  await ensureXLSX();
   const wb=XLSX.utils.book_new();
   // Baris judul
   const wsData=[[title],['Diekspor: '+new Date().toLocaleString('id-ID')],[''],[headers],...rows];
@@ -431,7 +432,8 @@ function exportExcel(title, headers, rows, filename){
   showToast('✅ Excel berhasil didownload!');
 }
 
-function exportPDF(title, headers, rows, filename, dari, sampai, kandang){
+async function exportPDF(title, headers, rows, filename, dari, sampai, kandang){
+  await ensureJsPDF();
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:rows[0]?.length>5?'landscape':'portrait',unit:'mm',format:'a4'});
   // Header

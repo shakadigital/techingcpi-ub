@@ -57,3 +57,46 @@ function exportToCSV(data, filename) {
 }
 function todayISO(){return new Date().toISOString().split('T')[0];}
 function yesterdayISO(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().split('T')[0];}
+
+// ═══ LAZY LOADING CDN LIBRARIES ═══
+// Load library hanya saat dibutuhkan, cache setelah load pertama
+const _libCache = {};
+const LIB_URLS = {
+  chartjs: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+  xlsx: 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  jspdf: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+  jspdfAutotable: 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js'
+};
+
+function loadLib(name) {
+  if(_libCache[name]) return _libCache[name];
+  const url = LIB_URLS[name];
+  if(!url) return Promise.reject(new Error('Unknown lib: ' + name));
+  _libCache[name] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Failed to load: ' + name));
+    document.head.appendChild(s);
+  });
+  return _libCache[name];
+}
+
+// Load Chart.js (untuk grafik & laporan)
+async function ensureChartJS() {
+  if(typeof Chart !== 'undefined') return;
+  await loadLib('chartjs');
+}
+
+// Load XLSX (untuk export Excel)
+async function ensureXLSX() {
+  if(typeof XLSX !== 'undefined') return;
+  await loadLib('xlsx');
+}
+
+// Load jsPDF (untuk export PDF)
+async function ensureJsPDF() {
+  if(typeof jspdf !== 'undefined') return;
+  await loadLib('jspdf');
+  await loadLib('jspdfAutotable');
+}

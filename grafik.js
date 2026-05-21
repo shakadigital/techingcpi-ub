@@ -3,6 +3,7 @@
 let chartHDP=null,chartPerforma=null;
 
 async function renderGrafik(){
+  await ensureChartJS();
   const {dari:dariStr, sampai:sampaiStr, kandang} = getLaporanRange();
   const now = new Date(sampaiStr);
 
@@ -229,6 +230,7 @@ function getFCRRange(){
 }
 
 async function renderFCR(){
+  await ensureChartJS();
   const {dari, sampai, kandang} = getLaporanRange();
   const inputs=await dbGetInput({dari,sampai,kandang});
   // Group by kandang
@@ -362,7 +364,7 @@ function exportSiklus(){
     ['Keuangan','Biaya Ops (Rp)',d.totalBiayaOps],
     ['Keuangan','Laba/Rugi (Rp)',d.labaRugi],
   ];
-  exportExcel('Ringkasan Siklus - '+d.namaKandang,headers,data,'siklus_'+d.namaKandang+'_'+today+'.xlsx');
+  await exportExcel('Ringkasan Siklus - '+d.namaKandang,headers,data,'siklus_'+d.namaKandang+'_'+today+'.xlsx');
 }
 
 // ═══ BACKUP & RESTORE ═══

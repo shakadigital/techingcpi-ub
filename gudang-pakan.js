@@ -242,7 +242,7 @@ async function exportPembelian() {
       k.status_bayar||'belum', k.sisa_tagihan||0,
       k.keterangan||'', k.user_input||''
     ]);
-    exportExcel('Laporan Pembelian Pakan', headers, data, `Laporan_Pembelian_${new Date().toISOString().split('T')[0]}.xlsx`);
+    await exportExcel('Laporan Pembelian Pakan', headers, data, `Laporan_Pembelian_${new Date().toISOString().split('T')[0]}.xlsx`);
   } catch(e) {
     showToast('❌ Gagal export: ' + e.message);
   }

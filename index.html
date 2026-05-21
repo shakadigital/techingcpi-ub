@@ -57,11 +57,7 @@
       document.head.appendChild(s);
     })();
   </script>
-  <!-- CDN: defer agar tidak block rendering -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js" defer></script>
+  <!-- CDN: lazy load saat dibutuhkan (lihat utils.js loadLib) -->
   <!-- DB harus load duluan (tidak defer) -->
   <!-- offline-db.js tidak kritis untuk boot, bisa defer -->
   <script src="offline-db.js" defer></script>

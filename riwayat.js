@@ -412,20 +412,20 @@ async function exportRiwayat(){
       const tp=((d.pakan||[]).reduce((s,p)=>s+(parseFloat(p.jumlah)||0),0)).toFixed(1);
       return[d.tanggal,d.kandang,d.sisa_ayam||0,d.deplesi?d.deplesi.total:0,d.produksi?d.produksi.total.butir:0,d.produksi?d.produksi.hdp:'',tp,d.air_liter||0];
     }).filter(Boolean);
-    exportExcel('Riwayat Harian',headers,data,'riwayat_harian_'+today+'.xlsx');
+    await exportExcel('Riwayat Harian',headers,data,'riwayat_harian_'+today+'.xlsx');
   } else if(currentRTab==='penjualan'){
     const all=await dbGetPenjualan({});
     if(!all.length){showToast('⚠️ Tidak ada data untuk diexport!');return;}
     const headers=['Tanggal','Pelanggan','Grade','Butir','Kilo (kg)','Harga/kg (Rp)','Total (Rp)'];
     const data=[];
     all.forEach(rec=>{(rec.rows||[]).forEach(r=>{data.push([rec.tanggal,r.pelanggan||'',r.grade||'',r.butir||0,r.kilo||0,r.harga||0,String(r.total||'').replace(/[^0-9]/g,'')]);});});
-    exportExcel('Riwayat Penjualan',headers,data,'riwayat_penjualan_'+today+'.xlsx');
+    await exportExcel('Riwayat Penjualan',headers,data,'riwayat_penjualan_'+today+'.xlsx');
   } else {
     const kiriman=await dbGetKiriman({});
     if(!kiriman.length){showToast('⚠️ Tidak ada data untuk diexport!');return;}
     const headers=['Tanggal','Pakan','Jumlah (kg)','Harga/kg (Rp)','Total (Rp)','Supplier','Keterangan'];
     const data=kiriman.map(k=>[k.tanggal,k.nama_pakan,k.jumlah,k.harga_per_kg||0,parseFloat(k.harga_total)||0,k.supplier||'',k.keterangan||'']);
-    exportExcel('Riwayat Kiriman Pakan',headers,data,'riwayat_kiriman_'+today+'.xlsx');
+    await exportExcel('Riwayat Kiriman Pakan',headers,data,'riwayat_kiriman_'+today+'.xlsx');
   }
 }
 
