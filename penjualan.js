@@ -8,7 +8,7 @@ async function populatePelangganSelect(sel){
   if(!sel) return;
   const pelanggan = await dbGetPelanggan();
   const prev = sel.value;
-  sel.innerHTML = '<option value="">-- Pilih Pelanggan --</option>';
+  sel.innerHTML = '<option value="Warga">Warga</option>';
   pelanggan.filter(p => p.active !== false).forEach(p => {
     const o = document.createElement('option');
     o.value = p.nama;
@@ -18,7 +18,7 @@ async function populatePelangganSelect(sel){
   // Opsi ketik manual
   const oManual = document.createElement('option');
   oManual.value = '__manual__';
-  oManual.textContent = '✏️ Ketik nama lain...';
+  oManual.textContent = '✏️ Ketik nama...';
   sel.appendChild(oManual);
   if(prev) sel.value = prev;
 }
@@ -58,7 +58,7 @@ function addSaleRow(){
   card.innerHTML=
     '<button class="btn-del-card" onclick="removeSaleRow(this)">✕</button>'+
     '<div class="sc-row"><div class="sc-field" style="grid-column:1/-1"><label>Pelanggan</label>'+
-      '<select class="pelanggan-select" onchange="onPelangganChange(this)"><option value="">-- Pilih Pelanggan --</option></select>'+
+      '<select class="pelanggan-select" onchange="onPelangganChange(this)"><option value="Warga">Warga</option></select>'+
       '<input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>'+
     '</div></div>'+
     '<div class="sc-row three">'+
