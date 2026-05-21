@@ -148,10 +148,13 @@ function goBack(){
 async function initApp(){
   if(!document.getElementById('tanggal').value)document.getElementById('tanggal').value=new Date().toISOString().split('T')[0];
   if(!document.getElementById('jual-tanggal').value)document.getElementById('jual-tanggal').value=new Date().toISOString().split('T')[0];
-  await populateKandangSelects();
-  await populateAllPakanSelects();
-  await populateAllPelangganSelects();
-  await loadKesMaster(); // Load master vitamin/obat/vaksin untuk dropdown
+  // Parallel fetch — semua independen satu sama lain
+  await Promise.all([
+    populateKandangSelects(),
+    populateAllPakanSelects(),
+    populateAllPelangganSelects(),
+    loadKesMaster()
+  ]);
   updatePeriodBar();
   calcSisa();calcSaleTotal();
   renderHome();

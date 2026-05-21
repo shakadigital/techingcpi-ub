@@ -1,12 +1,47 @@
-const CACHE_NAME = 'teachingfarm-v4.1.0';
+const CACHE_NAME = 'teachingfarm-v4.2.0';
 const STATIC_ASSETS = [
-  '/supabase.js',
+  '/',
+  '/index.html',
+  '/styles.css',
   '/manifest.json',
+  // Core JS
+  '/supabase.js',
+  '/auth.js',
+  '/app.js',
+  '/utils.js',
+  // Page modules
+  '/home.js',
+  '/penjualan.js',
+  '/gudang-pakan.js',
+  '/gudang-nonpakan.js',
+  '/biaya.js',
+  '/laporan.js',
+  '/riwayat.js',
+  '/settings-page.js',
+  '/master.js',
+  '/kemitraan.js',
+  '/grafik.js',
+  '/kas.js',
+  '/backup.js',
+  '/standar-performa.js',
+  '/pwa-update.js',
+  '/input_harian.js',
+  '/bw-module.js',
+  // Features
+  '/offline-db.js',
+  '/offline-manager.js',
+  '/mobile-gestures.js',
+  '/mobile-forms.js',
+  '/pull-to-refresh.js',
+  '/realtime-manager.js',
+  '/install-prompt.js',
+  // Icons
   '/icon/favicon.ico',
   '/icon/icon.svg',
   '/icon/icon-96.png',
   '/icon/icon-192.png',
-  '/icon/icon-512.png'
+  '/icon/icon-512.png',
+  '/icon/logo-app.png'
 ];
 
 // Install

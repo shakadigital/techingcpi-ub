@@ -80,12 +80,31 @@ const SB = {
 
 // ═══════════════════════════════════════════════════
 //  CACHE LAYER (untuk performa & offline fallback)
+//  Max 50 entries, LRU eviction
 // ═══════════════════════════════════════════════════
 const cache = {
   _data: {},
-  get: k => cache._data[k] ?? null,
-  set: (k, v) => { cache._data[k] = v; },
-  del: k => { delete cache._data[k]; }
+  _order: [],
+  _maxSize: 50,
+  get: k => { 
+    if(cache._data[k] !== undefined) {
+      // Move to end (most recently used)
+      cache._order = cache._order.filter(x => x !== k);
+      cache._order.push(k);
+    }
+    return cache._data[k] ?? null;
+  },
+  set: (k, v) => { 
+    if(cache._data[k] === undefined) cache._order.push(k);
+    else cache._order = [...cache._order.filter(x => x !== k), k];
+    cache._data[k] = v;
+    // Evict oldest if over limit
+    while(cache._order.length > cache._maxSize) {
+      const oldest = cache._order.shift();
+      delete cache._data[oldest];
+    }
+  },
+  del: k => { delete cache._data[k]; cache._order = cache._order.filter(x => x !== k); }
 };
 
 // ═══════════════════════════════════════════════════
