@@ -93,6 +93,15 @@ function calcSaleTotal(){
 }
 // ═══ STOK TELUR KUMULATIF ═══
 async function getStokTelur(tgl){
+  // Coba server-side dulu (lebih cepat, tidak fetch semua data)
+  if(typeof dbGetStokTelur === 'function') {
+    try {
+      const serverStok = await dbGetStokTelur(tgl);
+      if(serverStok) return serverStok;
+    } catch { /* fallback ke client-side */ }
+  }
+  
+  // Fallback: client-side calculation
   const prod={Normal:{butir:0,kilo:0},Cream:{butir:0,kilo:0},Retak:{butir:0,kilo:0}};
   const inputs=await dbGetInput({sampai:tgl});
   inputs.forEach(row=>{
@@ -103,7 +112,7 @@ async function getStokTelur(tgl){
       prod[G].kilo+=parseFloat(d.produksi[g]?.kilo)||0;
     });
   });
-  const juals=await dbGetPenjualan({sampai:tgl});
+  const juals=await dbGetPenjualan({sampai:tgl, limit:9999});
   juals.forEach(j=>{
     (j.rows||[]).forEach(r=>{
       const G=r.grade;

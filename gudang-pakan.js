@@ -1,6 +1,14 @@
 ﻿// ═══ MODULE: gudang-pakan ═══
 
 async function calcStokPakan(namaPakan){
+  // Coba server-side dulu
+  if(typeof dbGetStokPakan === 'function') {
+    try {
+      const stokMap = await dbGetStokPakan();
+      if(stokMap && stokMap[namaPakan] !== undefined) return Math.max(0, stokMap[namaPakan]);
+    } catch { /* fallback */ }
+  }
+  // Fallback client-side
   const kiriman=cache.get('kiriman_pakan')||await dbGetKiriman();
   const masuk=kiriman.filter(k=>k.nama_pakan===namaPakan).reduce((s,k)=>s+(parseFloat(k.jumlah)||0),0);
   const inputs=cache.get('_all_inputs')||await dbGetInput();

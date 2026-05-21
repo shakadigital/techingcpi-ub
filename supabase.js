@@ -62,6 +62,20 @@ const SB = {
   update: (table, body, query) => supa('PATCH', table, body, query),
   upsert: (table, body) => supa('POST', table, body, '?on_conflict=id'),
   delete: (table, query) => supa('DELETE', table, null, query),
+  rpc: async (fnName, params = {}) => {
+    const url = `${SUPA_URL}/rest/v1/rpc/${fnName}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+    });
+    if (!res.ok) throw new Error(`RPC ${fnName}: ${await res.text()}`);
+    return res.json();
+  }
 };
 
 // ═══════════════════════════════════════════════════
@@ -161,7 +175,8 @@ async function dbGetInput(filters = {}) {
     if (filters.kandang) q += `&kandang=eq.${encodeURIComponent(filters.kandang)}`;
     if (filters.dari) q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
-    const isAll = !filters.tanggal && !filters.kandang && !filters.dari && !filters.sampai;
+    if (filters.limit) q += `&limit=${filters.limit}`;
+    const isAll = !filters.tanggal && !filters.kandang && !filters.dari && !filters.sampai && !filters.limit;
     if (isAll && cache.get('_all_inputs')) return cache.get('_all_inputs');
     const rows = await SB.select(TB.input_harian, q);
     if (isAll) cache.set('_all_inputs', rows || []);
@@ -191,6 +206,8 @@ async function dbGetPenjualan(filters = {}) {
     let q = '?select=*&order=tanggal.desc';
     if (filters.dari) q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
+    if (filters.limit) q += `&limit=${filters.limit}`;
+    else q += '&limit=100'; // Default limit untuk performa
     const rows = await SB.select(TB.penjualan, q);
     cache.set('penjualan_list', rows);
     return rows || [];
@@ -227,6 +244,8 @@ async function dbGetKiriman(filters = {}) {
     let q = '?select=*&order=tanggal.desc';
     if (filters.dari) q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
+    if (filters.limit) q += `&limit=${filters.limit}`;
+    else q += '&limit=100'; // Default limit
     const rows = await SB.select(TB.kiriman_pakan, q);
     cache.set('kiriman_pakan', rows);
     return rows || [];
@@ -251,6 +270,8 @@ async function dbGetKas(filters = {}) {
     if (filters.dari)   q += `&tanggal=gte.${filters.dari}`;
     if (filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
     if (filters.kandang) q += `&kandang=eq.${encodeURIComponent(filters.kandang)}`;
+    if (filters.limit) q += `&limit=${filters.limit}`;
+    else q += '&limit=200'; // Default limit
     const rows = await SB.select(TB.kas_operasional, q);
     cache.set('kas_list', rows);
     return rows || [];
@@ -269,10 +290,33 @@ async function dbDeleteKas(id) {
 }
 
 async function dbGetSaldoKas(kandang) {
-  const list = await dbGetKas(kandang ? { kandang } : {});
-  const masuk  = list.filter(k => k.jenis === 'masuk') .reduce((s, k) => s + (parseFloat(k.jumlah) || 0), 0);
-  const keluar = list.filter(k => k.jenis === 'keluar').reduce((s, k) => s + (parseFloat(k.jumlah) || 0), 0);
-  return { masuk, keluar, saldo: masuk - keluar, list };
+  // Server-side aggregate — jauh lebih cepat dari fetch semua record
+  try {
+    const result = await SB.rpc('get_saldo_kas_tf_ub', { p_kandang: kandang || null });
+    // Tetap ambil list terbaru (limited) untuk tampilan
+    const list = await dbGetKas(kandang ? { kandang } : {});
+    return { masuk: result.masuk, keluar: result.keluar, saldo: result.saldo, list };
+  } catch {
+    // Fallback ke client-side jika RPC gagal
+    const list = await dbGetKas(kandang ? { kandang } : {});
+    const masuk  = list.filter(k => k.jenis === 'masuk') .reduce((s, k) => s + (parseFloat(k.jumlah) || 0), 0);
+    const keluar = list.filter(k => k.jenis === 'keluar').reduce((s, k) => s + (parseFloat(k.jumlah) || 0), 0);
+    return { masuk, keluar, saldo: masuk - keluar, list };
+  }
+}
+
+// Server-side stok telur (menghindari fetch semua input + penjualan)
+async function dbGetStokTelur(sampai) {
+  try {
+    return await SB.rpc('get_stok_telur_tf_ub', { p_sampai: sampai || new Date().toISOString().split('T')[0] });
+  } catch { return null; }
+}
+
+// Server-side stok pakan
+async function dbGetStokPakan() {
+  try {
+    return await SB.rpc('get_stok_pakan_tf_ub', {});
+  } catch { return null; }
 }
 
 // ── ACTIVITY LOG ───────────────────────────────────
