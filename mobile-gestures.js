@@ -35,6 +35,8 @@ class MobileGestures {
   handleTouchStart(e) {
     // Don't interfere with form inputs, buttons, or scrollable areas
     if (this.shouldIgnoreTouch(e.target)) {
+      this.startX = 0;
+      this.startY = 0;
       return;
     }
 
