@@ -57,8 +57,9 @@ class MobileGestures {
       return;
     }
 
-    // Prevent default horizontal scroll if we're handling swipe
-    if (Math.abs(deltaX) > 10 && !this.isScrolling) {
+    // Only prevent default for significant horizontal swipes (>30px)
+    // This avoids blocking taps/clicks on buttons and cards
+    if (Math.abs(deltaX) > 30 && !this.isScrolling) {
       e.preventDefault();
     }
   }
@@ -164,7 +165,8 @@ class MobileGestures {
     // Ignore touches on interactive elements
     const ignoredElements = [
       'input', 'textarea', 'select', 'button', 'a',
-      '.modal', '.dropdown', '.tbl', '.chart-wrap'
+      '.modal', '.dropdown', '.tbl', '.chart-wrap',
+      '.qa-btn', '.quick-actions'
     ];
 
     // Check if target or parent matches ignored elements
@@ -209,8 +211,8 @@ class MobileGestures {
     // Patch switchPage untuk update currentPage
     const origSwitchPage = window.switchPage;
     if (typeof origSwitchPage === 'function') {
-      window.switchPage = (name) => {
-        origSwitchPage(name);
+      window.switchPage = (name, _fromBack) => {
+        origSwitchPage(name, _fromBack);
         this.currentPage = name;
       };
     }
