@@ -470,5 +470,3 @@ function downloadCSV(csv,filename){
   const a=document.createElement('a');a.href=url;a.download=filename;a.click();
   URL.revokeObjectURL(url);
 }
-
-// ═══ SETTINGS DROPDOWN ═══

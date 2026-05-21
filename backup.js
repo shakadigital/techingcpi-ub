@@ -66,5 +66,3 @@ async function restoreData(input){
   }catch(e){statusEl.textContent='❌ Gagal restore: '+e.message;}
   input.value='';
 }
-
-// ═══ KAS OPERASIONAL ═══

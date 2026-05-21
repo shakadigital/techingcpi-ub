@@ -428,19 +428,3 @@ async function exportRiwayat(){
     await exportExcel('Riwayat Kiriman Pakan',headers,data,'riwayat_kiriman_'+today+'.xlsx');
   }
 }
-
-// ═══ LAPORAN ═══
-let currentLTab='rekap';
-function switchLTab(tab){
-  currentLTab=tab;
-  ['rekap','labarugi','kemitraan','grafik','fcr'].forEach(t=>{
-    const tabEl=document.getElementById('ltab-'+t);
-    const contentEl=document.getElementById('ltab-content-'+t);
-    if(tabEl) tabEl.classList.toggle('active',t===tab);
-    if(contentEl) contentEl.style.display=t===tab?'block':'none';
-  });
-  if(tab==='kemitraan') initRekapKemitraan();
-  else renderLaporan();
-}
-
-// ═══ HARGA PASAR HARIAN ═══

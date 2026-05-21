@@ -385,6 +385,3 @@ async function renderRekapKemitraan(){
     </div>
   </div>`;
 }
-
-// ═══ BOOT ═══
-// Wait for DB script to load before initializing

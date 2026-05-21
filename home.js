@@ -540,6 +540,3 @@ async function renderHomeAlerts(){
   el.style.display='block';
   el.innerHTML=alerts.map(a=>`<div class="alert-item ${a.type}"><div class="ai-icon">${a.icon}</div><div class="ai-text"><div class="ai-title">${a.title}</div><div class="ai-desc">${a.desc}</div></div></div>`).join('');
 }
-
-// ═══ GRAFIK (Chart.js) ═══
-let chartHDP=null,chartPerforma=null;

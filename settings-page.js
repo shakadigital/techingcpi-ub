@@ -307,5 +307,3 @@ function initDarkMode(){
     if(btn)btn.textContent='☀️';
   }
 }
-
-// ═══ MULTI-BAHASA ═══

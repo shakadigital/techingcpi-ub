@@ -584,5 +584,3 @@ async function openKirimanEditModal(id){
   setSupplierValue('mk2-supplier-select','mk2-supplier-text','mk2-supplier',k.supplier||'');
   document.getElementById('modal-kiriman').style.display='flex';
 }
-
-// ═══ HOME ═══

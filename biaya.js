@@ -291,6 +291,3 @@ async function populateBiayaKandang(){
     console.error('populateBiayaKandang error:',e);
   }
 }
-
-// ═══ RIWAYAT ═══
-let currentRTab='harian';

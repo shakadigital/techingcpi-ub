@@ -66,5 +66,3 @@ async function saveKas(){
     showToast(jenis==='masuk'?'✅ Alokasi kas disimpan!':'✅ Pengeluaran kas dicatat!');
   }catch(e){showToast('❌ Gagal: '+e.message);}
 }
-// ═══ MASTER DATA ═══
-const MASTER_ROLES = ['superadmin','admin','manajer'];

@@ -386,5 +386,3 @@ async function deleteMasterData(type, id){
     showToast('✅ Data dinonaktifkan.');
   }catch(e){showToast('❌ Gagal: '+e.message);}
 }
-
-// ═══ FORCE UPDATE PWA (Superadmin only) ═══

@@ -341,7 +341,7 @@ async function showRingkasanSiklus(namaKandang){
   document.getElementById('modal-siklus').style.display='flex';
 }
 
-function exportSiklus(){
+async function exportSiklus(){
   if(!_siklusData)return;
   const d=_siklusData;
   const today=new Date().toISOString().split('T')[0];
@@ -366,5 +366,3 @@ function exportSiklus(){
   ];
   await exportExcel('Ringkasan Siklus - '+d.namaKandang,headers,data,'siklus_'+d.namaKandang+'_'+today+'.xlsx');
 }
-
-// ═══ BACKUP & RESTORE ═══
