@@ -68,36 +68,45 @@ let _currentGTab = 'pakan';
 
 function switchGTab(tab) {
   _currentGTab = tab;
-  ['pakan','vitamin','obat','vaksin','desinfektan','lainnya'].forEach(t => {
-    document.getElementById(`gtab-${t}`).classList.toggle('active', t === tab);
-  });
+  try {
+    ['pakan','vitamin','obat','vaksin','desinfektan','lainnya'].forEach(t => {
+      const el = document.getElementById(`gtab-${t}`);
+      if(el) el.classList.toggle('active', t === tab);
+    });
 
-  // Tampilkan konten tabel, sembunyikan cards overview
-  const qaCards = document.getElementById('gudang-qa');
-  if(qaCards) qaCards.style.display = 'none';
-  const contentArea = document.getElementById('gudang-content-area');
-  if(contentArea) contentArea.style.display = '';
+    // Tampilkan konten tabel, sembunyikan cards overview
+    const qaCards = document.getElementById('gudang-qa');
+    if(qaCards) qaCards.style.display = 'none';
+    const contentArea = document.getElementById('gudang-content-area');
+    if(contentArea) contentArea.style.display = 'block';
 
-  const isPakan = tab === 'pakan';
-  document.getElementById('gtab-content-pakan').style.display    = isPakan ? '' : 'none';
-  document.getElementById('gtab-content-nonpakan').style.display = isPakan ? 'none' : '';
+    const pakanContent = document.getElementById('gtab-content-pakan');
+    const nonpakanContent = document.getElementById('gtab-content-nonpakan');
+    const isPakan = tab === 'pakan';
+    if(pakanContent) pakanContent.style.display = isPakan ? 'block' : 'none';
+    if(nonpakanContent) nonpakanContent.style.display = isPakan ? 'none' : 'block';
 
-  if(isPakan) {
-    renderGudangPakan();
-  } else {
-    renderGudangNonPakan(tab);
+    if(isPakan) {
+      renderGudangPakan();
+    } else {
+      renderGudangNonPakan(tab);
+    }
+  } catch(e) {
+    console.error('switchGTab error:', e);
+    showToast('❌ Error: ' + e.message);
   }
 }
 
 // Kembali ke tampilan cards gudang
 function showGudangCards() {
   const qaCards = document.getElementById('gudang-qa');
-  if(qaCards) qaCards.style.display = '';
+  if(qaCards) qaCards.style.display = 'grid';
   const contentArea = document.getElementById('gudang-content-area');
   if(contentArea) contentArea.style.display = 'none';
   // Reset active state
   ['pakan','vitamin','obat','vaksin','desinfektan','lainnya'].forEach(t => {
-    document.getElementById(`gtab-${t}`).classList.remove('active');
+    const el = document.getElementById(`gtab-${t}`);
+    if(el) el.classList.remove('active');
   });
   // Refresh stok info di cards
   loadGudangCardStok();
