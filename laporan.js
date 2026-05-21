@@ -438,7 +438,7 @@ async function exportPDF(title, headers, rows, filename, dari, sampai, kandang){
   const doc=new jsPDF({orientation:rows[0]?.length>5?'landscape':'portrait',unit:'mm',format:'a4'});
   // Header
   doc.setFontSize(14);doc.setFont('helvetica','bold');
-  doc.text('Teaching Farm UB',14,15);
+  doc.text('Teaching cpi-ub',14,15);
   doc.setFontSize(11);doc.setFont('helvetica','normal');
   doc.text(title,14,22);
   doc.setFontSize(9);doc.setTextColor(100);
@@ -456,7 +456,7 @@ async function exportPDF(title, headers, rows, filename, dari, sampai, kandang){
     didDrawPage:(data)=>{
       // Footer
       doc.setFontSize(7);doc.setTextColor(150);
-      doc.text('Teaching Farm UB — '+new Date().toLocaleDateString('id-ID'),14,doc.internal.pageSize.height-8);
+      doc.text('Teaching cpi-ub — '+new Date().toLocaleDateString('id-ID'),14,doc.internal.pageSize.height-8);
       doc.text('Hal '+data.pageNumber,doc.internal.pageSize.width-20,doc.internal.pageSize.height-8);
     }
   });

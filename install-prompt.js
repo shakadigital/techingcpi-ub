@@ -151,7 +151,7 @@ class InstallPrompt {
       <div class="install-modal version-modal">
         <div class="install-modal-header">
           <div class="install-modal-icon">🚀</div>
-          <h3>Teaching Farm V${APP_VERSION}</h3>
+          <h3>Teaching cpi-ub V${APP_VERSION}</h3>
         </div>
         <div class="install-modal-body">
           <div class="version-welcome">
@@ -159,7 +159,7 @@ class InstallPrompt {
             <p>Fitur baru yang tersedia:</p>
           </div>
           <div class="version-features">
-            <div class="version-feature">📱 Shortcut home screen sekarang tampil sebagai "TF-UB"</div>
+            <div class="version-feature">📱 Shortcut home screen sekarang tampil sebagai "cpi-ub"</div>
             <div class="version-feature">🔄 Update versi aplikasi ke V2.9.0</div>
             <div class="version-feature">⚡ Peningkatan cache untuk performa lebih cepat</div>
           </div>

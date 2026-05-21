@@ -1,7 +1,7 @@
 {
-  "name": "TF-UB 4.0",
-  "short_name": "TF-UB",
-  "description": "Sistem Manajemen Terpadu Peternakan Ayam Petelur - TF-UB 4.0 dengan fitur Offline, Mobile UX, dan Real-time Updates",
+  "name": "Teaching cpi-ub",
+  "short_name": "cpi-ub",
+  "description": "Sistem Manajemen Terpadu Peternakan Ayam Petelur - Teaching cpi-ub dengan fitur Offline, Mobile UX, dan Real-time Updates",
   "version": "4.0.0",
   "start_url": "/index.html",
   "scope": "/",
@@ -37,21 +37,21 @@
       "short_name": "Input",
       "description": "Input data harian kandang dengan mode offline",
       "url": "/index.html#input",
-      "icons": [{ "src": "icon/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icon/logo-app.png", "sizes": "192x192" }]
     },
     {
       "name": "Laporan",
       "short_name": "Laporan",
       "description": "Lihat laporan produksi real-time",
       "url": "/index.html#laporan",
-      "icons": [{ "src": "icon/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icon/logo-app.png", "sizes": "192x192" }]
     },
     {
       "name": "Penjualan",
       "short_name": "Penjualan",
       "description": "Catat penjualan dengan sync otomatis",
       "url": "/index.html#penjualan",
-      "icons": [{ "src": "icon/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icon/logo-app.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [
