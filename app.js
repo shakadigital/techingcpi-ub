@@ -39,6 +39,11 @@ async function manualSync(){
       await window.offlineManager.backgroundSync();
     }
     
+    // Clear all cache before fetching so that fresh data is retrieved and repopulates the cache
+    if(typeof cache!=='undefined'&&cache._data){
+      Object.keys(cache._data).forEach(k=>cache.del(k));
+    }
+    
     // 2. Refresh semua data dari server
     const results=await Promise.allSettled([
       dbGetUsers(),
@@ -52,11 +57,6 @@ async function manualSync(){
     
     // Cek hasil
     const failed=results.filter(r=>r.status==='rejected');
-    
-    // Clear all cache regardless of partial failures so successful ones update UI
-    if(typeof cache!=='undefined'&&cache._data){
-      Object.keys(cache._data).forEach(k=>cache.del(k));
-    }
     
     if(failed.length>0){
       console.error('Sync errors:',failed);

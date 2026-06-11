@@ -1,4 +1,4 @@
-﻿// ═══ MODULE: settings-page ═══
+// ═══ MODULE: settings-page ═══
 
 function renderSettings(){
   const isSuperadmin = currentUser?.role === 'superadmin';
@@ -51,8 +51,8 @@ async function renderKandangTable(){
   });
 }
 
-function openKandangModal(id){
-  const list=cache.get('kandang_list')||[];
+async function openKandangModal(id){
+  const list=cache.get('kandang_list')||await dbGetKandang();
   const k=id?list.find(x=>x.id===id):null;
   document.getElementById('modal-kandang-title').textContent=k?'Edit Kandang':'Tambah Kandang';
   document.getElementById('mk-id').value=k?k.id:'';

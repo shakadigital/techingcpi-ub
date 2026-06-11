@@ -68,8 +68,9 @@ class RealtimeManager {
       const tables = ['input_harian', 'penjualan', 'kas_operasional', 'kiriman_pakan'];
 
       for (const table of tables) {
+        const tableName = TB[table] || table;
         const query = `?select=id,updated_at&order=updated_at.desc&limit=1&updated_at=gt.${this.lastChecked}`;
-        const rows = await SB.select(table, query);
+        const rows = await SB.select(tableName, query);
 
         if (rows && rows.length > 0) {
           this.handleDatabaseChange(table, 'UPDATE', rows[0]);

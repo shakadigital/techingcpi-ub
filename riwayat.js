@@ -1,4 +1,4 @@
-﻿// ═══ MODULE: riwayat ═══
+// ═══ MODULE: riwayat ═══
 
 // ═══ RIWAYAT ═══
 let currentRTab='harian';
@@ -11,17 +11,17 @@ function switchRTab(tab){
   renderRiwayat();
 }
 
-function renderRiwayat(){
-  populateRiwayatKandang();
+async function renderRiwayat(){
+  await populateRiwayatKandang();
   if(currentRTab==='harian')renderRHarian();
   else if(currentRTab==='penjualan')renderRPenjualan();
   else renderRKiriman();
 }
 
-function populateRiwayatKandang(){
+async function populateRiwayatKandang(){
   const sel=document.getElementById('r-kandang-filter');
   const prev=sel.value;
-  const list=cache.get('kandang_list')||[];
+  const list=cache.get('kandang_list')||await dbGetKandang();
   sel.innerHTML='<option value="">Semua Kandang</option>';
   list.forEach(k=>{const o=document.createElement('option');o.value=k.nama;o.textContent=k.nama;sel.appendChild(o);});
   if(prev)sel.value=prev;

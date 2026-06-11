@@ -1,4 +1,4 @@
-﻿// ═══ MODULE: laporan ═══
+// ═══ MODULE: laporan ═══
 
 // ═══ LAPORAN ═══
 let currentLTab='rekap';
@@ -82,8 +82,8 @@ async function saveHargaPasar() {
   if (activePage && activePage.id === 'page-home') renderHome();
 }
 
-function populateLaporanKandang(){
-  const list=cache.get('kandang_list')||[];
+async function populateLaporanKandang(){
+  const list=cache.get('kandang_list')||await dbGetKandang();
   // Populate semua select kandang di halaman laporan
   // Populate select kandang di halaman laporan
   ['l-kandang'].forEach(id=>{

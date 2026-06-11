@@ -1,8 +1,8 @@
-﻿// ═══ MODULE: kemitraan ═══
+// ═══ MODULE: kemitraan ═══
 
-function showPengambilanIntiSection(){
+async function showPengambilanIntiSection(){
   // Tampilkan section pengambilan inti jika ada kandang kemitraan
-  const list=cache.get('kandang_list')||[];
+  const list=cache.get('kandang_list')||await dbGetKandang();
   const hasKemitraan=list.some(k=>k.sistem==='kemitraan'&&k.status==='Aktif');
   const section=document.getElementById('section-pengambilan-inti');
   if(section) section.style.display=hasKemitraan?'block':'none';
@@ -28,7 +28,7 @@ async function renderPengambilanIntiTable(){
 }
 
 async function openPengambilanIntiModal(){
-  const list=cache.get('kandang_list')||[];
+  const list=cache.get('kandang_list')||await dbGetKandang();
   const kemitraanList=list.filter(k=>k.sistem==='kemitraan'&&k.status==='Aktif');
   if(!kemitraanList.length){showToast('⚠️ Tidak ada kandang kemitraan aktif!');return;}
 
@@ -217,8 +217,8 @@ async function deletePengambilanInti(id){
 
 // ═══ SETTINGS — KANDANG ═══
 
-function showKemitraanTab(){
-  const list=cache.get('kandang_list')||[];
+async function showKemitraanTab(){
+  const list=cache.get('kandang_list')||await dbGetKandang();
   const hasKemitraan=list.some(k=>k.sistem==='kemitraan');
   const tab=document.getElementById('ltab-kemitraan');
   if(tab) tab.style.display=hasKemitraan?'':'none';

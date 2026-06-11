@@ -5,7 +5,7 @@ async function updatePeriodBar(){
   const tglInput = document.getElementById('tanggal').value || new Date().toISOString().split('T')[0];
   
   if(!name){bar.style.display='none';document.getElementById('hdr-kandang').textContent='—';return;}
-  const list=cache.get('kandang_list')||[];
+  const list=cache.get('kandang_list')||await dbGetKandang();
   const k=list.find(x=>x.nama===name);
   if(!k){bar.style.display='none';return;}
   bar.style.display='flex';
