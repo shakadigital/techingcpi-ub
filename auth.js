@@ -146,6 +146,14 @@ function showApp() {
   
   initApp().catch(e => console.error('initApp error:', e)); // Called from app.js
   
+  // Log akses pengguna ke database (tidak dimunculkan di UI aplikasi)
+  if (typeof dbSaveLog === 'function') {
+    dbSaveLog('AKSES', 'users', currentUser?.id || null, null,
+      { username: currentUser?.username, role: currentUser?.role },
+      `User ${currentUser?.username || '—'} membuka/mengakses aplikasi.`
+    ).catch(e => console.warn('[Log Akses] Gagal menyimpan log:', e));
+  }
+  
   // Inisialisasi realtime setelah app tampil (tidak block loading)
   setTimeout(() => { 
     if (typeof initRealtimeManager === 'function') initRealtimeManager(); 

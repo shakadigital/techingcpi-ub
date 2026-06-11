@@ -422,35 +422,41 @@ async function dbUpdateStatusTagihan(kirimanId, jumlahBayar) {
 
 // ── MASTER TABLES ──────────────────────────────────
 async function dbGetMaster(table, filters = {}) {
+  const tableName = TB[table] || table;
   try {
     let q = '?select=*&active=eq.true&order=kode.asc';
     if (filters.kategori) q += `&kategori=eq.${encodeURIComponent(filters.kategori)}`;
-    const rows = await SB.select(table, q);
+    const rows = await SB.select(tableName, q);
     cache.set(table, rows);
     return rows || [];
   } catch { return cache.get(table) || []; }
 }
 
 async function dbSaveMaster(table, obj) {
+  const tableName = TB[table] || table;
   if (obj.id) {
     obj.updated_at = new Date().toISOString();
-    await SB.update(table, obj, `?id=eq.${obj.id}`);
+    await SB.update(tableName, obj, `?id=eq.${obj.id}`);
   } else {
     obj.id = crypto.randomUUID();
     obj.created_at = new Date().toISOString();
-    await SB.insert(table, obj);
+    await SB.insert(tableName, obj);
   }
   cache.del(table);
+  cache.del(tableName);
 }
 
 async function dbDeleteMaster(table, id) {
-  await SB.update(table, { active: false, updated_at: new Date().toISOString() }, `?id=eq.${id}`);
+  const tableName = TB[table] || table;
+  await SB.update(tableName, { active: false, updated_at: new Date().toISOString() }, `?id=eq.${id}`);
   cache.del(table);
+  cache.del(tableName);
 }
 
 async function dbGenerateKode(table, prefix) {
+  const tableName = TB[table] || table;
   try {
-    const rows = await SB.select(table, `?select=kode&kode=ilike.${prefix}-%25&order=kode.desc&limit=1`);
+    const rows = await SB.select(tableName, `?select=kode&kode=ilike.${prefix}-%25&order=kode.desc&limit=1`);
     if (!rows || !rows.length) return `${prefix}-001`;
     const lastKode = rows[0].kode;
     const lastNum = parseInt(lastKode.replace(prefix + '-', '')) || 0;
