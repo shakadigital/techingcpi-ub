@@ -286,6 +286,18 @@ function collectInputData(){
   const tgl=document.getElementById('tanggal').value;
   const knd=document.getElementById('kandang').value;
   if(!tgl||!knd){showToast('⚠️ Pilih tanggal dan kandang!');return null;}
+  
+  const hpVal = parseFloat(document.getElementById('harga_pasar').value) || 0;
+  if(hpVal <= 0){
+    showToast('⚠️ Harga pasar hari ini wajib diisi!');
+    const hpEl = document.getElementById('harga_pasar');
+    if(hpEl){
+      hpEl.focus();
+      hpEl.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+    return null;
+  }
+
   return{
     tanggal:tgl,kandang:knd,user:currentUser?currentUser.username:'',
     deplesi:{mati:document.getElementById('mati').value,afkir:document.getElementById('afkir').value,total:document.getElementById('total_deplesi').value},
@@ -299,7 +311,7 @@ function collectInputData(){
       total:{butir:document.getElementById('p_total_butir').value,kilo:document.getElementById('p_total_kilo').value},
       hdp:document.getElementById('hdp').value,berat_rata:document.getElementById('berat_rata').value
     },
-    harga_pasar:parseFloat(document.getElementById('harga_pasar').value)||0,
+    harga_pasar:hpVal,
     kesehatan: collectKesehatan(),
     catatan:document.getElementById('catatan').value
   };
