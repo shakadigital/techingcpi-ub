@@ -524,6 +524,19 @@ async function captureSummaryFullscreen(){
 // ═══ PENGAMBILAN INTI (KEMITRAAN) ═══
 
 
+// Helper untuk mendeteksi pakan starter/grower
+function isStarterGrowerFeed(feedName) {
+  if (!feedName) return false;
+  const name = feedName.toLowerCase();
+  return name.includes('522') ||
+         name.includes('521') ||
+         name.includes('starter') ||
+         name.includes('grower') ||
+         name.includes('doc') ||
+         name.includes('pre-') ||
+         name.includes('prelay');
+}
+
 async function renderHomeAlerts(){
   const alerts=[];
   const today=new Date().toISOString().split('T')[0];
@@ -533,7 +546,27 @@ async function renderHomeAlerts(){
   // 1. Alert stok pakan rendah
   try{
     const pakans=await dbGetDaftarPakan();
+    
+    // Periksa apakah ada kandang aktif dengan ayam berumur <= 19 minggu
+    let hasYoungChickens = false;
+    for (const k of aktif) {
+      if (k.chickin) {
+        const hariSejak = Math.floor((new Date(today) - new Date(k.chickin)) / 86400000);
+        const umurMasukVal = parseInt(k.umur_masuk) || 0;
+        const totalHari = umurMasukVal + hariSejak;
+        const weekNum = Math.floor(totalHari / 7);
+        if (weekNum <= 19) {
+          hasYoungChickens = true;
+          break;
+        }
+      }
+    }
+
     for(const p of pakans){
+      // Jika pakan termasuk tipe starter/grower dan tidak ada ayam berumur <= 19 minggu, lewati peringatan
+      if (isStarterGrowerFeed(p.nama) && !hasYoungChickens) {
+        continue;
+      }
       const stok=await calcStokPakan(p.nama);
       const min=parseFloat(p.stok_minimal)||0;
       if(min>0&&stok<min){
