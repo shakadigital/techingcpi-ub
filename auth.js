@@ -93,8 +93,19 @@ async function doLogin() {
   }
   err.textContent = '⏳ Memeriksa...';
   try {
-    const user = await dbFindUser(u, p);
+    const hashedPassword = await hashPassword(p);
+    const user = await dbFindUser(u, hashedPassword, p);
     if (user) {
+      // Migrasi otomatis jika password di database masih berupa plaintext
+      if (user.password === p) {
+        try {
+          user.password = hashedPassword;
+          await dbSaveUser(user);
+          console.log(`[Migration] Password user "${user.username}" berhasil di-migrate ke SHA-256.`);
+        } catch (migErr) {
+          console.warn('Gagal migrasi password:', migErr);
+        }
+      }
       currentUser = user;
       sessionStorage.setItem('session_user', JSON.stringify(user));
       err.textContent = '';

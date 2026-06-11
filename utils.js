@@ -100,3 +100,15 @@ async function ensureJsPDF() {
   await loadLib('jspdf');
   await loadLib('jspdfAutotable');
 }
+
+// ── Hash password dengan SHA-256 (Web Crypto API) ──
+async function hashPassword(password) {
+  if (!password) return '';
+  // Jika password sudah berupa hash SHA-256 (64 karakter heksadesimal), langsung kembalikan
+  if (/^[a-f0-9]{64}$/i.test(password)) return password;
+  
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}

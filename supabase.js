@@ -135,11 +135,12 @@ async function dbDeleteUser(id) {
   cache.del('users');
 }
 
-async function dbFindUser(username, password) {
+async function dbFindUser(username, hashedPassword, plaintextPassword) {
   try {
     const rows = await SB.select(TB.users, `?select=*&username=eq.${encodeURIComponent(username)}`);
     return (rows || []).find(u =>
-      u.password === password &&
+      u.username === username &&
+      (u.password === hashedPassword || u.password === plaintextPassword) &&
       (u.active === true || u.active === 'true' || u.active === 1)
     ) || null;
   } catch { return null; }

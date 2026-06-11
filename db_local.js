@@ -161,12 +161,12 @@ async function dbDeleteUser(id) {
   cache.del('users');
 }
 
-async function dbFindUser(username, password) {
+async function dbFindUser(username, hashedPassword, plaintextPassword) {
   try {
     const rows = await dbGetUsers();
     return (rows || []).find(u =>
       u.username === username &&
-      u.password === password &&
+      (u.password === hashedPassword || u.password === plaintextPassword) &&
       (u.active === true || u.active === 'true' || u.active === 1)
     ) || null;
   } catch { return null; }

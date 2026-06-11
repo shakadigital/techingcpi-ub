@@ -1,4 +1,4 @@
-﻿// ═══ MODULE: home ═══
+// ═══ MODULE: home ═══
 
 async function renderHome(){
   const list=await dbGetKandang();
@@ -299,16 +299,55 @@ async function renderDailySummary(todayInputs, kandangList){
   let refKandangNama = targetKandang || (hasData && filtered[0]?.kandang) || (activeKandangList.length > 0 ? activeKandangList[0].nama : '');
   const refKandang=kList.find(k=>k.nama===refKandangNama);
   
+  let weekNum = 0;
   if(refKandang?.chickin){
     const hariSejak=Math.floor((new Date(today)-new Date(refKandang.chickin))/86400000);
     const umurMasukVal = parseInt(refKandang.umur_masuk) || 0;
     const totalHari=umurMasukVal+hariSejak;
-    umurMinggu=Math.floor(totalHari/7)+'w';
+    weekNum = Math.floor(totalHari/7);
+    umurMinggu=weekNum+'w';
     umurHari=(totalHari%7)+'d';
     hariKeProd='Hari ke-'+(hariSejak+1);
   }
   const dsHariKe=document.getElementById('ds-hari-ke');
   if(dsHariKe)dsHariKe.textContent=hariKeProd;
+
+  // ── Ambil data standar sesuai umur ──
+  let stdFI='', stdWater='', stdEW='', stdHDP='';
+  if (weekNum > 0) {
+    try {
+      const standar = await loadStandarPerforma();
+      let stdRow = null;
+      if (weekNum < 18) {
+        stdRow = (standar.pertumbuhan || []).find(r => r.umur === weekNum);
+      } else {
+        stdRow = (standar.produksi || []).find(r => r.umur === weekNum);
+      }
+      
+      if (stdRow) {
+        const getUpperBound = str => {
+          if(!str) return '';
+          const s = String(str).replace(/\s/g,'').replace(',','.');
+          const m = s.match(/^([\d.]+)[–\-]([\d.]+)$/);
+          if(m) return m[2];
+          return s;
+        };
+        const fmtStdVal = (valStr) => {
+          if (!valStr) return '';
+          return getUpperBound(valStr).replace('.', ',');
+        };
+        
+        stdFI = fmtStdVal(stdRow.konsumsi_pakan);
+        stdWater = fmtStdVal(stdRow.air_minum);
+        if (weekNum >= 18) {
+          stdEW = fmtStdVal(stdRow.berat_telur);
+          stdHDP = fmtStdVal(stdRow.hdp);
+        }
+      }
+    } catch(e) {
+      console.warn('Gagal memuat standar performa untuk summary:', e);
+    }
+  }
 
   // ── Helper trend ──
   const trend=(now,prev)=>{
@@ -365,13 +404,13 @@ async function renderDailySummary(todayInputs, kandangList){
     <tr><td>Deplesi Hari Ini</td><td class="${deplesiClass}">${hasData?(totalDeplesi+' ekor ('+deplesiPct.toFixed(3)+'%)'):'—'}</td><td>${trendDeplesi||'—'}</td></tr>
 
     <tr class="section-head"><td colspan="3">🌾 Pakan & Air</td></tr>
-    <tr><td>FI (Feed Intake)</td><td>${avgFI>0?avgFI.toFixed(1):'—'}</td><td>gr/ekor</td></tr>
-    <tr><td>Water Intake</td><td>${avgWater>0?avgWater.toFixed(0):'—'}</td><td>ml/ekor</td></tr>
+    <tr><td>FI (Feed Intake)</td><td>${avgFI>0?avgFI.toFixed(1):'—'}${stdFI?`<span class="val-std">/ ${stdFI}gr</span>`:''}</td><td>gr/ekor</td></tr>
+    <tr><td>Water Intake</td><td>${avgWater>0?avgWater.toFixed(0):'—'}${stdWater?`<span class="val-std">/ ${stdWater}ml</span>`:''}</td><td>ml/ekor</td></tr>
     <tr><td>Rasio Air:Pakan</td><td>${avgRasio>0?avgRasio.toFixed(2):'—'}</td><td>:1</td></tr>
 
     <tr class="section-head"><td colspan="3">🥚 Produksi Telur</td></tr>
-    <tr><td>EW (Egg Weight)</td><td>${avgEW>0?avgEW.toFixed(1):'—'}</td><td>gr/butir</td></tr>
-    <tr><td>HD% (Hen Day)</td><td class="${hdpClass}">${avgHDP>0?avgHDP.toFixed(1)+'%':'—'}</td><td>${trendHDP||'—'}</td></tr>
+    <tr><td>EW (Egg Weight)</td><td>${avgEW>0?avgEW.toFixed(1):'—'}${stdEW?`<span class="val-std">/ ${stdEW}gr</span>`:''}</td><td>gr/butir</td></tr>
+    <tr><td>HD% (Hen Day)</td><td class="${hdpClass}">${avgHDP>0?avgHDP.toFixed(1)+'%':'—'}${stdHDP?`<span class="val-std">/ ${stdHDP}%</span>`:''}</td><td>${trendHDP||'—'}</td></tr>
     <tr><td>Total Produksi</td><td>${hasData?(totalButir.toLocaleString('id-ID')+' butir'):'—'}</td><td>${hasData?(totalKg.toFixed(2)+' kg'):'—'}</td></tr>
 
     <tr class="section-head"><td colspan="3">📊 Efisiensi</td></tr>

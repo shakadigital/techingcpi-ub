@@ -1297,3 +1297,14 @@
     body.dark #tbl-standar-produksi tr:nth-child(even) {
       background: #1a2234;
     }
+
+    /* ── VALUE STANDARD TEXT (BLUE) ── */
+    .val-std {
+      color: #0284c7;
+      font-weight: 500;
+      font-size: 0.85em;
+      margin-left: 4px;
+    }
+    body.dark .val-std {
+      color: #38bdf8;
+    }

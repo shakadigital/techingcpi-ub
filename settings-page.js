@@ -238,10 +238,11 @@ async function saveUser(){
   if(!pw){showToast('⚠️ Password wajib diisi!');return;}
   if(pw.length<6){showToast('⚠️ Password minimal 6 karakter!');return;}
 
-  const obj={username:uname,password:pw,role:document.getElementById('mu-role').value,active:true};
-  if(id)obj.id=id;
-  showToast('⏳ Menyimpan...');
-  try{
+  try {
+    const hashedPassword = await hashPassword(pw);
+    const obj={username:uname,password:hashedPassword,role:document.getElementById('mu-role').value,active:true};
+    if(id)obj.id=id;
+    showToast('⏳ Menyimpan...');
     await dbSaveUser(obj);
     closeModal('modal-user');
     await renderUserTable();
