@@ -365,8 +365,9 @@
             <thead><tr><th>Grade</th><th>Butir</th><th>Kilo (kg)</th></tr></thead>
             <tbody>
               <tr><td>Normal</td><td><input type="number" id="p_normal_butir" min="0" value="0" oninput="calcProduksi()"/></td><td><input type="number" id="p_normal_kilo" min="0" step="0.01" value="0" oninput="calcProduksi()"/></td></tr>
-              <tr><td>Cream</td><td><input type="number" id="p_cream_butir" min="0" value="0" oninput="calcProduksi()"/></td><td><input type="number" id="p_cream_kilo" min="0" step="0.01" value="0" oninput="calcProduksi()"/></td></tr>
-              <tr><td>Retak</td><td><input type="number" id="p_retak_butir" min="0" value="0" oninput="calcProduksi()"/></td><td><input type="number" id="p_retak_kilo" min="0" step="0.01" value="0" oninput="calcProduksi()"/></td></tr>
+              <tr><td>Crem</td><td><input type="number" id="p_crem_butir" min="0" value="0" oninput="calcProduksi()"/></td><td><input type="number" id="p_crem_kilo" min="0" step="0.01" value="0" oninput="calcProduksi()"/></td></tr>
+              <tr><td>Bentes kering</td><td><input type="number" id="p_bentes_kering_butir" min="0" value="0" oninput="calcProduksi()"/></td><td><input type="number" id="p_bentes_kering_kilo" min="0" step="0.01" value="0" oninput="calcProduksi()"/></td></tr>
+              <tr><td>Ceplokan</td><td><input type="number" id="p_ceplokan_butir" min="0" value="0" oninput="calcProduksi()"/></td><td><input type="number" id="p_ceplokan_kilo" min="0" step="0.01" value="0" oninput="calcProduksi()"/></td></tr>
               <tr class="total-row"><td>TOTAL</td><td><input type="number" id="p_total_butir" readonly/></td><td><input type="number" id="p_total_kilo" readonly/></td></tr>
             </tbody>
           </table>
@@ -457,6 +458,14 @@
       <div class="card">
         <div class="card-header"><div class="num">🥚</div><h2>Transaksi Penjualan Telur</h2></div>
         <div class="card-body">
+          <div class="info-box" style="margin-bottom: 12px; padding: 10px; border-radius: 6px; text-align: left; font-size: 0.85rem; color: #555; background: #fff8e1; border-left: 4px solid #ffc107;">
+            <strong>Ketentuan Harga Tambahan:</strong><br/>
+            1. Eceran / Normal : DO + 1.000/kg<br/>
+            2. Bakul / Normal : DO + 300/kg<br/>
+            3. Crem : DO - 1.500/kg<br/>
+            4. Bentes kering : DO - 5.000/kg<br/>
+            5. Ceplokan : 4.000 / 5btr
+          </div>
           <div id="sale-tbody">
             <div class="sale-card sale-row">
               <button class="btn-del-card" onclick="removeSaleRow(this)">✕</button>
@@ -468,7 +477,7 @@
               </div>
               <div class="sc-row three">
                 <div class="sc-field"><label>Grade</label>
-                  <select><option value="">-- Grade --</option><option>Normal</option><option>Cream</option><option>Retak</option></select>
+                  <select><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes kering</option><option>Ceplokan</option></select>
                 </div>
                 <div class="sc-field"><label>Butir</label><input type="number" min="0" placeholder="0" oninput="calcTotal(this)"/></div>
                 <div class="sc-field"><label>Kilo (kg)</label><input type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal(this)"/></div>
@@ -1907,8 +1916,9 @@
         <tr><td style="color:#888">Mati</td><td id="ep-mati"></td></tr>
         <tr><td style="color:#888">Afkir</td><td id="ep-afkir"></td></tr>
         <tr><td style="color:#888">Telur Normal</td><td id="ep-normal"></td></tr>
-        <tr><td style="color:#888">Telur Cream</td><td id="ep-cream"></td></tr>
-        <tr><td style="color:#888">Telur Retak</td><td id="ep-retak"></td></tr>
+        <tr><td style="color:#888">Telur Crem</td><td id="ep-crem"></td></tr>
+        <tr><td style="color:#888">Telur Bentes kering</td><td id="ep-bentes-kering"></td></tr>
+        <tr><td style="color:#888">Telur Ceplokan</td><td id="ep-ceplokan"></td></tr>
         <tr><td style="color:#888">HDP</td><td id="ep-hdp"></td></tr>
         <tr><td style="color:#888">Air</td><td id="ep-air"></td></tr>
         <tr><td style="color:#888">Pakan</td><td id="ep-pakan"></td></tr>

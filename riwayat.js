@@ -143,8 +143,9 @@ async function editInputHarian(id){
     document.getElementById('ep-mati').textContent=(d.deplesi?.mati||0)+' ekor';
     document.getElementById('ep-afkir').textContent=(d.deplesi?.afkir||0)+' ekor';
     document.getElementById('ep-normal').textContent=(d.produksi?.normal?.butir||0)+' butir / '+(d.produksi?.normal?.kilo||0)+' kg';
-    document.getElementById('ep-cream').textContent=(d.produksi?.cream?.butir||0)+' butir / '+(d.produksi?.cream?.kilo||0)+' kg';
-    document.getElementById('ep-retak').textContent=(d.produksi?.retak?.butir||0)+' butir / '+(d.produksi?.retak?.kilo||0)+' kg';
+    document.getElementById('ep-crem').textContent=(d.produksi?.crem?.butir||(d.produksi?.cream?.butir||0))+' butir / '+(d.produksi?.crem?.kilo||(d.produksi?.cream?.kilo||0))+' kg';
+    document.getElementById('ep-bentes-kering').textContent=(d.produksi?.bentes_kering?.butir||(d.produksi?.retak?.butir||0))+' butir / '+(d.produksi?.bentes_kering?.kilo||(d.produksi?.retak?.kilo||0))+' kg';
+    document.getElementById('ep-ceplokan').textContent=(d.produksi?.ceplokan?.butir||0)+' butir / '+(d.produksi?.ceplokan?.kilo||0)+' kg';
     document.getElementById('ep-hdp').textContent=(d.produksi?.hdp||'—')+'%';
     document.getElementById('ep-air').textContent=(d.air_liter||0)+' L';
     document.getElementById('ep-pakan').textContent=((d.pakan||[]).map(p=>p.kode+' '+p.jumlah+'kg').join(', '))||'—';
@@ -168,12 +169,14 @@ function _loadEditToForm(d,id){
     document.getElementById('afkir').value=d.deplesi?d.deplesi.afkir:0;
     document.getElementById('populasi_awal').value=d.sisa_ayam||0;
     document.getElementById('air_liter').value=d.air_liter||0;
-    document.getElementById('p_normal_butir').value=d.produksi?d.produksi.normal.butir:0;
-    document.getElementById('p_normal_kilo').value=d.produksi?d.produksi.normal.kilo:0;
-    document.getElementById('p_cream_butir').value=d.produksi?d.produksi.cream.butir:0;
-    document.getElementById('p_cream_kilo').value=d.produksi?d.produksi.cream.kilo:0;
-    document.getElementById('p_retak_butir').value=d.produksi?d.produksi.retak.butir:0;
-    document.getElementById('p_retak_kilo').value=d.produksi?d.produksi.retak.kilo:0;
+    document.getElementById('p_normal_butir').value=d.produksi?.normal?.butir||0;
+    document.getElementById('p_normal_kilo').value=d.produksi?.normal?.kilo||0;
+    document.getElementById('p_crem_butir').value=d.produksi?.crem?.butir||(d.produksi?.cream?.butir||0);
+    document.getElementById('p_crem_kilo').value=d.produksi?.crem?.kilo||(d.produksi?.cream?.kilo||0);
+    document.getElementById('p_bentes_kering_butir').value=d.produksi?.bentes_kering?.butir||(d.produksi?.retak?.butir||0);
+    document.getElementById('p_bentes_kering_kilo').value=d.produksi?.bentes_kering?.kilo||(d.produksi?.retak?.kilo||0);
+    document.getElementById('p_ceplokan_butir').value=d.produksi?.ceplokan?.butir||0;
+    document.getElementById('p_ceplokan_kilo').value=d.produksi?.ceplokan?.kilo||0;
     document.getElementById('catatan').value=d.catatan||'';
     const hpEl = document.getElementById('harga_pasar');
     if(hpEl) {

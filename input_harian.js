@@ -65,9 +65,10 @@ function calcAir(){
 }
 function calcProduksi(){
   const nb=parseFloat(document.getElementById('p_normal_butir').value)||0,nk=parseFloat(document.getElementById('p_normal_kilo').value)||0;
-  const cb=parseFloat(document.getElementById('p_cream_butir').value)||0,ck=parseFloat(document.getElementById('p_cream_kilo').value)||0;
-  const rb=parseFloat(document.getElementById('p_retak_butir').value)||0,rk=parseFloat(document.getElementById('p_retak_kilo').value)||0;
-  const tb=nb+cb+rb,tk=(nk+ck+rk).toFixed(2);
+  const cb=parseFloat(document.getElementById('p_crem_butir').value)||0,ck=parseFloat(document.getElementById('p_crem_kilo').value)||0;
+  const bb=parseFloat(document.getElementById('p_bentes_kering_butir').value)||0,bk=parseFloat(document.getElementById('p_bentes_kering_kilo').value)||0;
+  const cpb=parseFloat(document.getElementById('p_ceplokan_butir').value)||0,cpk=parseFloat(document.getElementById('p_ceplokan_kilo').value)||0;
+  const tb=nb+cb+bb+cpb,tk=(nk+ck+bk+cpk).toFixed(2);
   document.getElementById('p_total_butir').value=tb;document.getElementById('p_total_kilo').value=tk;
   const sisa=parseFloat(document.getElementById('sisa_ayam').value)||0;
   document.getElementById('hdp').value=sisa>0?(tb/sisa*100).toFixed(2)+' %':'0.00 %';
@@ -96,7 +97,7 @@ function autoResetInputForm(){
   _lastLoadedInputHash = ''; // Reset hash agar bisa load data baru
   // Reset input fields ke 0
   ['mati','afkir','air_liter',
-   'p_normal_butir','p_normal_kilo','p_cream_butir','p_cream_kilo','p_retak_butir','p_retak_kilo'
+   'p_normal_butir','p_normal_kilo','p_crem_butir','p_crem_kilo','p_bentes_kering_butir','p_bentes_kering_kilo','p_ceplokan_butir','p_ceplokan_kilo'
   ].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
   // Reset readonly calculated fields
   ['total_deplesi','sisa_ayam','p_total_butir','p_total_kilo',
@@ -306,8 +307,9 @@ function collectInputData(){
     air_liter:document.getElementById('air_liter').value,
     produksi:{
       normal:{butir:document.getElementById('p_normal_butir').value,kilo:document.getElementById('p_normal_kilo').value},
-      cream:{butir:document.getElementById('p_cream_butir').value,kilo:document.getElementById('p_cream_kilo').value},
-      retak:{butir:document.getElementById('p_retak_butir').value,kilo:document.getElementById('p_retak_kilo').value},
+      crem:{butir:document.getElementById('p_crem_butir').value,kilo:document.getElementById('p_crem_kilo').value},
+      bentes_kering:{butir:document.getElementById('p_bentes_kering_butir').value,kilo:document.getElementById('p_bentes_kering_kilo').value},
+      ceplokan:{butir:document.getElementById('p_ceplokan_butir').value,kilo:document.getElementById('p_ceplokan_kilo').value},
       total:{butir:document.getElementById('p_total_butir').value,kilo:document.getElementById('p_total_kilo').value},
       hdp:document.getElementById('hdp').value,berat_rata:document.getElementById('berat_rata').value
     },
@@ -593,7 +595,7 @@ function resetInputForm(){
   if(!confirm('Reset semua data form?'))return;
   document.getElementById('tanggal').value=new Date().toISOString().split('T')[0];
   document.getElementById('kandang').value='';
-  ['mati','afkir','populasi_awal','air_liter','p_normal_butir','p_normal_kilo','p_cream_butir','p_cream_kilo','p_retak_butir','p_retak_kilo'].forEach(id=>document.getElementById(id).value=0);
+  ['mati','afkir','populasi_awal','air_liter','p_normal_butir','p_normal_kilo','p_crem_butir','p_crem_kilo','p_bentes_kering_butir','p_bentes_kering_kilo','p_ceplokan_butir','p_ceplokan_kilo'].forEach(id=>document.getElementById(id).value=0);
   document.getElementById('catatan').value='';
   resetKesRows();
   if (typeof _editRowId !== 'undefined') _editRowId = null;

@@ -62,7 +62,7 @@ function addSaleRow(){
       '<input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>'+
     '</div></div>'+
     '<div class="sc-row three">'+
-      '<div class="sc-field"><label>Grade</label><select><option value="">-- Grade --</option><option>Normal</option><option>Cream</option><option>Retak</option></select></div>'+
+      '<div class="sc-field"><label>Grade</label><select><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes kering</option><option>Ceplokan</option></select></div>'+
       '<div class="sc-field"><label>Butir</label><input type="number" min="0" placeholder="0" oninput="calcTotal(this)"/></div>'+
       '<div class="sc-field"><label>Kilo (kg)</label><input type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal(this)"/></div>'+
     '</div>'+
@@ -102,15 +102,18 @@ async function getStokTelur(tgl){
   }
   
   // Fallback: client-side calculation
-  const prod={Normal:{butir:0,kilo:0},Cream:{butir:0,kilo:0},Retak:{butir:0,kilo:0}};
+  const prod={'Normal':{butir:0,kilo:0},'Crem':{butir:0,kilo:0},'Bentes kering':{butir:0,kilo:0},'Ceplokan':{butir:0,kilo:0}};
   const inputs=await dbGetInput({sampai:tgl});
   inputs.forEach(row=>{
     const d=row.data;if(!d||!d.produksi)return;
-    ['normal','cream','retak'].forEach(g=>{
-      const G=g.charAt(0).toUpperCase()+g.slice(1);
+    const mapping={'normal':'Normal','crem':'Crem','bentes_kering':'Bentes kering','ceplokan':'Ceplokan'};
+    Object.keys(mapping).forEach(g=>{
+      const G=mapping[g];
       prod[G].butir+=parseInt(d.produksi[g]?.butir)||0;
       prod[G].kilo+=parseFloat(d.produksi[g]?.kilo)||0;
     });
+    if(d.produksi.cream){prod['Crem'].butir+=parseInt(d.produksi.cream.butir)||0;prod['Crem'].kilo+=parseFloat(d.produksi.cream.kilo)||0;}
+    if(d.produksi.retak){prod['Bentes kering'].butir+=parseInt(d.produksi.retak.butir)||0;prod['Bentes kering'].kilo+=parseFloat(d.produksi.retak.kilo)||0;}
   });
   const juals=await dbGetPenjualan({sampai:tgl, limit:9999});
   juals.forEach(j=>{
@@ -130,7 +133,7 @@ async function renderStokTelur(){
   const el=document.getElementById('stok-telur-body');
   el.innerHTML='<div style="color:#aaa;font-size:.85rem;text-align:center;padding:8px">⏳ Menghitung stok...</div>';
   const stok=await getStokTelur(tgl);
-  const grades=['Normal','Cream','Retak'];
+  const grades=['Normal','Crem','Bentes kering','Ceplokan'];
   const totalButir=grades.reduce((s,g)=>s+stok[g].butir,0);
   const totalKilo=grades.reduce((s,g)=>s+stok[g].kilo,0);
   el.innerHTML=
