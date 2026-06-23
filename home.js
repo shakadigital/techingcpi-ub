@@ -126,9 +126,24 @@ async function renderHargaPasarChart() {
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return 'Rp ' + Math.round(context.raw).toLocaleString('id-ID') + '/kg';
+            }
+          }
+        }
+      },
       scales: {
-        y: { beginAtZero: false, ticks: { callback: v => 'Rp '+v.toLocaleString('id-ID') } },
+        y: { 
+          beginAtZero: false, 
+          ticks: { 
+            callback: v => 'Rp ' + Math.round(v).toLocaleString('id-ID'),
+            precision: 0
+          } 
+        },
         x: { ticks: { font: { size: 9 } } }
       }
     }
