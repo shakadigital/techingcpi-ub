@@ -232,7 +232,7 @@ CREATE TABLE IF NOT EXISTS master_pelanggan_tf_ub (
   nama TEXT NOT NULL,
   telepon TEXT,
   alamat TEXT,
-  tipe TEXT DEFAULT 'retail' CHECK (tipe IN ('retail','grosir','distributor')),
+  tipe TEXT DEFAULT 'eceran' CHECK (tipe IN ('eceran','bakul','distributor')),
   harga_khusus NUMERIC DEFAULT 0,
   keterangan TEXT,
   active BOOLEAN DEFAULT true,

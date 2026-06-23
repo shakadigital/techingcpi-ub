@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS master_pelanggan_tf_ub (
   nama text NOT NULL,
   telepon text,
   alamat text,
-  tipe text DEFAULT 'retail' CHECK (tipe = ANY (ARRAY['retail','grosir','distributor'])),
+  tipe text DEFAULT 'eceran' CHECK (tipe = ANY (ARRAY['eceran','bakul','distributor'])),
   harga_khusus numeric DEFAULT 0,
   keterangan text,
   active boolean DEFAULT true,
