@@ -294,7 +294,7 @@ async function renderRiwayatJual(){
             <button onclick="hapusPenjualan('${rec.id}')" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus transaksi ini">🗑️</button>
            </td>`
         :(isAdmin?'':'<td></td>');
-      tr.innerHTML='<td>'+fmtTgl(rec.tanggal)+'</td><td>'+esc(r.pelanggan||'—')+'</td><td>'+esc(r.grade||'—')+'</td><td>'+(r.butir||0)+' butir</td><td>'+(r.kilo||0)+' kg</td><td>'+esc(r.total||'Rp 0')+'</td>'+(i===0?aksiCell:'');
+      tr.innerHTML='<td>'+fmtTgl(rec.tanggal)+'</td><td>'+esc(r.pelanggan||'—')+'</td><td>'+esc(r.grade||'—')+'</td><td>'+(r.butir||0)+' butir</td><td>'+(r.kilo||0)+' kg</td><td>Rp '+(r.harga?parseFloat(r.harga).toLocaleString('id-ID'):'0')+'</td><td>'+esc(r.total||'Rp 0')+'</td>'+(i===0?aksiCell:'');
       tbody.appendChild(tr);
     });
   });
