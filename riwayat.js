@@ -69,7 +69,7 @@ async function renderRHarian(){
     tr.innerHTML=
       '<td>'+fmtTgl(d.tanggal)+'</td><td>'+esc(d.kandang)+'</td>'+
       '<td>'+(d.sisa_ayam||0)+' ekor</td><td>'+(d.deplesi?d.deplesi.total:0)+' ekor</td>'+
-      '<td>'+(d.produksi?d.produksi.total.butir:0)+' butir</td><td>'+(d.produksi?d.produksi.hdp:'—')+'</td>'+
+      '<td>'+(d.produksi?d.produksi.total.butir:0)+' butir</td><td>'+(d.produksi&&d.produksi.total.kilo?parseFloat(d.produksi.total.kilo).toFixed(1):0)+' kg</td><td>'+(d.produksi?d.produksi.hdp:'—')+'</td>'+
       '<td>'+totalPakan+' kg</td><td>'+(d.air_liter||0)+' L</td>'+
       userCell+
       '<td style="white-space:nowrap"><button class="btn-edit" onclick="editInputHarian(\''+row.id+'\')">✏️</button>'+delBtn+'</td>';
@@ -177,7 +177,7 @@ function _loadEditToForm(d,id){
     document.getElementById('catatan').value=d.catatan||'';
     const hpEl = document.getElementById('harga_pasar');
     if(hpEl) {
-      hpEl.value = d.harga_pasar || '';
+      hpEl.value = d.harga_pasar ? parseInt(d.harga_pasar, 10).toLocaleString('id-ID') : '';
       // Jika sudah ada harga pasar, set readonly sebagai review
       if(d.harga_pasar && parseFloat(d.harga_pasar) > 0) {
         hpEl.readOnly = true;
@@ -406,11 +406,11 @@ async function exportRiwayat(){
     const f=getRFilter();
     const rows=await dbGetInput(f);
     if(!rows.length){showToast('⚠️ Tidak ada data untuk diexport!');return;}
-    const headers=['Tanggal','Kandang','Sisa Ayam','Deplesi','Prod Butir','HDP','Pakan (kg)','Air (L)'];
+    const headers=['Tanggal','Kandang','Sisa Ayam','Deplesi','Prod Butir','Prod Kilo','HDP','Pakan (kg)','Air (L)'];
     const data=rows.map(row=>{
       const d=row.data;if(!d)return null;
       const tp=((d.pakan||[]).reduce((s,p)=>s+(parseFloat(p.jumlah)||0),0)).toFixed(1);
-      return[d.tanggal,d.kandang,d.sisa_ayam||0,d.deplesi?d.deplesi.total:0,d.produksi?d.produksi.total.butir:0,d.produksi?d.produksi.hdp:'',tp,d.air_liter||0];
+      return[d.tanggal,d.kandang,d.sisa_ayam||0,d.deplesi?d.deplesi.total:0,d.produksi?d.produksi.total.butir:0,d.produksi&&d.produksi.total.kilo?parseFloat(d.produksi.total.kilo).toFixed(1):0,d.produksi?d.produksi.hdp:'',tp,d.air_liter||0];
     }).filter(Boolean);
     await exportExcel('Riwayat Harian',headers,data,'riwayat_harian_'+today+'.xlsx');
   } else if(currentRTab==='penjualan'){

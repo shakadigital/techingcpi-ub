@@ -1,4 +1,4 @@
-﻿// ═══ MODULE: master ═══
+// ═══ MODULE: master ═══
 
 // ═══ MASTER DATA ═══
 const MASTER_ROLES = ['superadmin','admin','manajer'];
@@ -116,7 +116,7 @@ async function renderMasterPelanggan(){
   tbody.innerHTML = '';
   if(!list.length){ empty.style.display='block'; return; }
   empty.style.display = 'none';
-  const tipeBadge = {retail:'badge-blue',grosir:'badge-green',distributor:'badge-orange'};
+  const tipeBadge = {eceran:'badge-blue',bakul:'badge-green'};
   list.forEach(p=>{
     const tr = document.createElement('tr');
     tr.innerHTML =
@@ -224,9 +224,8 @@ const MASTER_FORMS = {
       <div class="field">
         <label>Tipe</label>
         <select id="mf-tipe">
-          <option value="retail"      ${d.tipe==='retail'     ?'selected':''}>Retail</option>
-          <option value="grosir"      ${d.tipe==='grosir'     ?'selected':''}>Grosir</option>
-          <option value="distributor" ${d.tipe==='distributor'?'selected':''}>Distributor</option>
+          <option value="eceran" ${d.tipe==='eceran'?'selected':''}>Eceran</option>
+          <option value="bakul"  ${d.tipe==='bakul'?'selected':''}>Bakul</option>
         </select>
       </div>
       <div class="field">
@@ -340,7 +339,7 @@ async function saveMasterData(){
     obj.telepon  = document.getElementById('mf-telepon')?.value.trim()||null;
     obj.alamat   = document.getElementById('mf-alamat')?.value.trim()||null;
   } else if(type === 'pelanggan'){
-    obj.tipe         = document.getElementById('mf-tipe')?.value || 'retail';
+    obj.tipe         = document.getElementById('mf-tipe')?.value || 'eceran';
     obj.telepon      = document.getElementById('mf-telepon')?.value.trim()||null;
     obj.harga_khusus = parseFloat(document.getElementById('mf-harga')?.value)||0;
     obj.alamat       = document.getElementById('mf-alamat')?.value.trim()||null;

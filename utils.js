@@ -23,6 +23,20 @@ function fmtTglPanjang(iso){
   catch{return iso;}
 }
 
+// ── Format Input Ribuan ──
+function formatRibuan(input) {
+  let val = input.value.replace(/[^0-9]/g, '');
+  if(val) {
+    input.value = parseInt(val, 10).toLocaleString('id-ID');
+  } else {
+    input.value = '';
+  }
+}
+function unformatRibuan(str) {
+  if(!str) return 0;
+  return parseFloat(String(str).replace(/\./g, '')) || 0;
+}
+
 // ── Export to CSV ──
 function exportToCSV(data, filename) {
   if(!data || !data.length) {

@@ -287,7 +287,7 @@ function collectInputData(){
   const knd=document.getElementById('kandang').value;
   if(!tgl||!knd){showToast('⚠️ Pilih tanggal dan kandang!');return null;}
   
-  const hpVal = parseFloat(document.getElementById('harga_pasar').value) || 0;
+  const hpVal = unformatRibuan(document.getElementById('harga_pasar').value) || 0;
   if(hpVal <= 0){
     showToast('⚠️ Harga pasar hari ini wajib diisi!');
     const hpEl = document.getElementById('harga_pasar');

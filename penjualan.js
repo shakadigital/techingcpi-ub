@@ -159,7 +159,7 @@ async function loadHargaPasarJual() {
   });
 
   if(hargaFromInput > 0) {
-    el.value = hargaFromInput;
+    el.value = parseInt(hargaFromInput, 10).toLocaleString('id-ID');
     el.readOnly = true;
     el.style.opacity = '0.7';
     statusEl.innerHTML = '✅ <span style="color:#2d6a4f">Sudah diinput di halaman Input</span>';
@@ -173,7 +173,7 @@ async function loadHargaPasarJual() {
 
 async function saveHargaPasarFromJual() {
   const tgl = document.getElementById('jual-tanggal').value || new Date().toISOString().split('T')[0];
-  const harga = parseFloat(document.getElementById('jual-harga-pasar').value) || 0;
+  const harga = unformatRibuan(document.getElementById('jual-harga-pasar').value) || 0;
   if(!harga) return;
 
   // Simpan ke semua input_harian hari ini yang belum punya harga_pasar

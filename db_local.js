@@ -653,9 +653,8 @@ async function _seedDefaultData() {
 
   // Seed master pelanggan
   const pelanggan = [
-    { kode: 'PLG-001', nama: 'Pasar Tradisional', tipe: 'retail', keterangan: 'Pelanggan pasar umum' },
-    { kode: 'PLG-002', nama: 'Toko Sembako Maju', tipe: 'grosir', keterangan: 'Pelanggan grosir tetap' },
-    { kode: 'PLG-003', nama: 'Distributor Jaya', tipe: 'distributor', keterangan: 'Distributor telur wilayah' },
+    { kode: 'PLG-001', nama: 'Pasar Tradisional', tipe: 'eceran', keterangan: 'Pelanggan pasar umum' },
+    { kode: 'PLG-002', nama: 'Toko Sembako Maju', tipe: 'bakul', keterangan: 'Pelanggan grosir tetap' },
   ];
   for (const p of pelanggan) {
     await _put('master_pelanggan', { id: crypto.randomUUID(), ...p, active: true, created_at: new Date().toISOString() });

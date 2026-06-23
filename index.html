@@ -376,7 +376,7 @@
           </div>
           <!-- Harga Pasar Harian -->
           <div id="harga-pasar-section" class="row" style="margin-top:12px;padding-top:12px;border-top:1px dashed #b7e4c7">
-            <div class="field" style="flex:1"><label>💰 Harga Pasar Hari Ini (Rp/kg) <span style="color:#dc2626">*</span></label><input type="number" id="harga_pasar" min="0" step="100" placeholder="Mis. 24000" inputmode="numeric" pattern="[0-9]*"/></div>
+            <div class="field" style="flex:1"><label>💰 Harga Pasar Hari Ini (Rp/kg) <span style="color:#dc2626">*</span></label><input type="text" id="harga_pasar" placeholder="Mis. 24.000" inputmode="numeric" oninput="formatRibuan(this)"/></div>
           </div>
         </div>
       </div>
@@ -446,7 +446,7 @@
           <div class="row" style="align-items:center;gap:8px">
             <div class="field" style="flex:1">
               <label>Harga (Rp/kg)</label>
-              <input type="number" id="jual-harga-pasar" min="0" step="100" placeholder="Mis. 24000" onchange="saveHargaPasarFromJual()"/>
+              <input type="text" id="jual-harga-pasar" placeholder="Mis. 24.000" inputmode="numeric" oninput="formatRibuan(this)" onchange="saveHargaPasarFromJual()"/>
             </div>
             <div id="jual-hp-status" style="font-size:.75rem;color:#888;flex:1;padding-top:16px">—</div>
           </div>
@@ -1229,7 +1229,7 @@
           <div class="card-body">
             <div style="overflow-x:auto">
               <table class="tbl">
-                <thead><tr><th>Tanggal</th><th>Kandang</th><th>Populasi</th><th>Deplesi</th><th>Prod. (butir)</th><th>HDP</th><th>Pakan (kg)</th><th>Air (L)</th><th id="th-harian-user" style="display:none">Diinput Oleh</th><th></th></tr></thead>
+                <thead><tr><th>Tgl & Kdg</th><th>Populasi</th><th>Deplesi</th><th>Prod. (butir)</th><th>Prod. (kg)</th><th>HDP</th><th>Pakan (kg)</th><th>Air (L)</th><th id="th-harian-user" style="display:none">Diinput Oleh</th><th></th></tr></thead>
                 <tbody id="r-harian-tbody"></tbody>
               </table>
             </div>
