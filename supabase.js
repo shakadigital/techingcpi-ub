@@ -28,6 +28,7 @@ const TB = {
   pengambilan_inti:   'pengambilan_inti_tf_ub',
   sessions_bw:        'sessions_bw_tf_ub',
   timbang:            'timbang_tf_ub',
+  audit_stok:         'audit_stok_tf_ub'
 };
 
 // ═══════════════════════════════════════════════════
@@ -609,4 +610,24 @@ async function dbSaveStandar(data) {
     console.warn('dbSaveStandar fallback to localStorage:', e.message);
     throw e;
   }
+}
+
+// ── AUDIT STOK ─────────────────────────────────────────
+async function dbGetAudit(filters = {}) {
+  try {
+    let q = '?select=*&order=tanggal.desc';
+    if(filters.jenis_item) q += `&jenis_item=eq.${encodeURIComponent(filters.jenis_item)}`;
+    if(filters.dari) q += `&tanggal=gte.${filters.dari}`;
+    if(filters.sampai) q += `&tanggal=lte.${filters.sampai}`;
+    return await SB.select(TB.audit_stok, q) || [];
+  } catch(e) {
+    console.error('dbGetAudit error:', e);
+    return [];
+  }
+}
+
+async function dbSaveAudit(obj) {
+  if (!obj.id) obj.id = crypto.randomUUID();
+  if (!obj.created_at) obj.created_at = new Date().toISOString();
+  await SB.insert(TB.audit_stok, obj);
 }

@@ -296,6 +296,25 @@ async function renderLapLabaRugi(){
     }
   });
 
+  // Hitung Penyusutan dari Audit Stok Pakan
+  const susutMap = {};
+  const audits = typeof dbGetAudit === 'function' ? await dbGetAudit({dari, sampai}) : [];
+  
+  // Ambil harga terakhir dari semua kiriman untuk nilai penyusutan
+  const hargaMap = {};
+  const kirimanSorted = [...semuaKiriman].sort((a,b) => b.tanggal.localeCompare(a.tanggal));
+  kirimanSorted.forEach(k => { if(k.nama_pakan && !hargaMap[k.nama_pakan]) hargaMap[k.nama_pakan] = parseFloat(k.harga_per_kg) || 0; });
+  
+  audits.forEach(a => {
+    // Jika selisih minus, berarti rugi
+    if (a.jenis_item === 'Pakan' && parseFloat(a.selisih) < 0) {
+      const lostKg = Math.abs(parseFloat(a.selisih));
+      const harga = hargaMap[a.kategori_item] || 0;
+      const totalRugi = lostKg * harga;
+      susutMap[a.tanggal] = (susutMap[a.tanggal] || 0) + totalRugi;
+    }
+  });
+
   const allInputs=await dbGetInput({dari,sampai,kandang});
 
   // Hitung total pembayaran real (yang sudah dibayar)
@@ -305,8 +324,8 @@ async function renderLapLabaRugi(){
     .filter(k=>k.status_bayar!=='lunas')
     .reduce((s,k)=>s+(parseFloat(k.sisa_tagihan)||0),0);
 
-  const allDates=[...new Set([...Object.keys(pendMap),...Object.keys(biayaMap),...Object.keys(opsMap)])].sort().reverse();
-  let totalPend=0,totalBiaya=0,totalOps=0;
+  const allDates=[...new Set([...Object.keys(pendMap),...Object.keys(biayaMap),...Object.keys(opsMap),...Object.keys(susutMap)])].sort().reverse();
+  let totalPend=0,totalBiaya=0,totalOps=0,totalSusut=0;
   const tbody=document.getElementById('lr-tbody');
   const empty=document.getElementById('lr-empty');
   tbody.innerHTML='';
@@ -321,15 +340,21 @@ async function renderLapLabaRugi(){
     }
 
     allDates.forEach(tgl=>{
-      const pend=pendMap[tgl]||0,biaya=biayaMap[tgl]||0,ops=opsMap[tgl]||0;
-      const totalB=biaya+ops,laba=pend-totalB;
-      totalPend+=pend;totalBiaya+=biaya;totalOps+=ops;
+      const pend=pendMap[tgl]||0,biaya=biayaMap[tgl]||0,ops=opsMap[tgl]||0,susut=susutMap[tgl]||0;
+      const totalB=biaya+ops+susut,laba=pend-totalB;
+      totalPend+=pend;totalBiaya+=biaya;totalOps+=ops;totalSusut+=susut;
       const tr=document.createElement('tr');
-      tr.innerHTML='<td>'+fmtTgl(tgl)+'</td><td style="color:#1b4332;font-weight:600">Rp '+pend.toLocaleString('id-ID')+'</td><td style="color:#dc2626">Rp '+biaya.toLocaleString('id-ID')+'</td><td style="color:#f59e0b;font-weight:600">Rp '+ops.toLocaleString('id-ID')+'</td><td style="color:#dc2626;font-weight:600">Rp '+totalB.toLocaleString('id-ID')+'</td><td style="font-weight:700;color:'+(laba>=0?'#1b4332':'#dc2626')+'">Rp '+laba.toLocaleString('id-ID')+'</td>';
+      tr.innerHTML='<td>'+fmtTgl(tgl)+'</td>'+
+                   '<td style="color:#1b4332;font-weight:600">Rp '+pend.toLocaleString('id-ID')+'</td>'+
+                   '<td style="color:#dc2626">Rp '+biaya.toLocaleString('id-ID')+'</td>'+
+                   '<td style="color:#f59e0b;font-weight:600">Rp '+ops.toLocaleString('id-ID')+'</td>'+
+                   '<td style="color:#8b5cf6;font-weight:600">Rp '+susut.toLocaleString('id-ID')+'</td>'+
+                   '<td style="color:#dc2626;font-weight:600">Rp '+totalB.toLocaleString('id-ID')+'</td>'+
+                   '<td style="font-weight:700;color:'+(laba>=0?'#1b4332':'#dc2626')+'">Rp '+laba.toLocaleString('id-ID')+'</td>';
       tbody.appendChild(tr);
     });
 
-    const totalSemua=totalBiaya+totalOps;
+    const totalSemua=totalBiaya+totalOps+totalSusut;
     const totalLaba=totalPend-totalSemua;
 
     const trTotal = document.createElement('tr');
@@ -343,6 +368,7 @@ async function renderLapLabaRugi(){
       <td style="color:#1b4332">Rp ${totalPend.toLocaleString('id-ID')}</td>
       <td style="color:#dc2626">Rp ${totalBiaya.toLocaleString('id-ID')}</td>
       <td style="color:#f59e0b">Rp ${totalOps.toLocaleString('id-ID')}</td>
+      <td style="color:#8b5cf6">Rp ${totalSusut.toLocaleString('id-ID')}</td>
       <td style="color:#dc2626">Rp ${totalSemua.toLocaleString('id-ID')}</td>
       <td style="color:${totalLaba>=0?'#1b4332':'#dc2626'}">Rp ${totalLaba.toLocaleString('id-ID')}</td>
     `;
@@ -443,17 +469,34 @@ async function exportLaporan(format='csv'){
       }
     });
 
+    const susutMap = {};
+    const semuaKiriman = await dbGetKiriman({});
+    const hargaMap = {};
+    const kirimanSorted = [...semuaKiriman].sort((a,b) => b.tanggal.localeCompare(a.tanggal));
+    kirimanSorted.forEach(k => { if(k.nama_pakan && !hargaMap[k.nama_pakan]) hargaMap[k.nama_pakan] = parseFloat(k.harga_per_kg) || 0; });
+    
+    const audits = typeof dbGetAudit === 'function' ? await dbGetAudit({dari, sampai}) : [];
+    audits.forEach(a => {
+      if (a.jenis_item === 'Pakan' && parseFloat(a.selisih) < 0) {
+        const lostKg = Math.abs(parseFloat(a.selisih));
+        const harga = hargaMap[a.kategori_item] || 0;
+        susutMap[a.tanggal] = (susutMap[a.tanggal] || 0) + (lostKg * harga);
+      }
+    });
+
     const inputs=await dbGetInput({dari,sampai,kandang});
+    const allDates = [...new Set([...Object.keys(pendMap),...Object.keys(biayaMap),...Object.keys(opsMap),...Object.keys(susutMap)])].sort().reverse();
+    
     if(isSupervisor){
-      headers=['Tanggal','Penjualan (Rp)','Biaya Pakan (Rp)','Biaya Ops (Rp)'];
-      [...new Set([...Object.keys(pendMap),...Object.keys(biayaMap)])].sort().reverse().forEach(tgl=>{
-        rows.push([tgl,pendMap[tgl]||0,Math.round(biayaMap[tgl]||0),Math.round(opsMap[tgl]||0)]);
+      headers=['Tanggal','Penjualan (Rp)','Biaya Pakan (Rp)','Biaya Ops (Rp)','Penyusutan (Rp)'];
+      allDates.forEach(tgl=>{
+        rows.push([tgl,pendMap[tgl]||0,Math.round(biayaMap[tgl]||0),Math.round(opsMap[tgl]||0),Math.round(susutMap[tgl]||0)]);
       });
     } else {
-      headers=['Tanggal','Pendapatan (Rp)','Biaya Pakan (Rp)','Biaya Ops (Rp)','Total Biaya (Rp)','Laba/Rugi (Rp)'];
-      [...new Set([...Object.keys(pendMap),...Object.keys(biayaMap)])].sort().reverse().forEach(tgl=>{
-        const p=pendMap[tgl]||0,b=Math.round(biayaMap[tgl]||0),o=Math.round(opsMap[tgl]||0);
-        rows.push([tgl,p,b,o,b+o,p-b-o]);
+      headers=['Tanggal','Pendapatan (Rp)','Biaya Pakan (Rp)','Biaya Ops (Rp)','Penyusutan (Rp)','Total Biaya (Rp)','Laba/Rugi (Rp)'];
+      allDates.forEach(tgl=>{
+        const p=pendMap[tgl]||0,b=Math.round(biayaMap[tgl]||0),o=Math.round(opsMap[tgl]||0),s=Math.round(susutMap[tgl]||0);
+        rows.push([tgl,p,b,o,s,b+o+s,p-b-o-s]);
       });
     }
   } else {

@@ -434,7 +434,12 @@
 
       <!-- Stok Telur Kumulatif -->
       <div class="card">
-        <div class="card-header"><div class="num">📦</div><h2>Stok Telur Tersedia</h2></div>
+        <div class="card-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="num">📦</div><h2>Stok Telur Tersedia</h2>
+          </div>
+          <button class="btn-export" onclick="openAuditModal('Telur')" style="margin-left:auto;background:#f59e0b" id="btn-audit-telur">⚙️ Audit Stok</button>
+        </div>
         <div class="card-body" id="stok-telur-body">
           <div style="color:#aaa;font-size:.85rem;text-align:center;padding:8px 0">Pilih tanggal untuk melihat stok.</div>
         </div>
@@ -1311,6 +1316,7 @@
         <button class="btn-export" onclick="exportLaporan('csv')" style="display:none">⬇️ CSV</button>
         <button class="btn-export" onclick="exportLaporan('excel')" style="border-color:#1d6f42;color:#1d6f42">📊 Excel</button>
         <button class="btn-export" onclick="exportLaporan('pdf')" style="border-color:#c0392b;color:#c0392b">📄 PDF</button>
+        <button class="btn-export" onclick="openAuditModal('Pakan')" style="border-color:#f59e0b;color:#f59e0b;margin-left:auto" id="btn-audit-laporan">⚙️ Audit Stok</button>
       </div>
 
       <!-- Harga Pasar Harian (dipindah ke halaman Input & Jual) -->
@@ -1359,7 +1365,7 @@
           <div class="card-body">
             <div style="overflow-x:auto">
               <table class="tbl">
-                <thead><tr><th>Tanggal</th><th>Pendapatan (Rp)</th><th>Biaya Pakan (Rp)</th><th>Biaya Ops (Rp)</th><th>Total Biaya (Rp)</th><th>Laba/Rugi (Rp)</th></tr></thead>
+                <thead><tr><th>Tanggal</th><th>Pendapatan (Rp)</th><th>Biaya Pakan (Rp)</th><th>Biaya Ops (Rp)</th><th>Penyusutan (Rp)</th><th>Total Biaya (Rp)</th><th>Laba/Rugi (Rp)</th></tr></thead>
                 <tbody id="lr-tbody"></tbody>
               </table>
             </div>
@@ -1963,6 +1969,56 @@
   </div>
 </div>
 
+<!-- ══ MODAL AUDIT STOK ══ -->
+<div class="modal-overlay" id="modal-audit-stok">
+  <div class="modal-content" style="max-width:500px">
+    <div class="modal-header"><h2>⚙️ Audit / Penyesuaian Stok</h2></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Jenis Item</label>
+        <select id="audit-jenis" onchange="renderAuditKategori()">
+          <option value="Telur">Telur</option>
+          <option value="Pakan">Pakan</option>
+          <option value="Non-Pakan">Non-Pakan</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Kategori / Nama Item</label>
+        <select id="audit-kategori" onchange="loadAuditStokSistem()"></select>
+      </div>
+      
+      <div class="info-box" style="margin:12px 0;background:#f3f4f6;border-left:4px solid #3b82f6">
+        <div style="font-size:0.8rem;color:#6b7280">Stok tercatat di sistem saat ini:</div>
+        <div id="audit-stok-sistem-text" style="font-size:1.2rem;font-weight:700;color:#1d4ed8;margin-top:4px">-</div>
+      </div>
+
+      <div class="row">
+        <div class="field" style="flex:1">
+          <label>Stok Aktual (Fisik) - <span id="audit-lbl-aktual"></span></label>
+          <input type="number" step="any" id="audit-stok-aktual" placeholder="Hitung manual..." oninput="calcAuditSelisih()">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px; align-items:center;">
+        <div class="field" style="flex:1">
+          <label>Selisih</label>
+          <input type="text" id="audit-selisih" readonly style="font-weight:bold;background:#fff" placeholder="0">
+        </div>
+        <div id="audit-selisih-info" style="flex:1; font-size:0.85rem; font-weight:600; padding-top:16px;"></div>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label>Keterangan / Alasan</label>
+        <textarea id="audit-keterangan" placeholder="Contoh: Dimakan tikus, telur pecah jatuh..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-audit-stok')">Batal</button>
+      <button class="btn-primary" onclick="saveAuditStok()">💾 Simpan Audit</button>
+    </div>
+  </div>
+</div>
+
 <script src="auth.js"></script>
 <script src="input_harian.js"></script>
 
@@ -1983,6 +2039,7 @@
 <script src="pwa-update.js"></script>
 <script src="gudang-nonpakan.js"></script>
 <script src="standar-performa.js"></script>
+<script src="audit.js"></script>
 
 <!-- Core app (navigation, init, boot) — must load after modules -->
 <script src="app.js"></script>
