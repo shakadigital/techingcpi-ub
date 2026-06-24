@@ -37,9 +37,9 @@ BEGIN
 
     -- Isi tabel temporary dengan seluruh riwayat kiriman pakan
     INSERT INTO temp_fifo_stock (nama_pakan, tanggal, sisa_jumlah, harga_per_kg)
-    SELECT nama_pakan, tanggal, jumlah, harga_per_kg
-    FROM kiriman_pakan_tf_ub
-    ORDER BY tanggal ASC, created_at ASC;
+    SELECT k.nama_pakan, k.tanggal, k.jumlah, k.harga_per_kg
+    FROM kiriman_pakan_tf_ub k
+    ORDER BY k.tanggal ASC, k.created_at ASC;
 
     -- 2. Looping semua riwayat pemakaian pakan secara berurutan dari awal
     FOR rec_input IN 
@@ -58,9 +58,9 @@ BEGIN
             
             -- Telusuri layer stok dari yang terlama (FIFO)
             FOR rec_stock IN 
-                SELECT * FROM temp_fifo_stock 
-                WHERE nama_pakan = v_nama AND sisa_jumlah > 0 
-                ORDER BY tanggal ASC, id ASC
+                SELECT * FROM temp_fifo_stock t
+                WHERE t.nama_pakan = v_nama AND t.sisa_jumlah > 0 
+                ORDER BY t.tanggal ASC, t.id ASC
             LOOP
                 IF v_qty_needed <= 0 THEN
                     EXIT;
@@ -79,25 +79,25 @@ BEGIN
                 v_qty_needed := v_qty_needed - v_qty_taken;
 
                 -- Update sisa stok di layer temporary
-                UPDATE temp_fifo_stock 
-                SET sisa_jumlah = sisa_jumlah - v_qty_taken 
-                WHERE id = rec_stock.id;
+                UPDATE temp_fifo_stock t
+                SET sisa_jumlah = t.sisa_jumlah - v_qty_taken 
+                WHERE t.id = rec_stock.id;
             END LOOP;
             
             -- Jika masih ada kebutuhan (minus stock / telat input kiriman)
             -- Gunakan fallback harga terakhir yang tercatat
             IF v_qty_needed > 0 THEN
-                SELECT harga_per_kg INTO v_fallback_price 
-                FROM kiriman_pakan_tf_ub 
-                WHERE nama_pakan = v_nama AND tanggal <= rec_input.tanggal
-                ORDER BY tanggal DESC LIMIT 1;
+                SELECT k.harga_per_kg INTO v_fallback_price 
+                FROM kiriman_pakan_tf_ub k
+                WHERE k.nama_pakan = v_nama AND k.tanggal <= rec_input.tanggal
+                ORDER BY k.tanggal DESC LIMIT 1;
                 
                 -- Jika tidak ada harga sebelum pemakaian, ambil harga perdana sesudahnya
                 IF v_fallback_price IS NULL THEN
-                    SELECT harga_per_kg INTO v_fallback_price 
-                    FROM kiriman_pakan_tf_ub 
-                    WHERE nama_pakan = v_nama 
-                    ORDER BY tanggal ASC LIMIT 1;
+                    SELECT k.harga_per_kg INTO v_fallback_price 
+                    FROM kiriman_pakan_tf_ub k
+                    WHERE k.nama_pakan = v_nama 
+                    ORDER BY k.tanggal ASC LIMIT 1;
                 END IF;
 
                 v_cost := v_qty_needed * COALESCE(v_fallback_price, 0);
