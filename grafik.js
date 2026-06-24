@@ -1,4 +1,4 @@
-﻿// ═══ MODULE: grafik ═══
+// ═══ MODULE: grafik ═══
 
 let chartHDP=null,chartPerforma=null;
 
@@ -130,10 +130,12 @@ async function renderGrafik(){
 
   // Sort minggu secara numerik
   const avg = arr => arr.length ? parseFloat((arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2)) : null;
-  const weekKeys = Object.keys(weekMap).sort((a,b)=>parseInt(a)-parseInt(b));
-  const wLabels = weekKeys;
-  const hdData  = weekKeys.map(k=>avg(weekMap[k].hd));
-  const wFiData  = weekKeys.map(k=>avg(weekMap[k].fi));
+  
+  // X-axis: fix dari umur 18 minggu sampai 90 minggu
+  const wLabels = Array.from({length: 90 - 18 + 1}, (_, i) => String(18 + i));
+  
+  const hdData  = wLabels.map(k=> weekMap[k] ? avg(weekMap[k].hd) : null);
+  const wFiData = wLabels.map(k=> weekMap[k] ? avg(weekMap[k].fi) : null);
 
   // ── Standar HY-Line: ambil nilai tengah dari range per minggu ──
   const standar = await loadStandarPerforma();
@@ -157,8 +159,8 @@ async function renderGrafik(){
   });
 
   // Petakan ke label minggu yang ada di grafik aktual
-  const stdFiData = weekKeys.map(k => stdMap[parseInt(k)]?.fi ?? null);
-  const stdHdData = weekKeys.map(k => stdMap[parseInt(k)]?.hd ?? null);
+  const stdFiData = wLabels.map(k => stdMap[parseInt(k)]?.fi ?? null);
+  const stdHdData = wLabels.map(k => stdMap[parseInt(k)]?.hd ?? null);
 
   const hasStdFi = stdFiData.some(v => v !== null);
   const hasStdHd = stdHdData.some(v => v !== null);
