@@ -6,8 +6,8 @@ let currentAuditSistem = 0;
 let currentAuditSatuan = '';
 
 function openAuditModal(jenis = 'Telur') {
-  if (currentUser.role !== 'Supervisor' && currentUser.role !== 'Admin') {
-    showToast('Hanya Supervisor dan Admin yang dapat melakukan audit stok.', 'error');
+  if (!currentUser || !['superadmin', 'admin', 'supervisor'].includes(currentUser.role)) {
+    showToast('Hanya Supervisor ke atas yang dapat melakukan audit stok.', 'error');
     return;
   }
   
