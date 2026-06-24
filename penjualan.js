@@ -321,7 +321,7 @@ async function exportRiwayatJual(){
   if(!can('EXPORT_LAP')){showToast('⚠️ Hanya Supervisor ke atas yang bisa download!');return;}
   showToast('⏳ Menyiapkan Excel...');
   try{
-    const list=await dbGetPenjualan({});
+    const list=await dbGetPenjualan({limit: 999999});
     if(list.length===0){showToast('⚠️ Tidak ada data penjualan');return;}
     const headers=['Tanggal','Pelanggan','Grade','Butir','Kilo (kg)','Harga/kg (Rp)','Total (Rp)','Diinput Oleh'];
     const data=[];

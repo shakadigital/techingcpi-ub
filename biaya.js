@@ -1,4 +1,4 @@
-﻿// ═══ MODULE: biaya ═══
+// ═══ MODULE: biaya ═══
 
 // ═══ BIAYA OPERASIONAL ═══
 const BIAYA_ROLES=['superadmin','admin','manajer','supervisor'];
@@ -240,26 +240,6 @@ async function exportRekapBiaya(){
   }catch(e){showToast('❌ Gagal: '+e.message);}
 }
 
-async function exportRiwayatJual(){
-  if(!can('EXPORT_LAP')){showToast('⚠️ Hanya Supervisor ke atas yang bisa download!');return;}
-  showToast('⏳ Menyiapkan Excel...');
-  try{
-    const list=await dbGetPenjualan({});
-    if(list.length===0){showToast('⚠️ Tidak ada data penjualan');return;}
-    const headers=['Tanggal','Pelanggan','Grade','Butir','Kilo (kg)','Harga/kg (Rp)','Total (Rp)','Diinput Oleh'];
-    const data=[];
-    list.forEach(p=>{
-      const items=p.items||[];
-      items.forEach(item=>{
-        data.push([p.tanggal,item.pelanggan||'',item.grade||'',item.butir||0,item.kilo||0,item.harga||0,item.total||0,p.user_input||'']);
-      });
-    });
-    await exportExcel('Riwayat Penjualan Telur',headers,data,`Riwayat_Penjualan_${new Date().toISOString().slice(0,10)}.xlsx`);
-  }catch(e){
-    console.error('Export error:',e);
-    showToast('❌ Gagal export: '+e.message);
-  }
-}
 
 function initBiayaPage(){
   if(!document.getElementById('biaya-tanggal').value)
