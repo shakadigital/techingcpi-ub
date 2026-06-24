@@ -241,6 +241,30 @@ async function renderLapRekap(){
     tbody.appendChild(tr);
   });
 
+  // Tambahkan baris TOTAL di bawah
+  const sumSisaAyam = rows.reduce((s,d)=>s+(d.sisa_ayam_calc||0),0);
+  const avgFI = sumSisaAyam > 0 ? (totalPakan * 1000 / sumSisaAyam) : 0;
+  const avgEW = totalProd > 0 ? (totalKilo * 1000 / totalProd) : 0;
+  
+  const trTotal = document.createElement('tr');
+  trTotal.style.background = '#e2e8f0';
+  trTotal.style.fontWeight = 'bold';
+  trTotal.style.position = 'sticky';
+  trTotal.style.bottom = '0';
+  trTotal.style.boxShadow = '0 -2px 5px rgba(0,0,0,0.05)';
+  trTotal.innerHTML = `
+    <td colspan="2" style="text-align:center">TOTAL / RATA-RATA</td>
+    <td>${totalDep}</td>
+    <td>—</td>
+    <td>${totalPakan.toFixed(1)}</td>
+    <td>${avgFI.toFixed(1)}</td>
+    <td>${totalProd}</td>
+    <td>${totalKilo.toFixed(1)}</td>
+    <td>${avgHDP.toFixed(2)}%</td>
+    <td>${avgEW.toFixed(1)}</td>
+  `;
+  tbody.appendChild(trTotal);
+
   // Scroll ke atas (data terbaru) setelah render
   if(tableWrapper) tableWrapper.scrollTop = 0;
 }
@@ -262,12 +286,17 @@ async function renderLapLabaRugi(){
     biayaMap[f.tanggal] = (biayaMap[f.tanggal] || 0) + parseFloat(f.biaya_pakan || 0);
   });
 
+  // Hitung biaya operasional dari tabel kas_operasional
+  const semuaKas = await dbGetKas({dari, sampai});
+  semuaKas.forEach(k => {
+    if(k.jenis === 'keluar') {
+      if(!kandang || k.kandang === kandang || !k.kandang) {
+        opsMap[k.tanggal] = (opsMap[k.tanggal]||0) + parseFloat(k.jumlah||0);
+      }
+    }
+  });
+
   const allInputs=await dbGetInput({dari,sampai,kandang});
-  for(const row of allInputs){
-    const d=row.data;if(!d)continue;
-    const ops=(d.biaya_ops||[]).reduce((s,b)=>s+(parseFloat(b.jumlah)||0),0);
-    opsMap[d.tanggal]=(opsMap[d.tanggal]||0)+ops;
-  }
 
   // Hitung total pembayaran real (yang sudah dibayar)
   const semuaBayar=await dbGetPembayaran({dari,sampai});
@@ -284,6 +313,13 @@ async function renderLapLabaRugi(){
   if(!allDates.length){empty.style.display='block';}
   else{
     empty.style.display='none';
+    
+    const tableWrapper = tbody.closest('.overflow-x-auto') || tbody.closest('div[style*="overflow"]') || tbody.parentElement.parentElement;
+    if(tableWrapper){
+      tableWrapper.style.maxHeight = '520px';
+      tableWrapper.style.overflowY = 'auto';
+    }
+
     allDates.forEach(tgl=>{
       const pend=pendMap[tgl]||0,biaya=biayaMap[tgl]||0,ops=opsMap[tgl]||0;
       const totalB=biaya+ops,laba=pend-totalB;
@@ -292,7 +328,29 @@ async function renderLapLabaRugi(){
       tr.innerHTML='<td>'+fmtTgl(tgl)+'</td><td style="color:#1b4332;font-weight:600">Rp '+pend.toLocaleString('id-ID')+'</td><td style="color:#dc2626">Rp '+biaya.toLocaleString('id-ID')+'</td><td style="color:#f59e0b;font-weight:600">Rp '+ops.toLocaleString('id-ID')+'</td><td style="color:#dc2626;font-weight:600">Rp '+totalB.toLocaleString('id-ID')+'</td><td style="font-weight:700;color:'+(laba>=0?'#1b4332':'#dc2626')+'">Rp '+laba.toLocaleString('id-ID')+'</td>';
       tbody.appendChild(tr);
     });
+
+    const totalSemua=totalBiaya+totalOps;
+    const totalLaba=totalPend-totalSemua;
+
+    const trTotal = document.createElement('tr');
+    trTotal.style.background = '#e2e8f0';
+    trTotal.style.fontWeight = 'bold';
+    trTotal.style.position = 'sticky';
+    trTotal.style.bottom = '0';
+    trTotal.style.boxShadow = '0 -2px 5px rgba(0,0,0,0.05)';
+    trTotal.innerHTML = `
+      <td style="text-align:center">TOTAL</td>
+      <td style="color:#1b4332">Rp ${totalPend.toLocaleString('id-ID')}</td>
+      <td style="color:#dc2626">Rp ${totalBiaya.toLocaleString('id-ID')}</td>
+      <td style="color:#f59e0b">Rp ${totalOps.toLocaleString('id-ID')}</td>
+      <td style="color:#dc2626">Rp ${totalSemua.toLocaleString('id-ID')}</td>
+      <td style="color:${totalLaba>=0?'#1b4332':'#dc2626'}">Rp ${totalLaba.toLocaleString('id-ID')}</td>
+    `;
+    tbody.appendChild(trTotal);
+
+    if(tableWrapper) tableWrapper.scrollTop = 0;
   }
+
   const totalSemua=totalBiaya+totalOps;
   const totalLaba=totalPend-totalSemua;
   // Margin real = pendapatan - yang sudah dibayar - ops
@@ -375,11 +433,17 @@ async function exportLaporan(format='csv'){
       biayaMap[f.tanggal] = (biayaMap[f.tanggal] || 0) + parseFloat(f.biaya_pakan || 0);
     });
 
+    // Hitung biaya operasional dari tabel kas_operasional
+    const semuaKas = await dbGetKas({dari, sampai});
+    semuaKas.forEach(k => {
+      if(k.jenis === 'keluar') {
+        if(!kandang || k.kandang === kandang || !k.kandang) {
+          opsMap[k.tanggal] = (opsMap[k.tanggal]||0) + parseFloat(k.jumlah||0);
+        }
+      }
+    });
+
     const inputs=await dbGetInput({dari,sampai,kandang});
-    for(const row of inputs){
-      const d=row.data;if(!d)continue;
-      opsMap[d.tanggal]=(opsMap[d.tanggal]||0)+(d.biaya_ops||[]).reduce((s,x)=>s+(parseFloat(x.jumlah)||0),0);
-    }
     if(isSupervisor){
       headers=['Tanggal','Penjualan (Rp)','Biaya Pakan (Rp)','Biaya Ops (Rp)'];
       [...new Set([...Object.keys(pendMap),...Object.keys(biayaMap)])].sort().reverse().forEach(tgl=>{
