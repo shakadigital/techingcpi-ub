@@ -519,7 +519,7 @@ async function exportExcel(title, headers, rows, filename){
   await ensureXLSX();
   const wb=XLSX.utils.book_new();
   // Baris judul
-  const wsData=[[title],['Diekspor: '+new Date().toLocaleString('id-ID')],[''],[headers],...rows];
+  const wsData=[[title],['Diekspor: '+new Date().toLocaleString('id-ID')],[''],headers,...rows];
   const ws=XLSX.utils.aoa_to_sheet(wsData);
   // Style lebar kolom otomatis
   ws['!cols']=headers.map((_,i)=>({wch:Math.max(headers[i].length,

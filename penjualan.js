@@ -326,7 +326,7 @@ async function exportRiwayatJual(){
     const headers=['Tanggal','Pelanggan','Grade','Butir','Kilo (kg)','Harga/kg (Rp)','Total (Rp)','Diinput Oleh'];
     const data=[];
     list.forEach(p=>{
-      const items=p.items||[];
+      const items=p.rows||[];
       items.forEach(item=>{
         data.push([p.tanggal,item.pelanggan||'',item.grade||'',item.butir||0,item.kilo||0,item.harga||0,item.total||0,p.user_input||'']);
       });
