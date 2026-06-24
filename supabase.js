@@ -352,6 +352,20 @@ async function dbGetStokPakan() {
   } catch { return null; }
 }
 
+// Server-side FIFO biaya pakan
+async function dbGetFifoBiayaPakan(dari, sampai, kandang) {
+  try {
+    return await SB.rpc('get_fifo_biaya_pakan_tf_ub', { 
+      p_dari: dari, 
+      p_sampai: sampai, 
+      p_kandang: kandang || null 
+    });
+  } catch (e) {
+    console.error('FIFO RPC Error:', e);
+    return [];
+  }
+}
+
 // ── ACTIVITY LOG ───────────────────────────────────
 async function dbSaveLog(aksi, tabel, recordId, dataLama, dataBaru, keterangan = '') {
   try {

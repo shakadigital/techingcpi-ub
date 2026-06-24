@@ -251,26 +251,20 @@ async function renderLapLabaRugi(){
   const juals=await dbGetPenjualan({dari,sampai});
   juals.forEach(rec=>{pendMap[rec.tanggal]=(pendMap[rec.tanggal]||0)+(parseInt(rec.grand_total)||0);});
 
-  // Ambil kiriman pakan untuk hitung biaya berdasarkan harga_per_kg
+  // Ambil kiriman pakan untuk tagihan belum bayar
   const semuaKiriman=await dbGetKiriman({});
-  const getHargaOnDate=(namaPakan,tgl)=>{
-    const filtered=semuaKiriman
-      .filter(k=>k.nama_pakan===namaPakan&&k.tanggal<=tgl)
-      .sort((a,b)=>b.tanggal.localeCompare(a.tanggal));
-    return filtered.length?parseFloat(filtered[0].harga_per_kg)||0:0;
-  };
 
   const biayaMap={},opsMap={};
+  
+  // Hitung biaya pakan menggunakan FIFO dari server
+  const fifoBiaya = await dbGetFifoBiayaPakan(dari, sampai, kandang);
+  fifoBiaya.forEach(f => {
+    biayaMap[f.tanggal] = (biayaMap[f.tanggal] || 0) + parseFloat(f.biaya_pakan || 0);
+  });
+
   const allInputs=await dbGetInput({dari,sampai,kandang});
   for(const row of allInputs){
     const d=row.data;if(!d)continue;
-    let biaya=0;
-    for(const p of (d.pakan||[])){
-      const namaPakan=p.kode||p.nama||'';
-      const harga=getHargaOnDate(namaPakan,d.tanggal);
-      biaya+=(parseFloat(p.jumlah)||0)*harga;
-    }
-    biayaMap[d.tanggal]=(biayaMap[d.tanggal]||0)+biaya;
     const ops=(d.biaya_ops||[]).reduce((s,b)=>s+(parseFloat(b.jumlah)||0),0);
     opsMap[d.tanggal]=(opsMap[d.tanggal]||0)+ops;
   }
@@ -371,21 +365,19 @@ async function exportLaporan(format='csv'){
 
   } else if(currentLTab==='labarugi'){
     title='Laporan Laba Rugi';
-    const semuaKiriman=await dbGetKiriman({});
-    const getHargaOnDate=(namaPakan,tgl)=>{
-      const f=semuaKiriman.filter(k=>k.nama_pakan===namaPakan&&k.tanggal<=tgl).sort((a,b)=>b.tanggal.localeCompare(a.tanggal));
-      return f.length?parseFloat(f[0].harga_per_kg)||0:0;
-    };
     const juals=await dbGetPenjualan({dari,sampai});
     const pendMap={};
     juals.forEach(rec=>{pendMap[rec.tanggal]=(pendMap[rec.tanggal]||0)+(parseInt(rec.grand_total)||0);});
-    const inputs=await dbGetInput({dari,sampai,kandang});
+    
     const biayaMap={},opsMap={};
+    const fifoBiaya = await dbGetFifoBiayaPakan(dari, sampai, kandang);
+    fifoBiaya.forEach(f => {
+      biayaMap[f.tanggal] = (biayaMap[f.tanggal] || 0) + parseFloat(f.biaya_pakan || 0);
+    });
+
+    const inputs=await dbGetInput({dari,sampai,kandang});
     for(const row of inputs){
       const d=row.data;if(!d)continue;
-      let b=0;
-      for(const p of (d.pakan||[])){b+=(parseFloat(p.jumlah)||0)*getHargaOnDate(p.kode||p.nama||'',d.tanggal);}
-      biayaMap[d.tanggal]=(biayaMap[d.tanggal]||0)+b;
       opsMap[d.tanggal]=(opsMap[d.tanggal]||0)+(d.biaya_ops||[]).reduce((s,x)=>s+(parseFloat(x.jumlah)||0),0);
     }
     if(isSupervisor){

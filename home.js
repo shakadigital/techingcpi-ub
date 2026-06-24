@@ -55,11 +55,11 @@ async function renderHome(){
   pctEl.style.color=pctJual>=80?'#16a34a':pctJual>=50?'#f59e0b':'#dc2626';
   const actEl=document.getElementById('home-activity');
   const recent=await dbGetInput({});
-  const last5=recent.slice(0,5);
-  if(!last5.length){actEl.innerHTML='<div style="color:#aaa;font-size:.85rem;text-align:center;padding:12px 0">Belum ada data tersimpan.</div>';}
+  const last7=recent.slice(0,7);
+  if(!last7.length){actEl.innerHTML='<div style="color:#aaa;font-size:.85rem;text-align:center;padding:12px 0">Belum ada data tersimpan.</div>';}
   else{
     actEl.innerHTML='<table class="tbl"><thead><tr><th>Tanggal</th><th>Kandang</th><th>Produksi</th><th>HDP</th></tr></thead><tbody>'+
-    last5.map(row=>{const d=row.data;if(!d)return'';return`<tr style="cursor:pointer" onclick="openDailySummaryFor('${d.tanggal}','${esc(d.kandang)}')"><td>${fmtTgl(d.tanggal)}</td><td>${esc(d.kandang)}</td><td>${d.produksi?d.produksi.total.butir+' butir':'—'}</td><td>${d.produksi?d.produksi.hdp:'—'}</td></tr>`;}).join('')+
+    last7.map(row=>{const d=row.data;if(!d)return'';return`<tr style="cursor:pointer" onclick="openDailySummaryFor('${d.tanggal}','${esc(d.kandang)}')"><td>${fmtTgl(d.tanggal)}</td><td>${esc(d.kandang)}</td><td>${d.produksi?d.produksi.total.butir+' butir':'—'}</td><td>${d.produksi?d.produksi.hdp:'—'}</td></tr>`;}).join('')+
     '</tbody></table>';
   }
   // Status kandang
