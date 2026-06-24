@@ -80,10 +80,13 @@ async function renderGrafik(){
   });
 
   // ── Performa Mingguan Chart (HD, FI, EW, FCR) ──
-  // Group per minggu umur ayam, gunakan data yang sudah difilter (inputs)
+  // Grafik ini harus mengabaikan filter tanggal agar selalu tampil full history.
   const semuaKandang = await dbGetKandang();
   const allKandangs = kandang ? semuaKandang.filter(k=>k.nama===kandang||k.id===kandang) : semuaKandang;
   const weekMap = {}; // key: nomor minggu, value: {hd:[], fi:[], ew:[], fcr:[]}
+
+  // Ambil semua data tanpa filter tanggal
+  const fullInputs = await dbGetInput({kandang});
 
   for(const k of allKandangs){
     if(!k || !k.chickin) continue;
@@ -91,8 +94,8 @@ async function renderGrafik(){
     chickInDate.setHours(0,0,0,0);
     const umurChickIn = parseInt(k.umur_masuk)||0;
 
-    // Gunakan inputs yang sudah difilter dari-sampai, bukan semua input
-    const kandangInputs = inputs.filter(r => r.kandang === k.nama);
+    // Gunakan fullInputs yang TIDAK DIFILTER berdasarkan tanggal
+    const kandangInputs = fullInputs.filter(r => r.kandang === k.nama);
 
     for(const r of kandangInputs){
       const tgl = new Date(r.tanggal);
