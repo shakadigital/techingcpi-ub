@@ -13,7 +13,7 @@ function openAuditModal(jenis = 'Telur') {
   
   const m = document.getElementById('modal-audit-stok');
   if(!m) return;
-  m.classList.add('show');
+  m.style.display = 'flex';
   
   document.getElementById('audit-jenis').value = jenis;
   renderAuditKategori();
