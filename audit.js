@@ -110,8 +110,9 @@ async function loadAuditStokSistem() {
     }
     
     currentAuditSistem = stok;
+    const decimals = (jenis === 'Telur' && !val.endsWith('_kg') && val !== 'Ceplokan') ? 0 : 2;
     document.getElementById('audit-stok-sistem-text').textContent = 
-      formatRibuan(stok.toFixed(jenis === 'Telur' && !val.endsWith('_kg') && val !== 'Ceplokan' ? 0 : 2)) + ' ' + currentAuditSatuan;
+      parseFloat(stok).toLocaleString('id-ID', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + ' ' + currentAuditSatuan;
       
     calcAuditSelisih();
   } catch (e) {
@@ -134,7 +135,8 @@ function calcAuditSelisih() {
   const selInput = document.getElementById('audit-selisih');
   const selInfo = document.getElementById('audit-selisih-info');
   
-  selInput.value = (selisih > 0 ? '+' : '') + formatRibuan(selisih.toFixed(2));
+  const formattedSelisih = Math.abs(selisih).toLocaleString('id-ID', { maximumFractionDigits: 2 });
+  selInput.value = (selisih > 0 ? '+' : (selisih < 0 ? '-' : '')) + formattedSelisih;
   
   if (selisih < 0) {
     selInput.style.color = '#dc2626'; // Red
