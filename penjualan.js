@@ -62,7 +62,7 @@ function addSaleRow(){
       '<input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>'+
     '</div></div>'+
     '<div class="sc-row three">'+
-      '<div class="sc-field"><label>Grade</label><select><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes kering</option><option>Ceplokan</option></select></div>'+
+      '<div class="sc-field"><label>Grade</label><select class="grade-select" onchange="onGradeChange(this)"><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes kering</option><option>Ceplokan</option><option>Rusak-buang</option></select></div>'+
       '<div class="sc-field"><label>Butir</label><input type="number" min="0" placeholder="0" oninput="calcTotal(this)"/></div>'+
       '<div class="sc-field"><label>Kilo (kg)</label><input type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal(this)"/></div>'+
     '</div>'+
@@ -233,7 +233,7 @@ async function savePenjualan(){
     if(!r.grade){showToast(`⚠️ Baris ${no}: Grade wajib dipilih!`);return;}
     if(!r.butir&&!r.kilo){showToast(`⚠️ Baris ${no}: Isi jumlah butir atau kilo!`);return;}
     if(r.butir<0||r.kilo<0){showToast(`⚠️ Baris ${no}: Jumlah tidak boleh negatif!`);return;}
-    if(r.harga<=0){showToast(`⚠️ Baris ${no}: Harga per kg wajib diisi!`);return;}
+    if(r.grade !== 'Rusak-buang' && r.harga<=0){showToast(`⚠️ Baris ${no}: Harga per kg wajib diisi!`);return;}
     if(!r.pelanggan){showToast(`⚠️ Baris ${no}: Nama pelanggan wajib diisi!`);return;}
   }
 
@@ -295,7 +295,7 @@ async function renderRiwayatJual(){
             <button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>
            </td>`
         :'';
-      tr.innerHTML='<td>'+fmtTgl(rec.tanggal)+'</td><td>'+esc(r.pelanggan||'—')+'</td><td>'+esc(r.grade||'—')+'</td><td>'+(r.butir||0)+' butir</td><td>'+(r.kilo||0)+' kg</td><td>Rp '+(r.harga?parseFloat(r.harga).toLocaleString('id-ID'):'0')+'</td><td>'+esc(r.total||'Rp 0')+'</td>'+aksiCell;
+      tr.innerHTML='<td'+(r.grade==='Rusak-buang'?' style="color:#dc2626"':'')+'>'+fmtTgl(rec.tanggal)+'</td><td'+(r.grade==='Rusak-buang'?' style="color:#dc2626"':'')+'>'+esc(r.pelanggan||'—')+'</td><td'+(r.grade==='Rusak-buang'?' style="color:#dc2626;font-weight:bold"':'')+'>'+esc(r.grade||'—')+'</td><td'+(r.grade==='Rusak-buang'?' style="color:#dc2626"':'')+'>'+(r.butir||0)+' butir</td><td'+(r.grade==='Rusak-buang'?' style="color:#dc2626"':'')+'>'+(r.kilo||0)+' kg</td><td'+(r.grade==='Rusak-buang'?' style="color:#dc2626"':'')+'>Rp '+(r.harga?parseFloat(r.harga).toLocaleString('id-ID'):'0')+'</td><td'+(r.grade==='Rusak-buang'?' style="color:#dc2626"':'')+'>'+esc(r.total||'Rp 0')+'</td>'+aksiCell;
       tbody.appendChild(tr);
     });
   });
@@ -398,7 +398,7 @@ async function simpanEditPenjualan() {
   const harga = parseFloat(document.getElementById('edit-pj-harga').value) || 0;
   const totalStr = document.getElementById('edit-pj-total').textContent;
   
-  if(!pel || !grade || (!butir && !kilo) || harga <= 0) {
+  if(!pel || !grade || (!butir && !kilo) || (grade !== 'Rusak-buang' && harga <= 0)) {
     showToast('⚠️ Harap lengkapi semua data dengan benar!');
     return;
   }

@@ -90,6 +90,8 @@ BEGIN
                 g := 'Crem';
             ELSIF g = 'Retak' THEN
                 g := 'Bentes kering';
+            ELSIF g = 'Rusak-buang' THEN
+                g := 'Bentes kering';
             END IF;
 
             IF prod ? g THEN
