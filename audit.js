@@ -42,8 +42,8 @@ async function renderAuditKategori() {
         {val: 'Normal_kg', label: 'Normal (Kg)', satuan: 'kg'},
         {val: 'Crem', label: 'Crem (Butir)', satuan: 'butir'},
         {val: 'Crem_kg', label: 'Crem (Kg)', satuan: 'kg'},
-        {val: 'Bentes kering', label: 'Bentes Kering (Butir)', satuan: 'butir'},
-        {val: 'Bentes kering_kg', label: 'Bentes Kering (Kg)', satuan: 'kg'},
+        {val: 'Bentes', label: 'Bentes (Butir)', satuan: 'butir'},
+        {val: 'Bentes_kg', label: 'Bentes (Kg)', satuan: 'kg'},
         {val: 'Ceplokan', label: 'Ceplokan (Butir)', satuan: 'butir'},
       ];
     } else if (jenis === 'Pakan') {

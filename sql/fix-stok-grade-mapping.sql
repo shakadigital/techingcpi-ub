@@ -20,7 +20,7 @@ BEGIN
     prod := '{
         "Normal": {"butir": 0, "kilo": 0},
         "Crem": {"butir": 0, "kilo": 0},
-        "Bentes kering": {"butir": 0, "kilo": 0},
+        "Bentes": {"butir": 0, "kilo": 0},
         "Ceplokan": {"butir": 0, "kilo": 0}
     }'::jsonb;
 
@@ -52,18 +52,18 @@ BEGIN
             prod := jsonb_set(prod, '{Crem,kilo}', (COALESCE((prod->'Crem'->>'kilo')::numeric, 0) + k)::text::jsonb);
         END IF;
 
-        -- Bentes kering
+        -- Bentes
         IF rec.prod_data ? 'bentes_kering' THEN
             b := COALESCE((rec.prod_data->'bentes_kering'->>'butir')::int, 0);
             k := COALESCE((rec.prod_data->'bentes_kering'->>'kilo')::numeric, 0);
-            prod := jsonb_set(prod, '{Bentes kering,butir}', (COALESCE((prod->'Bentes kering'->>'butir')::int, 0) + b)::text::jsonb);
-            prod := jsonb_set(prod, '{Bentes kering,kilo}', (COALESCE((prod->'Bentes kering'->>'kilo')::numeric, 0) + k)::text::jsonb);
+            prod := jsonb_set(prod, '{Bentes,butir}', (COALESCE((prod->'Bentes'->>'butir')::int, 0) + b)::text::jsonb);
+            prod := jsonb_set(prod, '{Bentes,kilo}', (COALESCE((prod->'Bentes'->>'kilo')::numeric, 0) + k)::text::jsonb);
         END IF;
         IF rec.prod_data ? 'retak' THEN
             b := COALESCE((rec.prod_data->'retak'->>'butir')::int, 0);
             k := COALESCE((rec.prod_data->'retak'->>'kilo')::numeric, 0);
-            prod := jsonb_set(prod, '{Bentes kering,butir}', (COALESCE((prod->'Bentes kering'->>'butir')::int, 0) + b)::text::jsonb);
-            prod := jsonb_set(prod, '{Bentes kering,kilo}', (COALESCE((prod->'Bentes kering'->>'kilo')::numeric, 0) + k)::text::jsonb);
+            prod := jsonb_set(prod, '{Bentes,butir}', (COALESCE((prod->'Bentes'->>'butir')::int, 0) + b)::text::jsonb);
+            prod := jsonb_set(prod, '{Bentes,kilo}', (COALESCE((prod->'Bentes'->>'kilo')::numeric, 0) + k)::text::jsonb);
         END IF;
 
         -- Ceplokan
@@ -89,9 +89,9 @@ BEGIN
             IF g = 'Cream' THEN
                 g := 'Crem';
             ELSIF g = 'Retak' THEN
-                g := 'Bentes kering';
-            ELSIF g = 'Rusak-buang' THEN
-                g := 'Bentes kering';
+                g := 'Bentes';
+            ELSIF g = 'Busuk' THEN
+                g := 'Bentes';
             END IF;
 
             IF prod ? g THEN
