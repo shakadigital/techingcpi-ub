@@ -128,6 +128,9 @@
     </div>
     <div class="hdr-right">
       <span id="hdr-user" style="font-size:.75rem;opacity:.85"></span>
+      <button class="sync-btn" id="btn-presence" onclick="showOnlineUsers()" title="Daftar Pengguna Online" style="display:none; color:#10b981; font-size:1.1rem;">
+        <span class="sync-icon">🟢</span>
+      </button>
       <button class="sync-btn" id="btn-sync" onclick="manualSync()" title="Sync Data">
         <span class="sync-icon">🔄</span>
       </button>
@@ -438,7 +441,10 @@
           <div style="display:flex;align-items:center;gap:8px">
             <div class="num">📦</div><h2>Stok Telur Tersedia</h2>
           </div>
-          <button class="btn-export" onclick="openAuditModal('Telur')" style="margin-left:auto;background:#f59e0b" id="btn-audit-telur">⚙️ Audit Stok</button>
+          <div style="margin-left:auto; display:flex; gap:8px;">
+            <button class="btn-export" onclick="openRiwayatAuditModal('Telur')" style="background:#0284c7" id="btn-riwayat-audit-telur">📋 Histori</button>
+            <button class="btn-export" onclick="openAuditModal('Telur')" style="background:#f59e0b" id="btn-audit-telur">⚙️ Audit Stok</button>
+          </div>
         </div>
         <div class="card-body" id="stok-telur-body">
           <div style="color:#aaa;font-size:.85rem;text-align:center;padding:8px 0">Pilih tanggal untuk melihat stok.</div>
@@ -1316,7 +1322,10 @@
         <button class="btn-export" onclick="exportLaporan('csv')" style="display:none">⬇️ CSV</button>
         <button class="btn-export" onclick="exportLaporan('excel')" style="border-color:#1d6f42;color:#1d6f42">📊 Excel</button>
         <button class="btn-export" onclick="exportLaporan('pdf')" style="border-color:#c0392b;color:#c0392b">📄 PDF</button>
-        <button class="btn-export" onclick="openAuditModal('Pakan')" style="border-color:#f59e0b;color:#f59e0b;margin-left:auto" id="btn-audit-laporan">⚙️ Audit Stok</button>
+          <div style="margin-left:auto; display:flex; gap:8px;">
+            <button class="btn-export" onclick="openRiwayatAuditModal('Pakan')" style="border-color:#0284c7;color:#0284c7" id="btn-riwayat-audit-pakan">📋 Histori</button>
+            <button class="btn-export" onclick="openAuditModal('Pakan')" style="border-color:#f59e0b;color:#f59e0b" id="btn-audit-laporan">⚙️ Audit Stok</button>
+          </div>
       </div>
 
       <!-- Harga Pasar Harian (dipindah ke halaman Input & Jual) -->
@@ -1978,6 +1987,10 @@
     </div>
     <div class="modal-body">
       <div class="field">
+        <label>Tanggal Pelaksanaan</label>
+        <input type="date" id="audit-tanggal" onchange="loadAuditStokSistem()">
+      </div>
+      <div class="field">
         <label>Jenis Item</label>
         <select id="audit-jenis" onchange="renderAuditKategori()">
           <option value="Telur">Telur</option>
@@ -2047,6 +2060,101 @@
 <!-- Core app (navigation, init, boot) — must load after modules -->
 <script src="app.js"></script>
 <script src="bw-module.js"></script>
+<script src="presence.js"></script>
+
+<!-- ══ MODAL RIWAYAT AUDIT ══ -->
+<div class="modal-overlay" id="modal-riwayat-audit" style="display:none" onclick="if(event.target===this)closeModal('modal-riwayat-audit')">
+  <div class="modal" style="max-width:600px; width:95%;">
+    <div class="modal-header">
+      <h2>📋 Histori Penyesuaian Stok</h2>
+      <button class="modal-close" onclick="closeModal('modal-riwayat-audit')">×</button>
+    </div>
+    <div class="modal-body" style="max-height:60vh; overflow-y:auto; background:#f9fafb; padding:0;">
+      <div id="riwayat-audit-list">
+        <!-- List audit akan dimasukkan di sini -->
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('modal-riwayat-audit')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDIT PENJUALAN ══ -->
+<div class="modal-overlay" id="modal-edit-penjualan" style="display:none" onclick="if(event.target===this)closeModal('modal-edit-penjualan')">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h2>✏️ Edit Item Penjualan</h2>
+      <button class="modal-close" onclick="closeModal('modal-edit-penjualan')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-pj-id">
+      <input type="hidden" id="edit-pj-index">
+      
+      <div class="field">
+        <label>Pelanggan</label>
+        <select id="edit-pj-pelanggan" class="pelanggan-select" onchange="if(this.value==='__manual__'){document.getElementById('edit-pj-pelanggan-txt').style.display='block';document.getElementById('edit-pj-pelanggan-txt').focus();}else{document.getElementById('edit-pj-pelanggan-txt').style.display='none';}"></select>
+        <input type="text" id="edit-pj-pelanggan-txt" style="display:none;margin-top:6px" placeholder="Ketik nama pelanggan...">
+      </div>
+      
+      <div class="field">
+        <label>Grade</label>
+        <select id="edit-pj-grade">
+          <option value="">-- Grade --</option>
+          <option>Normal</option>
+          <option>Crem</option>
+          <option>Bentes kering</option>
+          <option>Ceplokan</option>
+          <option>Cream</option>
+          <option>Retak</option>
+        </select>
+      </div>
+      
+      <div class="row" style="gap:8px">
+        <div class="field" style="flex:1">
+          <label>Butir</label>
+          <input type="number" id="edit-pj-butir" min="0" placeholder="0" oninput="calcEditPenjualan()">
+        </div>
+        <div class="field" style="flex:1">
+          <label>Kilo (kg)</label>
+          <input type="number" id="edit-pj-kilo" min="0" step="0.01" placeholder="0" oninput="calcEditPenjualan()">
+        </div>
+      </div>
+      
+      <div class="field">
+        <label>Harga/kg (Rp)</label>
+        <input type="number" id="edit-pj-harga" min="0" step="100" placeholder="0" oninput="calcEditPenjualan()">
+      </div>
+      
+      <div class="field" style="background:#f9fafb; padding:10px; border-radius:6px; margin-top:8px;">
+        <label style="margin-bottom:0; color:#6b7280; font-size:0.8rem;">Total Transaksi (Item ini)</label>
+        <div id="edit-pj-total" style="font-size:1.2rem; font-weight:700; color:#111827;">Rp 0</div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn-secondary" onclick="closeModal('modal-edit-penjualan')">Batal</button>
+      <button class="btn-primary" onclick="simpanEditPenjualan()" id="btn-save-edit-pj">💾 Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ONLINE USERS ══ -->
+<div class="modal-overlay" id="modal-presence" style="display:none" onclick="if(event.target===this)closeModal('modal-presence')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h2>🟢 Pengguna Online</h2>
+      <button class="modal-close" onclick="closeModal('modal-presence')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="presence-list" style="display:flex; flex-direction:column; gap:10px;">
+        Memuat data...
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('modal-presence')">Tutup</button>
+    </div>
+  </div>
+</div>
 
 
 

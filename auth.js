@@ -62,6 +62,11 @@ function applyRoleRestrictions() {
   // Tab Backup di settings — superadmin only
   const stabBackup = document.getElementById('stab-backup');
   if (stabBackup) stabBackup.style.display = isSuperadmin ? '' : 'none';
+  
+  // Presence button — superadmin only, on supabase mode
+  const btnPresence = document.getElementById('btn-presence');
+  if (btnPresence) btnPresence.style.display = (isSuperadmin && window.DB_MODE === 'supabase') ? '' : 'none';
+
   // Sync button — sembunyikan di mode local (tidak relevan)
   const syncBtn = document.getElementById('btn-sync');
   if (syncBtn) syncBtn.style.display = window.DB_MODE === 'supabase' ? '' : 'none';
@@ -124,6 +129,8 @@ async function doLogin() {
 }
 
 function doLogout() {
+  if (typeof stopPresencePing === 'function') stopPresencePing();
+  
   currentUser = null;
   sessionStorage.removeItem('session_user');
   document.getElementById('app').style.display = 'none';
@@ -164,6 +171,9 @@ function showApp() {
       `User ${currentUser?.username || '—'} membuka/mengakses aplikasi.`
     ).catch(e => console.warn('[Log Akses] Gagal menyimpan log:', e));
   }
+  
+  // Mulai tracking status online pengguna (Presence)
+  if (typeof startPresencePing === 'function') startPresencePing();
   
   // Inisialisasi realtime setelah app tampil (tidak block loading)
   setTimeout(() => { 

@@ -235,6 +235,11 @@ async function dbDeletePenjualan(id) {
   cache.del('penjualan_list');
 }
 
+async function dbUpdatePenjualan(id, obj) {
+  await SB.update(TB.penjualan, obj, `?id=eq.${id}`);
+  cache.del('penjualan_list');
+}
+
 async function dbGetPenjualan(filters = {}) {
   try {
     let q = '?select=*&order=tanggal.desc';

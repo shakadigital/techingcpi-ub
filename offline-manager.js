@@ -420,3 +420,19 @@ window.dbSaveKasWithOffline = async function(data) {
 window.offlineManualSync = function() {
   window.offlineManager.manualSync();
 };
+
+window.dbUpdatePenjualanWithOffline = async function(id, data) {
+  if (window.offlineManager.shouldUseOfflineMode()) {
+    throw new Error('Fitur edit riwayat hanya tersedia saat online (terhubung ke internet).');
+  } else {
+    try {
+      if (typeof window.dbUpdatePenjualan === 'function') {
+        return await window.dbUpdatePenjualan(id, data);
+      }
+      throw new Error('dbUpdatePenjualan not available');
+    } catch (error) {
+      console.error('Online update failed:', error);
+      throw error;
+    }
+  }
+};

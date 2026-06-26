@@ -15,6 +15,10 @@ function openAuditModal(jenis = 'Telur') {
   if(!m) return;
   m.style.display = 'flex';
   
+  if (document.getElementById('audit-tanggal')) {
+    document.getElementById('audit-tanggal').value = typeof todayISO === 'function' ? todayISO() : new Date().toLocaleDateString('en-CA');
+  }
+  
   document.getElementById('audit-jenis').value = jenis;
   renderAuditKategori();
   
@@ -86,7 +90,8 @@ async function loadAuditStokSistem() {
   
   try {
     let stok = 0;
-    const nowStr = new Date().toLocaleDateString('en-CA');
+    const tglInput = document.getElementById('audit-tanggal');
+    const nowStr = (tglInput && tglInput.value) ? tglInput.value : (typeof todayISO === 'function' ? todayISO() : new Date().toLocaleDateString('en-CA'));
     
     if (jenis === 'Telur') {
       const s = await SB.rpc('get_stok_telur_tf_ub', { p_sampai: nowStr });
@@ -186,8 +191,11 @@ async function saveAuditStok() {
   btn.textContent = 'Menyimpan...';
   
   try {
+    const tglInput = document.getElementById('audit-tanggal');
+    const tgl = (tglInput && tglInput.value) ? tglInput.value : (typeof todayISO === 'function' ? todayISO() : new Date().toLocaleDateString('en-CA'));
+    
     const payload = {
-      tanggal: new Date().toLocaleDateString('en-CA'),
+      tanggal: tgl,
       jenis_item: jenis,
       kategori_item: val,
       stok_sistem: currentAuditSistem,
@@ -214,5 +222,86 @@ async function saveAuditStok() {
   } finally {
     btn.disabled = false;
     btn.textContent = '💾 Simpan Audit';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// RIWAYAT AUDIT STOK
+// ═══════════════════════════════════════════════════
+
+async function openRiwayatAuditModal(jenis = 'Telur') {
+  const m = document.getElementById('modal-riwayat-audit');
+  const list = document.getElementById('riwayat-audit-list');
+  if (!m || !list) return;
+  
+  m.style.display = 'flex';
+  list.innerHTML = '<div style="padding:30px;text-align:center;color:#6b7280;">⏳ Memuat riwayat audit...</div>';
+  
+  try {
+    // Ambil data audit terbaru dari database
+    const audits = await SB.select('audit_stok_tf_ub', `?jenis_item=eq.${jenis}&order=tanggal.desc,created_at.desc&limit=50`);
+    
+    if (!audits || audits.length === 0) {
+      list.innerHTML = `<div style="padding:30px;text-align:center;color:#6b7280;">Belum ada histori audit untuk item ${jenis}.</div>`;
+      return;
+    }
+    
+    let html = '';
+    for (const a of audits) {
+      const tgl = new Date(a.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      const created = new Date(a.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      
+      const isMinus = parseFloat(a.selisih) < 0;
+      const isPlus = parseFloat(a.selisih) > 0;
+      let badgeColor = '#9ca3af'; // gray (balance)
+      let badgeText = 'Balance';
+      
+      if (isMinus) {
+        badgeColor = '#ef4444'; // red
+        badgeText = 'Menyusut';
+      } else if (isPlus) {
+        badgeColor = '#10b981'; // green
+        badgeText = 'Bertambah';
+      }
+      
+      const selisihFormat = (isPlus ? '+' : '') + parseFloat(a.selisih).toLocaleString('id-ID') + ' ' + (a.satuan || '');
+      
+      html += `
+        <div style="padding:15px; border-bottom:1px solid #e5e7eb; display:flex; flex-direction:column; gap:8px; background:#fff;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-weight:700; color:#111827; font-size:1.05rem;">${a.kategori_item}</div>
+              <div style="font-size:0.85rem; color:#6b7280; display:flex; align-items:center; gap:6px; margin-top:2px;">
+                <span style="background:#f3f4f6; padding:2px 6px; border-radius:4px; border:1px solid #e5e7eb;">📅 ${tgl}</span>
+                <span>⏰ ${created}</span>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:700; font-size:1.1rem; color:${badgeColor};">${selisihFormat}</div>
+              <div style="font-size:0.75rem; color:#fff; background:${badgeColor}; padding:2px 6px; border-radius:12px; display:inline-block; margin-top:4px;">${badgeText}</div>
+            </div>
+          </div>
+          
+          <div style="background:#f9fafb; padding:10px; border-radius:6px; font-size:0.85rem; border:1px dashed #d1d5db;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:#6b7280;">Stok Sistem: <b>${parseFloat(a.stok_sistem).toLocaleString('id-ID')} ${a.satuan||''}</b></span>
+              <span style="color:#6b7280;">Fisik Aktual: <b>${parseFloat(a.stok_aktual).toLocaleString('id-ID')} ${a.satuan||''}</b></span>
+            </div>
+            <div style="color:#374151; border-top:1px dashed #e5e7eb; padding-top:6px; margin-top:4px;">
+              📝 <i>"${a.keterangan || 'Tidak ada keterangan'}"</i>
+            </div>
+            <div style="color:#9ca3af; font-size:0.75rem; margin-top:4px; text-align:right;">
+              Oleh: <b>${a.user_input || 'System'}</b>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    list.innerHTML = html;
+    
+  } catch (e) {
+    console.error('[Riwayat Audit] Error:', e);
+    list.innerHTML = '<div style="padding:30px;text-align:center;color:#ef4444;">Gagal memuat histori audit. Cek koneksi internet.</div>';
   }
 }

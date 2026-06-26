@@ -289,32 +289,158 @@ async function renderRiwayatJual(){
     const rows=rec.rows||[];
     rows.forEach((r,i)=>{
       const tr=document.createElement('tr');
-      const aksiCell=isAdmin&&i===0
-        ?`<td rowspan="${rows.length}" style="text-align:center;vertical-align:middle">
-            <button onclick="hapusPenjualan('${rec.id}')" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus transaksi ini">🗑️</button>
+      const aksiCell=isAdmin
+        ?`<td style="text-align:center;vertical-align:middle;white-space:nowrap;">
+            <button onclick="editPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit item ini">✏️</button>
+            <button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>
            </td>`
-        :(isAdmin?'':'<td></td>');
-      tr.innerHTML='<td>'+fmtTgl(rec.tanggal)+'</td><td>'+esc(r.pelanggan||'—')+'</td><td>'+esc(r.grade||'—')+'</td><td>'+(r.butir||0)+' butir</td><td>'+(r.kilo||0)+' kg</td><td>Rp '+(r.harga?parseFloat(r.harga).toLocaleString('id-ID'):'0')+'</td><td>'+esc(r.total||'Rp 0')+'</td>'+(i===0?aksiCell:'');
+        :'';
+      tr.innerHTML='<td>'+fmtTgl(rec.tanggal)+'</td><td>'+esc(r.pelanggan||'—')+'</td><td>'+esc(r.grade||'—')+'</td><td>'+(r.butir||0)+' butir</td><td>'+(r.kilo||0)+' kg</td><td>Rp '+(r.harga?parseFloat(r.harga).toLocaleString('id-ID'):'0')+'</td><td>'+esc(r.total||'Rp 0')+'</td>'+aksiCell;
       tbody.appendChild(tr);
     });
   });
 }
 
-async function hapusPenjualan(id){
+async function hapusPenjualanItem(id, index){
   if(!currentUser||!['admin','superadmin'].includes(currentUser.role)){showToast('⛔ Hanya Admin yang bisa menghapus data penjualan!');return;}
-  const konfirm=confirm('⚠️ Hapus transaksi penjualan ini?\n\nData yang dihapus tidak bisa dikembalikan.');
+  const konfirm=confirm('⚠️ Hapus item penjualan ini?\n\nJika ini adalah item terakhir di tanggal tersebut, seluruh struk akan ikut terhapus.');
   if(!konfirm)return;
   try{
     showToast('⏳ Menghapus...');
     const all=await dbGetPenjualan();
     const rec=all.find(x=>x.id===id);
-    await dbDeletePenjualan(id);
-    await dbSaveLog('HAPUS','penjualan',id,rec,null,
-      `Hapus penjualan tgl ${rec?.tanggal||'—'}, total Rp ${(rec?.grand_total||0).toLocaleString('id-ID')}`);
+    if(!rec) throw new Error('Data tidak ditemukan');
+    
+    const itemHapus = rec.rows[index];
+    const newRows = rec.rows.filter((_, i) => i !== index);
+    
+    // Jika masih ada sisa baris, update transaksi
+    if (newRows.length > 0) {
+      const newGrandTotal = newRows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0);
+      const updatedRec = { ...rec, rows: newRows, grand_total: newGrandTotal };
+      
+      if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
+        await window.dbUpdatePenjualanWithOffline(id, updatedRec);
+      } else {
+        await window.dbUpdatePenjualan(id, updatedRec);
+      }
+      await dbSaveLog('UPDATE','penjualan',id,updatedRec,rec,
+        `Menghapus sebagian item: ${itemHapus.grade} ${itemHapus.butir} butir (${itemHapus.kilo}kg) dari tgl ${rec.tanggal}`);
+    } else {
+      // Jika kosong, hapus seluruh transaksi
+      await dbDeletePenjualan(id);
+      await dbSaveLog('HAPUS','penjualan',id,rec,null,
+        `Hapus total penjualan tgl ${rec?.tanggal||'—'}, total Rp ${(rec?.grand_total||0).toLocaleString('id-ID')}`);
+    }
+
     await renderStokTelur();
     await renderRiwayatJual();
-    showToast('✅ Transaksi penjualan dihapus!');
+    showToast('✅ Item penjualan dihapus!');
   }catch(e){showToast('❌ Gagal menghapus: '+e.message);}
+}
+
+async function editPenjualanItem(id, index) {
+  if(!currentUser||!['admin','superadmin'].includes(currentUser.role)){showToast('⛔ Hanya Admin yang bisa mengedit!');return;}
+  
+  const all=await dbGetPenjualan();
+  const rec=all.find(x=>x.id===id);
+  if(!rec || !rec.rows[index]) return;
+  
+  const r = rec.rows[index];
+  
+  document.getElementById('edit-pj-id').value = id;
+  document.getElementById('edit-pj-index').value = index;
+  
+  await populatePelangganSelect(document.getElementById('edit-pj-pelanggan'));
+  
+  // Set pelanggan
+  let pelFound = false;
+  for(let opt of document.getElementById('edit-pj-pelanggan').options) {
+    if(opt.value === r.pelanggan) {
+      opt.selected = true;
+      pelFound = true; break;
+    }
+  }
+  if(!pelFound) {
+    document.getElementById('edit-pj-pelanggan').value = '__manual__';
+    document.getElementById('edit-pj-pelanggan-txt').style.display = 'block';
+    document.getElementById('edit-pj-pelanggan-txt').value = r.pelanggan || '';
+  } else {
+    document.getElementById('edit-pj-pelanggan-txt').style.display = 'none';
+  }
+  
+  document.getElementById('edit-pj-grade').value = r.grade || '';
+  document.getElementById('edit-pj-butir').value = r.butir || '';
+  document.getElementById('edit-pj-kilo').value = r.kilo || '';
+  document.getElementById('edit-pj-harga').value = r.harga || '';
+  document.getElementById('edit-pj-total').textContent = r.total || 'Rp 0';
+  
+  document.getElementById('modal-edit-penjualan').style.display = 'flex';
+}
+
+function calcEditPenjualan() {
+  const kilo = parseFloat(document.getElementById('edit-pj-kilo').value) || 0;
+  const harga = parseFloat(document.getElementById('edit-pj-harga').value) || 0;
+  document.getElementById('edit-pj-total').textContent = 'Rp ' + (kilo * harga).toLocaleString('id-ID');
+}
+
+async function simpanEditPenjualan() {
+  const id = document.getElementById('edit-pj-id').value;
+  const index = parseInt(document.getElementById('edit-pj-index').value, 10);
+  
+  const selPel = document.getElementById('edit-pj-pelanggan');
+  const txtPel = document.getElementById('edit-pj-pelanggan-txt');
+  const pel = selPel.value === '__manual__' ? txtPel.value.trim() : selPel.value;
+  
+  const grade = document.getElementById('edit-pj-grade').value;
+  const butir = parseFloat(document.getElementById('edit-pj-butir').value) || 0;
+  const kilo = parseFloat(document.getElementById('edit-pj-kilo').value) || 0;
+  const harga = parseFloat(document.getElementById('edit-pj-harga').value) || 0;
+  const totalStr = document.getElementById('edit-pj-total').textContent;
+  
+  if(!pel || !grade || (!butir && !kilo) || harga <= 0) {
+    showToast('⚠️ Harap lengkapi semua data dengan benar!');
+    return;
+  }
+  
+  try {
+    const btn = document.getElementById('btn-save-edit-pj');
+    btn.disabled = true;
+    btn.textContent = '⏳ Menyimpan...';
+    
+    const all = await dbGetPenjualan();
+    const rec = all.find(x=>x.id===id);
+    if(!rec) throw new Error('Data induk tidak ditemukan');
+    
+    const oldRow = { ...rec.rows[index] };
+    const newRow = { pelanggan: pel, grade, butir, kilo, harga, total: totalStr };
+    
+    rec.rows[index] = newRow;
+    
+    const newGrandTotal = rec.rows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0);
+    rec.grand_total = newGrandTotal;
+    
+    if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
+      await window.dbUpdatePenjualanWithOffline(id, rec);
+    } else {
+      await window.dbUpdatePenjualan(id, rec);
+    }
+    
+    await dbSaveLog('UPDATE','penjualan',id,rec,oldRow,
+      `Edit item penjualan tgl ${rec.tanggal}: ${oldRow.grade} -> ${grade}`);
+      
+    await renderStokTelur();
+    await renderRiwayatJual();
+    
+    closeModal('modal-edit-penjualan');
+    showToast('✅ Perubahan berhasil disimpan!');
+  } catch (e) {
+    showToast('❌ Gagal menyimpan: ' + e.message);
+  } finally {
+    const btn = document.getElementById('btn-save-edit-pj');
+    btn.disabled = false;
+    btn.textContent = '💾 Simpan Perubahan';
+  }
 }
 
 async function exportRiwayatJual(){

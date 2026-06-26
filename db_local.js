@@ -246,6 +246,12 @@ async function dbDeletePenjualan(id) {
   cache.del('penjualan_list');
 }
 
+async function dbUpdatePenjualan(id, obj) {
+  const existing = await _get('penjualan', id);
+  await _put('penjualan', { ...existing, ...obj });
+  cache.del('penjualan_list');
+}
+
 async function dbGetPenjualan(filters = {}) {
   try {
     const rows = await _queryTanggalRange('penjualan', filters);
