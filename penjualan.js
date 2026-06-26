@@ -109,7 +109,7 @@ async function getStokTelur(tgl){
   if(typeof dbGetStokTelur === 'function') {
     try {
       const serverStok = await dbGetStokTelur(tgl);
-      if(serverStok) return serverStok;
+      if(serverStok && serverStok['Normal']) return serverStok;
     } catch { /* fallback ke client-side */ }
   }
   

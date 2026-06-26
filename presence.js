@@ -59,7 +59,7 @@ async function showOnlineUsers() {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60000).toISOString();
     
     // Query users
-    const users = await SB.select('users_tf_ub', `?last_active=gte.${fiveMinutesAgo}&select=username,name,role,last_active`);
+    const users = await SB.select('users_tf_ub', `?last_active=gte.${fiveMinutesAgo}&select=username,nama,role,last_active`);
     
     if (!users || users.length === 0) {
       list.innerHTML = '<div style="padding:20px;text-align:center;color:#6b7280;">Tidak ada pengguna aktif selain Anda.</div>';
@@ -72,7 +72,7 @@ async function showOnlineUsers() {
     let html = '';
     for (const u of users) {
       const isMe = (u.username === currentUser.username);
-      const name = u.name || u.username;
+      const name = u.nama || u.username;
       
       const lastActiveDate = new Date(u.last_active);
       const timeStr = lastActiveDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
