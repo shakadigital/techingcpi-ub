@@ -94,7 +94,12 @@ async function loadAuditStokSistem() {
     const nowStr = (tglInput && tglInput.value) ? tglInput.value : (typeof todayISO === 'function' ? todayISO() : new Date().toLocaleDateString('en-CA'));
     
     if (jenis === 'Telur') {
-      const s = await SB.rpc('get_stok_telur_tf_ub', { p_sampai: nowStr });
+      let s;
+      try {
+        s = typeof getStokTelur === 'function' ? await getStokTelur(nowStr) : await window.dbGetStokTelur(nowStr);
+      } catch(e) {
+        s = await SB.rpc('get_stok_telur_tf_ub', { p_sampai: nowStr });
+      }
       if (val.endsWith('_kg')) {
         const grade = val.replace('_kg', '');
         stok = parseFloat(s[grade]?.kilo || 0);

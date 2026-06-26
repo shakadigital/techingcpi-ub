@@ -130,7 +130,10 @@ async function getStokTelur(tgl){
   const juals=await dbGetPenjualan({sampai:tgl, limit:9999});
   juals.forEach(j=>{
     (j.rows||[]).forEach(r=>{
-      const G=r.grade;
+      let G=r.grade;
+      if (G === 'Cream') G = 'Crem';
+      if (G === 'Retak' || G === 'Rusak-buang') G = 'Bentes kering';
+      
       if(prod[G]){
         prod[G].butir=Math.max(0,prod[G].butir-(parseInt(r.butir)||0));
         prod[G].kilo=Math.max(0,prod[G].kilo-(parseFloat(r.kilo)||0));
