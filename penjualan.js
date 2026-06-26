@@ -74,7 +74,7 @@ function addSaleRow(){
       '<input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>'+
     '</div></div>'+
     '<div class="sc-row three">'+
-      '<div class="sc-field"><label>Grade</label><select class="grade-select" onchange="onGradeChange(this)"><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes kering</option><option>Ceplokan</option><option>Rusak-buang</option></select></div>'+
+      '<div class="sc-field"><label>Grade</label><select class="grade-select" onchange="onGradeChange(this)"><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes kering</option><option>Ceplokan</option><option style="color:#dc2626;font-weight:bold">Rusak-buang</option></select></div>'+
       '<div class="sc-field"><label>Butir</label><input type="number" min="0" placeholder="0" oninput="calcTotal(this)"/></div>'+
       '<div class="sc-field"><label>Kilo (kg)</label><input type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal(this)"/></div>'+
     '</div>'+
