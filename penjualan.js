@@ -36,6 +36,18 @@ function onPelangganChange(sel){
   }
 }
 
+function onGradeChange(sel){
+  const card = sel.closest('.sale-row');
+  if(!card) return;
+  const hargaInput = card.querySelectorAll('input[type="number"]')[2];
+  if(hargaInput) {
+    if(sel.value === 'Rusak-buang') {
+      hargaInput.value = '0';
+      calcTotal(hargaInput);
+    }
+  }
+}
+
 function getSalePelanggan(card){
   const sel = card.querySelector('.pelanggan-select');
   const txt = card.querySelector('.pelanggan-text');
@@ -369,7 +381,11 @@ async function editPenjualanItem(id, index) {
     document.getElementById('edit-pj-pelanggan-txt').style.display = 'none';
   }
   
-  document.getElementById('edit-pj-grade').value = r.grade || '';
+  let g = r.grade || '';
+  if (g === 'Cream') g = 'Crem';
+  if (g === 'Retak') g = 'Bentes kering';
+  
+  document.getElementById('edit-pj-grade').value = g;
   document.getElementById('edit-pj-butir').value = r.butir || '';
   document.getElementById('edit-pj-kilo').value = r.kilo || '';
   document.getElementById('edit-pj-harga').value = r.harga || '';
