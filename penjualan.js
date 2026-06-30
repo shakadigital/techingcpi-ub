@@ -74,7 +74,7 @@ function addSaleRow(){
       '<input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>'+
     '</div></div>'+
     '<div class="sc-row three">'+
-      '<div class="sc-field"><label>Grade</label><select class="grade-select" onchange="onGradeChange(this)"><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Retak</option><option>Bentes</option><option>Ceplokan</option></select></div>'+
+      '<div class="sc-field"><label>Grade</label><select class="grade-select" onchange="onGradeChange(this)"><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes</option><option>Ceplokan</option></select></div>'+
       '<div class="sc-field"><label>Butir</label><input type="number" min="0" placeholder="0" oninput="calcTotal(this)"/></div>'+
       '<div class="sc-field"><label>Kilo (kg)</label><input type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal(this)"/></div>'+
     '</div>'+
@@ -113,13 +113,17 @@ async function getStokTelur(tgl){
         if (serverStok['Bentes kering'] && !serverStok['Bentes']) {
           serverStok['Bentes'] = serverStok['Bentes kering'];
         }
+        if (serverStok['Retak']) {
+          serverStok['Bentes'].butir += serverStok['Retak'].butir || 0;
+          serverStok['Bentes'].kilo += serverStok['Retak'].kilo || 0;
+        }
         return serverStok;
       }
     } catch { /* fallback ke client-side */ }
   }
   
   // Fallback: client-side calculation
-  const prod={'Normal':{butir:0,kilo:0},'Crem':{butir:0,kilo:0},'Retak':{butir:0,kilo:0},'Bentes':{butir:0,kilo:0},'Ceplokan':{butir:0,kilo:0}};
+  const prod={'Normal':{butir:0,kilo:0},'Crem':{butir:0,kilo:0},'Bentes':{butir:0,kilo:0},'Ceplokan':{butir:0,kilo:0}};
   const inputs=await dbGetInput({sampai:tgl});
   inputs.forEach(row=>{
     const d=row.data;if(!d||!d.produksi)return;
@@ -130,7 +134,7 @@ async function getStokTelur(tgl){
       prod[G].kilo+=parseFloat(d.produksi[g]?.kilo)||0;
     });
     if(d.produksi.cream){prod['Crem'].butir+=parseInt(d.produksi.cream.butir)||0;prod['Crem'].kilo+=parseFloat(d.produksi.cream.kilo)||0;}
-    if(d.produksi.retak){prod['Retak'].butir+=parseInt(d.produksi.retak.butir)||0;prod['Retak'].kilo+=parseFloat(d.produksi.retak.kilo)||0;}
+    if(d.produksi.retak){prod['Bentes'].butir+=parseInt(d.produksi.retak.butir)||0;prod['Bentes'].kilo+=parseFloat(d.produksi.retak.kilo)||0;}
   });
   const juals=await dbGetPenjualan({sampai:tgl, limit:9999});
   juals.forEach(j=>{
@@ -169,7 +173,7 @@ async function renderStokTelur(){
     return sat === 'butir' ? val.toLocaleString('id-ID') : val.toFixed(2);
   };
 
-  const grades=['Normal','Crem','Retak','Bentes','Ceplokan'];
+  const grades=['Normal','Crem','Bentes','Ceplokan'];
   const totalButir=grades.reduce((s,g)=>s+stok[g].butir,0);
   const totalKilo=grades.reduce((s,g)=>s+stok[g].kilo,0);
   el.innerHTML=
