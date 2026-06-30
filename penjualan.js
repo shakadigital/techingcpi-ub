@@ -604,19 +604,19 @@ async function importExcelPenjualan(e) {
           else countNew++;
         }
         
-        showToast(\? Berhasil! \ diupdate, \ transaksi baru.\);
+        showToast(`Berhasil! ${countUpdated} diupdate, ${countNew} transaksi baru.`);
         if (typeof loadRiwayatPenjualan === 'function') loadRiwayatPenjualan();
         if (typeof renderStokTelur === 'function') renderStokTelur();
       } catch(err) {
         console.error(err);
-        showToast('? Gagal memproses isi Excel.');
+        showToast('Gagal memproses isi Excel.');
       }
       document.getElementById('import-excel-penjualan').value = '';
     };
     reader.readAsArrayBuffer(file);
   } catch(e) {
     console.error(e);
-    showToast('? Gagal memuat library Excel.');
+    showToast('Gagal memuat library Excel.');
   }
 }
 
