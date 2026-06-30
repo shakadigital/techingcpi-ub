@@ -153,16 +153,28 @@ async function renderStokTelur(){
   const el=document.getElementById('stok-telur-body');
   el.innerHTML='<div style="color:#aaa;font-size:.85rem;text-align:center;padding:8px">⏳ Menghitung stok...</div>';
   const stok=await getStokTelur(tgl);
+  let audits = [];
+  try { audits = await dbGetAudit({ dari: tgl, sampai: tgl, jenis_item: 'Telur' }); } catch(e) {}
+  
+  const getDisp = (g, sat, val) => {
+    const a = audits.find(x => x.kategori_item === g && x.satuan === sat);
+    if (a && a.stok_aktual != null) {
+      if (sat === 'butir') return `${val.toLocaleString('id-ID')} / <span style="color:#0284c7">${parseInt(a.stok_aktual).toLocaleString('id-ID')}</span>`;
+      return `${val.toFixed(2)} / <span style="color:#0284c7">${parseFloat(a.stok_aktual).toFixed(2)}</span>`;
+    }
+    return sat === 'butir' ? val.toLocaleString('id-ID') : val.toFixed(2);
+  };
+
   const grades=['Normal','Crem','Retak','Bentes','Ceplokan'];
   const totalButir=grades.reduce((s,g)=>s+stok[g].butir,0);
   const totalKilo=grades.reduce((s,g)=>s+stok[g].kilo,0);
   el.innerHTML=
     '<table class="tbl" style="margin-bottom:0">'+
     '<thead><tr><th>Grade</th><th>Stok (butir)</th><th>Stok (kg)</th></tr></thead><tbody>'+
-    grades.map(g=>'<tr><td>'+g+'</td><td style="font-weight:700;color:'+(stok[g].butir>0?'#1b4332':'#dc2626')+'">'+stok[g].butir.toLocaleString('id-ID')+'</td><td>'+stok[g].kilo.toFixed(2)+' kg</td></tr>').join('')+
+    grades.map(g=>'<tr><td>'+g+'</td><td style="font-weight:700;color:'+(stok[g].butir>0?'#1b4332':'#dc2626')+'">'+getDisp(g, 'butir', stok[g].butir)+'</td><td>'+getDisp(g, 'kg', stok[g].kilo)+' kg</td></tr>').join('')+
     '<tr class="total-row"><td>TOTAL</td><td>'+totalButir.toLocaleString('id-ID')+'</td><td>'+totalKilo.toFixed(2)+' kg</td></tr>'+
     '</tbody></table>'+
-    '<div style="font-size:.75rem;color:#888;margin-top:8px">Kumulatif produksi semua kandang s.d. '+tgl+', dikurangi penjualan.</div>';
+    '<div style="font-size:.75rem;color:#888;margin-top:8px">Kumulatif produksi s.d. '+tgl+'. Angka biru adalah stok aktual dari audit.</div>';
 }
 
 // ═══ HARGA PASAR DI HALAMAN JUAL ═══
