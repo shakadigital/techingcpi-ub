@@ -502,3 +502,121 @@ async function exportRiwayatJual(){
     showToast('❌ Gagal export: '+e.message);
   }
 }
+
+// --- EXPORT / IMPORT EXCEL PENJUALAN ---
+async function exportExcelPenjualan() {
+  if (!can('JUAL')) { showToast('Tidak ada akses!'); return; }
+  showToast('? Menyiapkan file Excel...');
+  try {
+    await ensureXLSX();
+    const data = await dbGetPenjualan({ limit: 999999 });
+    const flatData = [];
+    data.forEach(p => {
+      if (Array.isArray(p.rows)) {
+        p.rows.forEach(r => {
+          flatData.push({
+            'ID_Transaksi': p.id,
+            'Tanggal': p.tanggal,
+            'Penginput': p.user_input || '',
+            'Pelanggan': r.pelanggan || '',
+            'Grade': r.grade || '',
+            'Butir': r.butir || 0,
+            'Kilo': r.kilo || 0,
+            'Harga': r.harga || 0,
+            'Total': parseFloat(String(r.total).replace(/[^0-9,-]/g, '')) || 0
+          });
+        });
+      }
+    });
+    
+    if (flatData.length === 0) {
+      showToast('?? Tidak ada data penjualan.');
+      return;
+    }
+    
+    const ws = XLSX.utils.json_to_sheet(flatData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Penjualan');
+    XLSX.writeFile(wb, \Data_Penjualan_\.xlsx\);
+    showToast('? File Excel berhasil diunduh!');
+  } catch(e) {
+    console.error(e);
+    showToast('? Gagal mengunduh Excel.');
+  }
+}
+
+async function importExcelPenjualan(e) {
+  if (!can('JUAL')) { showToast('Tidak ada akses!'); return; }
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  showToast('? Membaca file Excel...');
+  try {
+    await ensureXLSX();
+    const reader = new FileReader();
+    reader.onload = async function(event) {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet);
+        
+        if (rows.length === 0) {
+          showToast('?? File Excel kosong!');
+          return;
+        }
+        
+        showToast('? Memproses dan menyimpan data...');
+        const grouped = {};
+        rows.forEach(r => {
+          const id = r['ID_Transaksi'] || ('NEW_' + r['Tanggal'] + '_' + (r['Penginput']||''));
+          if (!grouped[id]) {
+            grouped[id] = {
+              id: r['ID_Transaksi'] || null,
+              tanggal: r['Tanggal'],
+              user_input: r['Penginput'] || '',
+              rows: [],
+              grand_total: 0
+            };
+          }
+          const butir = parseFloat(r['Butir']) || 0;
+          const kilo = parseFloat(r['Kilo']) || 0;
+          const harga = parseFloat(r['Harga']) || 0;
+          let total = parseFloat(r['Total']) || 0;
+          if (total === 0) total = (kilo > 0) ? (kilo * harga) : (butir * (harga/2000));
+          
+          grouped[id].rows.push({
+            pelanggan: r['Pelanggan'] || '',
+            grade: r['Grade'] || '',
+            butir: butir,
+            kilo: kilo,
+            harga: harga,
+            total: 'Rp ' + total.toLocaleString('id-ID')
+          });
+          grouped[id].grand_total += total;
+        });
+        
+        let countUpdated = 0, countNew = 0;
+        for (const key in grouped) {
+          const trans = grouped[key];
+          await dbSavePenjualan(trans);
+          if (trans.id) countUpdated++;
+          else countNew++;
+        }
+        
+        showToast(\? Berhasil! \ diupdate, \ transaksi baru.\);
+        if (typeof loadRiwayatPenjualan === 'function') loadRiwayatPenjualan();
+        if (typeof renderStokTelur === 'function') renderStokTelur();
+      } catch(err) {
+        console.error(err);
+        showToast('? Gagal memproses isi Excel.');
+      }
+      document.getElementById('import-excel-penjualan').value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  } catch(e) {
+    console.error(e);
+    showToast('? Gagal memuat library Excel.');
+  }
+}
+

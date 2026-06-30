@@ -235,7 +235,7 @@ async function dbDeleteInput(id) {
 }
 
 async function dbSavePenjualan(obj) {
-  obj.id = crypto.randomUUID();
+  if (!obj.id) obj.id = crypto.randomUUID();
   obj.created_at = obj.created_at || new Date().toISOString();
   await _put('penjualan', obj);
   cache.del('penjualan_list');

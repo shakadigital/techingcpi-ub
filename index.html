@@ -467,7 +467,16 @@
 
       <!-- Form Transaksi -->
       <div class="card">
-        <div class="card-header"><div class="num">🥚</div><h2>Transaksi Penjualan Telur</h2></div>
+        <div class="card-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="num">🥚</div><h2>Transaksi Penjualan Telur</h2>
+          </div>
+          <div style="margin-left:auto; display:flex; gap:8px;">
+            <button class="btn-export" onclick="exportExcelPenjualan()" style="background:#10b981;font-size:0.8rem;padding:4px 8px;">📥 Excel</button>
+            <button class="btn-export" onclick="document.getElementById('import-excel-penjualan').click()" style="background:#f59e0b;font-size:0.8rem;padding:4px 8px;">📤 Revisi</button>
+            <input type="file" id="import-excel-penjualan" accept=".xlsx, .xls, .csv" style="display:none" onchange="importExcelPenjualan(event)" />
+          </div>
+        </div>
         <div class="card-body">
           <div class="info-box" style="margin-bottom: 12px; padding: 10px; border-radius: 6px; text-align: left; font-size: 0.85rem; color: #555; background: #fff8e1; border-left: 4px solid #ffc107;">
             <strong>Ketentuan Harga Tambahan:</strong><br/>

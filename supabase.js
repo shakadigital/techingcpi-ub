@@ -225,8 +225,12 @@ async function dbDeleteInput(id) {
 
 // ── PENJUALAN ──────────────────────────────────────
 async function dbSavePenjualan(obj) {
-  obj.id = crypto.randomUUID();
-  await SB.insert(TB.penjualan, obj);
+  if (obj.id) {
+    await SB.update(TB.penjualan, obj, `?id=eq.${obj.id}`);
+  } else {
+    obj.id = crypto.randomUUID();
+    await SB.insert(TB.penjualan, obj);
+  }
   cache.del('penjualan_list');
 }
 
