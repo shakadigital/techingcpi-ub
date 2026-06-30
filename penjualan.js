@@ -331,7 +331,28 @@ async function renderRiwayatJual(){
             <button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>
            </td>`
         :'';
-      tr.innerHTML='<td'+(r.grade==='Busuk'?' style="color:#dc2626"':'')+'>'+fmtTgl(rec.tanggal)+'</td><td'+(r.grade==='Busuk'?' style="color:#dc2626"':'')+'>'+esc(r.pelanggan||'—')+'</td><td'+(r.grade==='Busuk'?' style="color:#dc2626;font-weight:bold"':'')+'>'+esc(r.grade||'—')+'</td><td'+(r.grade==='Busuk'?' style="color:#dc2626"':'')+'>'+(r.butir||0)+' butir</td><td'+(r.grade==='Busuk'?' style="color:#dc2626"':'')+'>'+(r.kilo||0)+' kg</td><td'+(r.grade==='Busuk'?' style="color:#dc2626"':'')+'>Rp '+(r.harga?parseFloat(r.harga).toLocaleString('id-ID'):'0')+'</td><td'+(r.grade==='Busuk'?' style="color:#dc2626"':'')+'>'+esc(r.total||'Rp 0')+'</td>'+aksiCell;
+        
+      const dateStr = fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2));
+      const tButir = (r.butir||0).toLocaleString('id-ID');
+      const tKilo = (r.kilo||0).toLocaleString('id-ID');
+      const tHarga = 'Rp ' + (r.harga ? parseFloat(r.harga).toLocaleString('id-ID') : '0');
+      const rTotalRaw = parseFloat(String(r.total||'0').replace(/[^0-9.-]+/g,""));
+      const tTotal = 'Rp ' + (isNaN(rTotalRaw) ? '0' : rTotalRaw.toLocaleString('id-ID'));
+      
+      const st = r.grade === 'Busuk' ? 'color:#dc2626;' : '';
+      const fw = r.grade === 'Busuk' ? 'font-weight:bold;' : '';
+      const ar = 'text-align:right;';
+      
+      tr.innerHTML = `
+        <td style="${st}">${dateStr}</td>
+        <td style="${st}">${esc(r.pelanggan||'—')}</td>
+        <td style="${st}${fw}">${esc(r.grade||'—')}</td>
+        <td style="${st}${ar}">${tButir}</td>
+        <td style="${st}${ar}">${r.kilo||0}</td>
+        <td style="${st}${ar}">${tHarga}</td>
+        <td style="${st}${ar}">${tTotal}</td>
+        ${aksiCell}
+      `;
       tbody.appendChild(tr);
     });
   });
