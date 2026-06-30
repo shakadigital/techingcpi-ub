@@ -158,9 +158,13 @@ async function renderStokTelur(){
   
   const getDisp = (g, sat, val) => {
     const a = audits.find(x => x.kategori_item === g && x.satuan === sat);
-    if (a && a.stok_aktual != null) {
-      if (sat === 'butir') return `${val.toLocaleString('id-ID')} / <span style="color:#0284c7">${parseInt(a.stok_aktual).toLocaleString('id-ID')}</span>`;
-      return `${val.toFixed(2)} / <span style="color:#0284c7">${parseFloat(a.stok_aktual).toFixed(2)}</span>`;
+    if (a && a.stok_aktual != null && a.selisih != null) {
+      if (sat === 'butir') {
+        const sysVal = val - parseInt(a.selisih);
+        return `${sysVal.toLocaleString('id-ID')} / <span style="color:#0284c7">${parseInt(a.stok_aktual).toLocaleString('id-ID')}</span>`;
+      }
+      const sysVal = val - parseFloat(a.selisih);
+      return `${sysVal.toFixed(2)} / <span style="color:#0284c7">${parseFloat(a.stok_aktual).toFixed(2)}</span>`;
     }
     return sat === 'butir' ? val.toLocaleString('id-ID') : val.toFixed(2);
   };
