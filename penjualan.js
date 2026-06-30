@@ -537,11 +537,11 @@ async function exportExcelPenjualan() {
     const ws = XLSX.utils.json_to_sheet(flatData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Penjualan');
-    XLSX.writeFile(wb, \Data_Penjualan_\.xlsx\);
-    showToast('? File Excel berhasil diunduh!');
+    XLSX.writeFile(wb, `Data_Penjualan_${Date.now()}.xlsx`);
+    showToast('File Excel berhasil diunduh!');
   } catch(e) {
     console.error(e);
-    showToast('? Gagal mengunduh Excel.');
+    showToast('Gagal mengunduh Excel.');
   }
 }
 
