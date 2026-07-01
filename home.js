@@ -45,7 +45,7 @@ async function renderHome(){
   }
   // % terjual = kilo terjual / total produksi hari ini (kg)
   let totalProdKilo=0;
-  todayInputs.forEach(row=>{const d=row.data;if(d&&d.produksi){['normal','cream','retak'].forEach(g=>{totalProdKilo+=parseFloat(d.produksi[g]?.kilo)||0;});}});
+  todayInputs.forEach(row=>{const d=row.data;if(d&&d.produksi){['normal','crem','retak'].forEach(g=>{totalProdKilo+=parseFloat(d.produksi[g]?.kilo)||0;});}});
   const pctJual=totalProdKilo>0?Math.min(100,Math.round((totalKiloJual/totalProdKilo)*100)):0;
   document.getElementById('hs-produksi').textContent=totalProd.toLocaleString('id-ID');
   document.getElementById('hs-pakan').textContent=totalPakan%1===0?totalPakan.toLocaleString('id-ID'):totalPakan.toFixed(1);
@@ -59,7 +59,7 @@ async function renderHome(){
   if(!last7.length){actEl.innerHTML='<div style="color:#aaa;font-size:.85rem;text-align:center;padding:12px 0">Belum ada data tersimpan.</div>';}
   else{
     actEl.innerHTML='<table class="tbl"><thead><tr><th>Tanggal</th><th>Kandang</th><th>Produksi</th><th>HDP</th></tr></thead><tbody>'+
-    last7.map(row=>{const d=row.data;if(!d)return'';return`<tr style="cursor:pointer" onclick="openDailySummaryFor('${d.tanggal}','${esc(d.kandang)}')"><td>${fmtTgl(d.tanggal)}</td><td>${esc(d.kandang)}</td><td>${d.produksi?d.produksi.total.butir+' butir':'—'}</td><td>${d.produksi?d.produksi.hdp:'—'}</td></tr>`;}).join('')+
+    last7.map(row=>{const d=row.data;if(!d)return'';return`<tr style="cursor:pointer" onclick="openDailySummaryFor('${d.tanggal}','${esc(d.kandang)}')"><td>${fmtTgl(d.tanggal)}</td><td>${esc(d.kandang)}</td><td>${d.produksi?d.produksi.total.butir+' butir':'—'}</td><td>${d.produksi&&d.produksi.hdp!==undefined?d.produksi.hdp:'—'}</td></tr>`;}).join('')+
     '</tbody></table>';
   }
   // Status kandang
