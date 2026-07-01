@@ -159,28 +159,57 @@ async function renderStokTelur(){
   const stok=await getStokTelur(tgl);
   let audits = [];
   try { audits = await dbGetAudit({ dari: tgl, sampai: tgl, jenis_item: 'Telur' }); } catch(e) {}
-  
+  let totalSysButir = 0, totalSysKilo = 0;
+  let totalActButir = 0, totalActKilo = 0;
+  let hasAuditButir = false, hasAuditKilo = false;
+
   const getDisp = (g, sat, val) => {
     const a = audits.find(x => x.kategori_item === g && x.satuan === sat);
     if (a && a.stok_aktual != null && a.selisih != null) {
       if (sat === 'butir') {
-        const sysVal = val - parseInt(a.selisih);
-        return `${sysVal.toLocaleString('id-ID')} / <span style="color:#0284c7">${parseInt(a.stok_aktual).toLocaleString('id-ID')}</span>`;
+        const sysVal = val + parseInt(a.selisih);
+        totalSysButir += sysVal;
+        totalActButir += val;
+        hasAuditButir = true;
+        return `${sysVal.toLocaleString('id-ID')} / <span style="color:#0284c7">${val.toLocaleString('id-ID')}</span>`;
       }
-      const sysVal = val - parseFloat(a.selisih);
-      return `${sysVal.toFixed(2)} / <span style="color:#0284c7">${parseFloat(a.stok_aktual).toFixed(2)}</span>`;
+      const sysVal = val + parseFloat(a.selisih);
+      totalSysKilo += sysVal;
+      totalActKilo += val;
+      hasAuditKilo = true;
+      return `${sysVal.toFixed(2)} / <span style="color:#0284c7">${val.toFixed(2)}</span>`;
     }
-    return sat === 'butir' ? val.toLocaleString('id-ID') : val.toFixed(2);
+    
+    // Fallback jika tidak ada audit di hari tersebut
+    if (sat === 'butir') {
+      totalSysButir += val;
+      totalActButir += val;
+      return val.toLocaleString('id-ID');
+    }
+    totalSysKilo += val;
+    totalActKilo += val;
+    return val.toFixed(2);
   };
 
   const grades=['Normal','Crem','Bentes','Ceplokan'];
-  const totalButir=grades.reduce((s,g)=>s+stok[g].butir,0);
-  const totalKilo=grades.reduce((s,g)=>s+stok[g].kilo,0);
+  
+  const tbodyHtml = grades.map(g => {
+    return '<tr><td>'+g+'</td><td style="font-weight:700;color:'+(stok[g].butir>0?'#1b4332':'#dc2626')+'">'+getDisp(g, 'butir', stok[g].butir)+'</td><td>'+getDisp(g, 'kg', stok[g].kilo)+' kg</td></tr>';
+  }).join('');
+  
+  const totalButirDisp = hasAuditButir 
+    ? `${totalSysButir.toLocaleString('id-ID')} / <span style="color:#0284c7">${totalActButir.toLocaleString('id-ID')}</span>`
+    : totalSysButir.toLocaleString('id-ID');
+    
+  const totalKiloDisp = hasAuditKilo 
+    ? `${totalSysKilo.toFixed(2)} / <span style="color:#0284c7">${totalActKilo.toFixed(2)}</span>`
+    : totalSysKilo.toFixed(2);
+
   el.innerHTML=
     '<table class="tbl" style="margin-bottom:0">'+
     '<thead><tr><th>Grade</th><th>Stok (butir)</th><th>Stok (kg)</th></tr></thead><tbody>'+
-    grades.map(g=>'<tr><td>'+g+'</td><td style="font-weight:700;color:'+(stok[g].butir>0?'#1b4332':'#dc2626')+'">'+getDisp(g, 'butir', stok[g].butir)+'</td><td>'+getDisp(g, 'kg', stok[g].kilo)+' kg</td></tr>').join('')+
-    '<tr class="total-row"><td>TOTAL</td><td>'+totalButir.toLocaleString('id-ID')+'</td><td>'+totalKilo.toFixed(2)+' kg</td></tr>'+
+    tbodyHtml+
+    '<tr class="total-row"><td>TOTAL</td><td>'+totalButirDisp+'</td><td>'+totalKiloDisp+' kg</td></tr>'+
     '</tbody></table>'+
     '<div style="font-size:.75rem;color:#888;margin-top:8px">Kumulatif produksi s.d. '+tgl+'. Angka biru adalah stok aktual dari audit.</div>';
 }
@@ -387,12 +416,13 @@ async function renderRiwayatJual(){
       const tr=document.createElement('tr');
       const isWaste = r.grade === 'Waste';
       const isBusuk = r.grade === 'Busuk';
-      const st = (isWaste || isBusuk) ? 'color:#dc2626;' : '';
-      const fw = (isWaste || isBusuk) ? 'font-weight:bold;' : '';
+      const isSusut = r.pelanggan === 'Susut Audit';
+      const st = (isWaste || isBusuk || isSusut) ? 'color:#dc2626;' : '';
+      const fw = (isWaste || isBusuk || isSusut) ? 'font-weight:bold;' : '';
       const ar = 'text-align:right;';
       
-      const canEdit = isAdmin || (isWaste && ['supervisor', 'staff'].includes(currentUser?.role));
-      const canDelete = isAdmin && !isWaste;
+      const canEdit = isAdmin || ((isWaste || isSusut) && ['supervisor', 'staff'].includes(currentUser?.role));
+      const canDelete = isAdmin && !isWaste && !isSusut;
       
       let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
       if (canEdit) aksiCell += `<button onclick="editPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit item ini">✏️</button>`;

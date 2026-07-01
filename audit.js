@@ -214,6 +214,28 @@ async function saveAuditStok() {
     };
     
     await dbSaveAudit(payload);
+    
+    // OTOMATISASI SUSUT KE PENJUALAN
+    if (jenis === 'Telur' && selisih !== 0 && typeof dbSavePenjualan === 'function') {
+      const pRow = {
+        pelanggan: 'Susut Audit',
+        grade: val,
+        butir: currentAuditSatuan === 'butir' ? selisih : 0,
+        kilo: currentAuditSatuan === 'kg' ? selisih : 0,
+        harga: 0,
+        total: 'Rp 0',
+        keterangan: ket || 'Penyesuaian stok audit'
+      };
+      // Simpan ke riwayat penjualan secara background (tidak perlu try catch terpisah karena ini satu blok try)
+      await dbSavePenjualan({
+        tanggal: tgl,
+        user_input: currentUser.name || currentUser.username || 'System',
+        rows: [pRow],
+        grand_total: 0
+      });
+      if(typeof renderRiwayatJual === 'function') renderRiwayatJual();
+    }
+    
     showToast('Audit stok berhasil disimpan!', 'success');
     closeModal('modal-audit-stok');
     
