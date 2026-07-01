@@ -117,18 +117,6 @@ async function getStokTelur(tgl){
           serverStok['Bentes'].butir += serverStok['Retak'].butir || 0;
           serverStok['Bentes'].kilo += serverStok['Retak'].kilo || 0;
         }
-        // FE-SIDE ADJUSTMENT FOR WASTE/BUSUK
-        // RPC get_stok_telur_tf_ub belum memotong Waste/Busuk. Kita potong manual dari Normal
-        const juals = await dbGetPenjualan({sampai: tgl, limit: 9999});
-        juals.forEach(j => {
-          (j.rows||[]).forEach(r => {
-            if (r.grade === 'Waste' || r.grade === 'Busuk') {
-              serverStok['Normal'].butir = Math.max(0, serverStok['Normal'].butir - (parseInt(r.butir)||0));
-              serverStok['Normal'].kilo = Math.max(0, serverStok['Normal'].kilo - (parseFloat(r.kilo)||0));
-            }
-          });
-        });
-
         return serverStok;
       }
     } catch { /* fallback ke client-side */ }
