@@ -314,7 +314,6 @@ function collectInputData(){
       hdp:document.getElementById('hdp').value,berat_rata:document.getElementById('berat_rata').value
     },
     harga_pasar:hpVal,
-    waste:{butir:document.getElementById('waste_butir').value,kilo:document.getElementById('waste_kilo').value,ket:document.getElementById('waste_ket').value},
     kesehatan: collectKesehatan(),
     catatan:document.getElementById('catatan').value
   };
@@ -596,9 +595,8 @@ function resetInputForm(){
   if(!confirm('Reset semua data form?'))return;
   document.getElementById('tanggal').value=new Date().toISOString().split('T')[0];
   document.getElementById('kandang').value='';
-  ['mati','afkir','populasi_awal','air_liter','p_normal_butir','p_normal_kilo','p_crem_butir','p_crem_kilo','p_bentes_kering_butir','p_bentes_kering_kilo','p_ceplokan_butir','p_ceplokan_kilo','waste_butir','waste_kilo'].forEach(id=>document.getElementById(id).value=0);
+  ['mati','afkir','populasi_awal','air_liter','p_normal_butir','p_normal_kilo','p_crem_butir','p_crem_kilo','p_bentes_kering_butir','p_bentes_kering_kilo','p_ceplokan_butir','p_ceplokan_kilo'].forEach(id=>document.getElementById(id).value=0);
   document.getElementById('catatan').value='';
-  document.getElementById('waste_ket').value='';
   resetKesRows();
   if (typeof _editRowId !== 'undefined') _editRowId = null;
   const pl=document.getElementById('pakan-list');

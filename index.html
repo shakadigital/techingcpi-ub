@@ -384,22 +384,9 @@
           </div>
         </div>
       </div>
-      <!-- 6. Telur Dibuang / Waste -->
+      <!-- 6. Kesehatan -->
       <div class="card">
-        <div class="card-header"><div class="num">6</div><h2>Telur Dibuang (Waste)</h2></div>
-        <div class="card-body">
-          <div class="row">
-            <div class="field"><label>Jumlah (Butir)</label><input type="number" id="waste_butir" min="0" value="0"/></div>
-            <div class="field"><label>Berat (Kg)</label><input type="number" id="waste_kilo" min="0" step="0.01" value="0"/></div>
-          </div>
-          <div class="row" style="margin-top:12px">
-            <div class="field" style="flex:1"><label>Keterangan (Opsional)</label><input type="text" id="waste_ket" placeholder="Misal: Pecah saat panen, dimakan tikus..."/></div>
-          </div>
-        </div>
-      </div>
-      <!-- 7. Kesehatan -->
-      <div class="card">
-        <div class="card-header"><div class="num">7</div><h2>Program Kesehatan</h2></div>
+        <div class="card-header"><div class="num">6</div><h2>Program Kesehatan</h2></div>
         <div class="card-body">
 
           <!-- Vitamin -->
@@ -543,6 +530,20 @@
               </table>
             </div>
             <div id="pengambilan-inti-empty" class="info-box" style="display:none">Belum ada data pengambilan.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Telur Dibuang / Waste -->
+      <div class="card" id="waste-card-penjualan">
+        <div class="card-header"><div class="num">🗑️</div><h2>Telur Dibuang (Waste)</h2></div>
+        <div class="card-body">
+          <div class="row">
+            <div class="field"><label>Jumlah (Butir)</label><input type="number" id="waste_butir" min="0" value="0"/></div>
+            <div class="field"><label>Berat (Kg)</label><input type="number" id="waste_kilo" min="0" step="0.01" value="0"/></div>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <div class="field" style="flex:1"><label>Keterangan (Opsional)</label><input type="text" id="waste_ket" placeholder="Misal: Pecah saat panen, dimakan tikus..."/></div>
           </div>
         </div>
       </div>
@@ -2128,6 +2129,8 @@
           <option>Retak</option>
           <option>Bentes</option>
           <option>Ceplokan</option>
+          <option>Busuk</option>
+          <option>Waste</option>
         </select>
       </div>
       
@@ -2145,6 +2148,11 @@
       <div class="field">
         <label>Harga/kg (Rp)</label>
         <input type="number" id="edit-pj-harga" min="0" step="100" placeholder="0" oninput="calcEditPenjualan()">
+      </div>
+      
+      <div class="field">
+        <label>Keterangan (Opsional)</label>
+        <input type="text" id="edit-pj-ket" placeholder="Misal: Pecah saat panen, dll">
       </div>
       
       <div class="field" style="background:#f9fafb; padding:10px; border-radius:6px; margin-top:8px;">

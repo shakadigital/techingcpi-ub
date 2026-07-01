@@ -180,9 +180,6 @@ function _loadEditToForm(d,id){
     document.getElementById('p_bentes_kering_kilo').value=d.produksi?.bentes_kering?.kilo||(d.produksi?.retak?.kilo||0);
     document.getElementById('p_ceplokan_butir').value=d.produksi?.ceplokan?.butir||0;
     document.getElementById('p_ceplokan_kilo').value=d.produksi?.ceplokan?.kilo||0;
-    document.getElementById('waste_butir').value=d.waste?.butir||0;
-    document.getElementById('waste_kilo').value=d.waste?.kilo||0;
-    document.getElementById('waste_ket').value=d.waste?.ket||'';
     document.getElementById('catatan').value=d.catatan||'';
     const hpEl = document.getElementById('harga_pasar');
     if(hpEl) {

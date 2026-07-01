@@ -268,6 +268,21 @@ async function savePenjualan(){
     };
   }).filter(r=>r.pelanggan||r.kilo||r.butir);
 
+  const wButir = parseFloat(document.getElementById('waste_butir')?.value) || 0;
+  const wKilo = parseFloat(document.getElementById('waste_kilo')?.value) || 0;
+  const wKet = document.getElementById('waste_ket')?.value || '';
+  if (wButir > 0 || wKilo > 0) {
+    rows.push({
+      pelanggan: 'Internal',
+      grade: 'Waste',
+      butir: wButir,
+      kilo: wKilo,
+      harga: 0,
+      total: 'Rp 0',
+      keterangan: wKet
+    });
+  }
+
   if(!rows.length){showToast('⚠️ Isi minimal satu baris penjualan!');return;}
 
   // Validasi setiap baris
@@ -277,7 +292,7 @@ async function savePenjualan(){
     if(!r.grade){showToast(`⚠️ Baris ${no}: Grade wajib dipilih!`);return;}
     if(!r.butir&&!r.kilo){showToast(`⚠️ Baris ${no}: Isi jumlah butir atau kilo!`);return;}
     if(r.butir<0||r.kilo<0){showToast(`⚠️ Baris ${no}: Jumlah tidak boleh negatif!`);return;}
-    if(r.grade !== 'Busuk' && r.harga<=0){showToast(`⚠️ Baris ${no}: Harga per kg wajib diisi!`);return;}
+    if(r.grade !== 'Busuk' && r.grade !== 'Waste' && r.harga<=0){showToast(`⚠️ Baris ${no}: Harga per kg wajib diisi!`);return;}
     if(!r.pelanggan){showToast(`⚠️ Baris ${no}: Nama pelanggan wajib diisi!`);return;}
   }
 
@@ -296,6 +311,9 @@ async function savePenjualan(){
     await renderStokTelur();await renderRiwayatJual();
     showToast('✅ Penjualan disimpan!');
     resetPenjualan();
+    document.getElementById('waste_butir').value=0;
+    document.getElementById('waste_kilo').value=0;
+    document.getElementById('waste_ket').value='';
   }catch(e){showToast('❌ Gagal menyimpan: '+e.message);}
 }
 
@@ -333,28 +351,31 @@ async function renderRiwayatJual(){
     const rows=rec.rows||[];
     rows.forEach((r,i)=>{
       const tr=document.createElement('tr');
-      const aksiCell=isAdmin
-        ?`<td style="text-align:center;vertical-align:middle;white-space:nowrap;">
-            <button onclick="editPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit item ini">✏️</button>
-            <button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>
-           </td>`
-        :'';
-        
+      const isWaste = r.grade === 'Waste';
+      const isBusuk = r.grade === 'Busuk';
+      const st = (isWaste || isBusuk) ? 'color:#dc2626;' : '';
+      const fw = (isWaste || isBusuk) ? 'font-weight:bold;' : '';
+      const ar = 'text-align:right;';
+      
+      const canEdit = isAdmin || (isWaste && ['supervisor', 'staff'].includes(currentUser?.role));
+      const canDelete = isAdmin && !isWaste;
+      
+      let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
+      if (canEdit) aksiCell += `<button onclick="editPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit item ini">✏️</button>`;
+      if (canDelete) aksiCell += `<button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>`;
+      aksiCell += '</td>';
+
       const dateStr = fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2));
       const tButir = (r.butir||0).toLocaleString('id-ID');
       const tKilo = (r.kilo||0).toLocaleString('id-ID');
       const tHarga = 'Rp ' + (r.harga ? parseFloat(r.harga).toLocaleString('id-ID') : '0');
       const rTotalRaw = parseFloat(String(r.total||'0').replace(/[^0-9.-]+/g,""));
       const tTotal = 'Rp ' + (isNaN(rTotalRaw) ? '0' : rTotalRaw.toLocaleString('id-ID'));
-      
-      const st = r.grade === 'Busuk' ? 'color:#dc2626;' : '';
-      const fw = r.grade === 'Busuk' ? 'font-weight:bold;' : '';
-      const ar = 'text-align:right;';
-      
+
       tr.innerHTML = `
         <td style="${st}">${dateStr}</td>
         <td style="${st}">${esc(r.pelanggan||'—')}</td>
-        <td style="${st}${fw}">${esc(r.grade||'—')}</td>
+        <td style="${st}${fw}">${esc(r.grade||'—')} ${r.keterangan ? ` <br><span style="font-size:0.8rem;opacity:0.7">${esc(r.keterangan)}</span>` : ''}</td>
         <td style="${st}${ar}">${tButir}</td>
         <td style="${st}${ar}">${r.kilo||0}</td>
         <td style="${st}${ar}">${tHarga}</td>
@@ -405,13 +426,15 @@ async function hapusPenjualanItem(id, index){
 }
 
 async function editPenjualanItem(id, index) {
-  if(!currentUser||!['admin','superadmin'].includes(currentUser.role)){showToast('⛔ Hanya Admin yang bisa mengedit!');return;}
-  
   const all=await dbGetPenjualan();
   const rec=all.find(x=>x.id===id);
   if(!rec || !rec.rows[index]) return;
   
   const r = rec.rows[index];
+  const isWaste = r.grade === 'Waste';
+  const canEdit = ['admin','superadmin'].includes(currentUser?.role) || (isWaste && ['supervisor','staff'].includes(currentUser?.role));
+  
+  if(!currentUser || !canEdit){showToast('⛔ Anda tidak memiliki akses untuk mengedit item ini!');return;}
   
   document.getElementById('edit-pj-id').value = id;
   document.getElementById('edit-pj-index').value = index;
@@ -442,6 +465,7 @@ async function editPenjualanItem(id, index) {
   document.getElementById('edit-pj-kilo').value = r.kilo || '';
   document.getElementById('edit-pj-harga').value = r.harga || '';
   document.getElementById('edit-pj-total').textContent = r.total || 'Rp 0';
+  document.getElementById('edit-pj-ket').value = r.keterangan || '';
   
   document.getElementById('modal-edit-penjualan').style.display = 'flex';
 }
@@ -465,8 +489,9 @@ async function simpanEditPenjualan() {
   const kilo = parseFloat(document.getElementById('edit-pj-kilo').value) || 0;
   const harga = parseFloat(document.getElementById('edit-pj-harga').value) || 0;
   const totalStr = document.getElementById('edit-pj-total').textContent;
+  const ket = document.getElementById('edit-pj-ket').value;
   
-  if(!pel || !grade || (!butir && !kilo) || (grade !== 'Busuk' && harga <= 0)) {
+  if(!pel || !grade || (!butir && !kilo) || (grade !== 'Busuk' && grade !== 'Waste' && harga <= 0)) {
     showToast('⚠️ Harap lengkapi semua data dengan benar!');
     return;
   }
@@ -481,7 +506,7 @@ async function simpanEditPenjualan() {
     if(!rec) throw new Error('Data induk tidak ditemukan');
     
     const oldRow = { ...rec.rows[index] };
-    const newRow = { pelanggan: pel, grade, butir, kilo, harga, total: totalStr };
+    const newRow = { pelanggan: pel, grade, butir, kilo, harga, total: totalStr, keterangan: ket };
     
     rec.rows[index] = newRow;
     
