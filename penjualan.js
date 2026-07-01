@@ -266,22 +266,7 @@ async function savePenjualan(){
       harga:parseFloat(nums[2]?.value)||0,
       total:r.querySelector('.total-col')?.textContent||'Rp 0'
     };
-  }).filter(r=>r.pelanggan||r.kilo||r.butir);
-
-  const wButir = parseFloat(document.getElementById('waste_butir')?.value) || 0;
-  const wKilo = parseFloat(document.getElementById('waste_kilo')?.value) || 0;
-  const wKet = document.getElementById('waste_ket')?.value || '';
-  if (wButir > 0 || wKilo > 0) {
-    rows.push({
-      pelanggan: 'Internal',
-      grade: 'Waste',
-      butir: wButir,
-      kilo: wKilo,
-      harga: 0,
-      total: 'Rp 0',
-      keterangan: wKet
-    });
-  }
+  }).filter(r=>r.kilo||r.butir);
 
   if(!rows.length){showToast('⚠️ Isi minimal satu baris penjualan!');return;}
 
@@ -311,10 +296,59 @@ async function savePenjualan(){
     await renderStokTelur();await renderRiwayatJual();
     showToast('✅ Penjualan disimpan!');
     resetPenjualan();
+  }catch(e){showToast('❌ Gagal menyimpan: '+e.message);}
+}
+
+async function saveWasteOnly() {
+  if(!can('JUAL')){showToast('Tidak ada akses!');return;}
+  const tgl=document.getElementById('jual-tanggal').value;
+  if(!tgl){showToast('⚠️ Pilih tanggal!');return;}
+  
+  const wButir = parseFloat(document.getElementById('waste_butir')?.value) || 0;
+  const wKilo = parseFloat(document.getElementById('waste_kilo')?.value) || 0;
+  const wKet = document.getElementById('waste_ket')?.value || '';
+  
+  if (wButir <= 0 && wKilo <= 0) {
+    showToast('⚠️ Isi jumlah butir atau berat kilo waste!');
+    return;
+  }
+  
+  showToast('⏳ Memeriksa stok...');
+  const stok=await getStokTelur(tgl);
+  if(wButir>stok.butir||wKilo>stok.kilo){
+    if(!confirm(`Stok tidak cukup! Tersedia: ${stok.butir} btr / ${stok.kilo} kg.\nTetap simpan waste?`))return;
+  }
+  
+  const row = {
+    pelanggan: 'Internal',
+    grade: 'Waste',
+    butir: wButir,
+    kilo: wKilo,
+    harga: 0,
+    total: 'Rp 0',
+    keterangan: wKet
+  };
+  
+  try {
+    document.querySelector('#waste-card-penjualan .btn-save').disabled = true;
+    document.querySelector('#waste-card-penjualan .btn-save').textContent = '⏳ Menyimpan...';
+    
+    await dbSavePenjualan({tanggal:tgl,user_input:currentUser?currentUser.username:'',rows:[row],grand_total:0});
+    await renderStokTelur();await renderRiwayatJual();
+    
     document.getElementById('waste_butir').value=0;
     document.getElementById('waste_kilo').value=0;
     document.getElementById('waste_ket').value='';
-  }catch(e){showToast('❌ Gagal menyimpan: '+e.message);}
+    showToast('✅ Waste berhasil disimpan!');
+  } catch(e) {
+    showToast('❌ Gagal menyimpan waste: '+e.message);
+  } finally {
+    const btn = document.querySelector('#waste-card-penjualan .btn-save');
+    if(btn) {
+      btn.disabled = false;
+      btn.innerHTML = '💾 Simpan Waste';
+    }
+  }
 }
 
 function resetPenjualan(){
