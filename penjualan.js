@@ -162,22 +162,42 @@ async function renderStokTelur(){
   let totalSysButir = 0, totalSysKilo = 0;
   let totalActButir = 0, totalActKilo = 0;
   let hasAuditButir = false, hasAuditKilo = false;
+  
+  // Ambil data penjualan untuk mengecek apakah Susut sudah terpotong
+  let juals = [];
+  try { juals = await dbGetPenjualan({sampai: tgl, limit: 9999}); } catch(e){}
 
   const getDisp = (g, sat, val) => {
     const a = audits.find(x => x.kategori_item === g && x.satuan === sat);
     if (a && a.stok_aktual != null && a.selisih != null) {
+      // Cek apakah audit ini sudah dicatat di Penjualan (fitur baru)
+      let isDeducted = false;
+      juals.forEach(j => {
+        if (j.tanggal === a.tanggal) {
+          (j.rows||[]).forEach(r => {
+            if (r.pelanggan === 'Susut Audit' && r.grade === g) isDeducted = true;
+          });
+        }
+      });
+      
+      const aktual = sat === 'butir' ? parseInt(a.stok_aktual) : parseFloat(a.stok_aktual);
+      const sel = sat === 'butir' ? parseInt(a.selisih) : parseFloat(a.selisih);
+      
+      // Jika sudah dipotong di Penjualan, val adalah stok aktual. Maka teoritis = val + selisih.
+      // Jika belum dipotong, val adalah stok teoritis.
+      const sysVal = isDeducted ? (val + sel) : val;
+      
       if (sat === 'butir') {
-        const sysVal = val + parseInt(a.selisih);
         totalSysButir += sysVal;
-        totalActButir += val;
+        totalActButir += aktual;
         hasAuditButir = true;
-        return `${sysVal.toLocaleString('id-ID')} / <span style="color:#0284c7">${val.toLocaleString('id-ID')}</span>`;
+        return `${sysVal.toLocaleString('id-ID')} / <span style="color:#0284c7">${aktual.toLocaleString('id-ID')}</span>`;
       }
-      const sysVal = val + parseFloat(a.selisih);
+      
       totalSysKilo += sysVal;
-      totalActKilo += val;
+      totalActKilo += aktual;
       hasAuditKilo = true;
-      return `${sysVal.toFixed(2)} / <span style="color:#0284c7">${val.toFixed(2)}</span>`;
+      return `${sysVal.toFixed(2)} / <span style="color:#0284c7">${aktual.toFixed(2)}</span>`;
     }
     
     // Fallback jika tidak ada audit di hari tersebut
