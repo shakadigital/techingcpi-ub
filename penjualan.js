@@ -201,15 +201,17 @@ async function loadHargaPasarJual() {
     }
   });
 
-  if(hargaFromInput > 0) {
+  if(hargaFromInput > 0 && currentUser?.role !== 'superadmin') {
     el.value = parseInt(hargaFromInput, 10).toLocaleString('id-ID');
     el.readOnly = true;
     el.style.opacity = '0.7';
+    el.title = 'Harga ikut input produksi harian';
     statusEl.innerHTML = '✅ <span style="color:#2d6a4f">Sudah diinput di halaman Input</span>';
   } else {
-    el.value = '';
+    if(hargaFromInput > 0) el.value = parseInt(hargaFromInput, 10).toLocaleString('id-ID');
     el.readOnly = false;
-    el.style.opacity = '';
+    el.style.opacity = '1';
+    el.title = '';
     statusEl.innerHTML = '⚠️ <span style="color:#b45309">Belum diinput hari ini</span>';
   }
 }
@@ -242,8 +244,10 @@ async function saveHargaPasarFromJual() {
   // Update status
   const statusEl = document.getElementById('jual-hp-status');
   if(statusEl) statusEl.innerHTML = '✅ <span style="color:#2d6a4f">Tersimpan</span>';
-  document.getElementById('jual-harga-pasar').readOnly = true;
-  document.getElementById('jual-harga-pasar').style.opacity = '0.7';
+  if (currentUser?.role !== 'superadmin') {
+    document.getElementById('jual-harga-pasar').readOnly = true;
+    document.getElementById('jual-harga-pasar').style.opacity = '0.7';
+  }
 }
 
 // ═══ PENJUALAN ═══

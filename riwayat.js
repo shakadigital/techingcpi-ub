@@ -187,8 +187,8 @@ function _loadEditToForm(d,id){
     const hpEl = document.getElementById('harga_pasar');
     if(hpEl) {
       hpEl.value = d.harga_pasar ? parseInt(d.harga_pasar, 10).toLocaleString('id-ID') : '';
-      // Jika sudah ada harga pasar, set readonly sebagai review
-      if(d.harga_pasar && parseFloat(d.harga_pasar) > 0) {
+      // Jika sudah ada harga pasar, set readonly sebagai review (kecuali superadmin)
+      if(d.harga_pasar && parseFloat(d.harga_pasar) > 0 && currentUser?.role !== 'superadmin') {
         hpEl.readOnly = true;
         hpEl.style.opacity = '0.7';
         hpEl.title = 'Sudah diinput sebelumnya';
