@@ -147,9 +147,12 @@ async function editInputHarian(id){
     document.getElementById('ep-bentes-kering').textContent=(d.produksi?.bentes_kering?.butir||(d.produksi?.retak?.butir||0))+' butir / '+(d.produksi?.bentes_kering?.kilo||(d.produksi?.retak?.kilo||0))+' kg';
     document.getElementById('ep-ceplokan').textContent=(d.produksi?.ceplokan?.butir||0)+' butir / '+(d.produksi?.ceplokan?.kilo||0)+' kg';
     document.getElementById('ep-hdp').textContent=(d.produksi?.hdp||'—')+'%';
+    // We can just append waste info directly in ep-catatan or add a new ep-waste if we had one.
+    // For now we will just load it into the form.
     document.getElementById('ep-air').textContent=(d.air_liter||0)+' L';
     document.getElementById('ep-pakan').textContent=((d.pakan||[]).map(p=>p.kode+' '+p.jumlah+'kg').join(', '))||'—';
-    document.getElementById('ep-catatan').textContent=d.catatan||'—';
+    const wasteStr = (d.waste && (d.waste.butir > 0 || d.waste.kilo > 0)) ? `\nTelur Dibuang: ${d.waste.butir||0} butir / ${d.waste.kilo||0} kg (${d.waste.ket||''})` : '';
+    document.getElementById('ep-catatan').textContent=(d.catatan||'—') + wasteStr;
     document.getElementById('ep-user').textContent=(d.user||row.user_input||'—')+' · '+fmtTglWaktu(row.updated_at||row.created_at||'');
     _editRowId=id;
     modal.style.display='flex';
@@ -177,6 +180,9 @@ function _loadEditToForm(d,id){
     document.getElementById('p_bentes_kering_kilo').value=d.produksi?.bentes_kering?.kilo||(d.produksi?.retak?.kilo||0);
     document.getElementById('p_ceplokan_butir').value=d.produksi?.ceplokan?.butir||0;
     document.getElementById('p_ceplokan_kilo').value=d.produksi?.ceplokan?.kilo||0;
+    document.getElementById('waste_butir').value=d.waste?.butir||0;
+    document.getElementById('waste_kilo').value=d.waste?.kilo||0;
+    document.getElementById('waste_ket').value=d.waste?.ket||'';
     document.getElementById('catatan').value=d.catatan||'';
     const hpEl = document.getElementById('harga_pasar');
     if(hpEl) {
