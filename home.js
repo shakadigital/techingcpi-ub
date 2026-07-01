@@ -58,8 +58,24 @@ async function renderHome(){
   const last7=recent.slice(0,7);
   if(!last7.length){actEl.innerHTML='<div style="color:#aaa;font-size:.85rem;text-align:center;padding:12px 0">Belum ada data tersimpan.</div>';}
   else{
-    actEl.innerHTML='<table class="tbl"><thead><tr><th>Tanggal</th><th>Kandang</th><th>Produksi</th><th>HDP</th></tr></thead><tbody>'+
-    last7.map(row=>{const d=row.data;if(!d)return'';return`<tr style="cursor:pointer" onclick="openDailySummaryFor('${d.tanggal}','${esc(d.kandang)}')"><td>${fmtTgl(d.tanggal)}</td><td>${esc(d.kandang)}</td><td>${d.produksi?d.produksi.total.butir+' butir':'—'}</td><td>${d.produksi&&d.produksi.hdp!==undefined?d.produksi.hdp:'—'}</td></tr>`;}).join('')+
+    actEl.innerHTML='<table class="tbl"><thead><tr><th>Tanggal</th><th>Produksi (btr)</th><th>Produksi (kg)</th><th>Hen Day (%)</th><th>Fi (gr)</th><th>FCR</th></tr></thead><tbody>'+
+    last7.map(row=>{
+      const d=row.data; if(!d)return'';
+      const totPakan = (d.pakan||[]).reduce((s,p)=>s+(parseFloat(p.jumlah)||0),0);
+      const sisaAyam = parseInt(d.sisa_ayam)||0;
+      const totProdKilo = parseFloat(d.produksi?.total?.kilo)||0;
+      const fi = sisaAyam > 0 ? (totPakan * 1000) / sisaAyam : 0;
+      const fcr = totProdKilo > 0 ? totPakan / totProdKilo : 0;
+      
+      return`<tr style="cursor:pointer" onclick="openDailySummaryFor('${d.tanggal}','${esc(d.kandang)}')">
+        <td>${fmtTgl(d.tanggal)}</td>
+        <td>${d.produksi?d.produksi.total.butir:'—'}</td>
+        <td>${d.produksi?totProdKilo.toFixed(1):'—'}</td>
+        <td>${d.produksi&&d.produksi.hdp!==undefined?d.produksi.hdp:'—'}</td>
+        <td>${fi>0?fi.toFixed(1):'—'}</td>
+        <td>${fcr>0?fcr.toFixed(2):'—'}</td>
+      </tr>`;
+    }).join('')+
     '</tbody></table>';
   }
   // Status kandang
