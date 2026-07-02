@@ -273,7 +273,7 @@ async function saveAuditStok() {
           
           if (selButir !== 0) {
             penjualanRows.push({
-              pelanggan: 'Susut Audit', grade: g, butir: selButir, kilo: 0,
+              pelanggan: 'Susut Audit', grade: g, butir: -selButir, kilo: 0,
               harga: 0, total: 'Rp 0', keterangan: ket || 'Penyesuaian stok audit'
             });
           }
@@ -296,10 +296,10 @@ async function saveAuditStok() {
             // Cek apakah row penjualan untuk grade ini sudah ada (biar digabung)
             const existRow = penjualanRows.find(r => r.grade === g);
             if (existRow) {
-              existRow.kilo = selKg;
+              existRow.kilo = -selKg;
             } else {
               penjualanRows.push({
-                pelanggan: 'Susut Audit', grade: g, butir: 0, kilo: selKg,
+                pelanggan: 'Susut Audit', grade: g, butir: 0, kilo: -selKg,
                 harga: 0, total: 'Rp 0', keterangan: ket || 'Penyesuaian stok audit'
               });
             }
@@ -492,7 +492,7 @@ window.hapusRiwayatAudit = async function(id) {
           const p = pRows[0];
           let rows = p.rows || [];
           const idx = rows.findIndex(r => r.pelanggan === 'Susut Audit' && r.grade === a.kategori_item && 
-                 ((a.satuan === 'butir' && r.butir == a.selisih) || (a.satuan === 'kg' && r.kilo == a.selisih)));
+                 ((a.satuan === 'butir' && r.butir == -a.selisih) || (a.satuan === 'kg' && r.kilo == -a.selisih)));
           if (idx !== -1) {
             rows.splice(idx, 1);
             if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
@@ -562,7 +562,7 @@ window.editRiwayatAudit = async function(id) {
         let rows = p.rows || [];
         // Cari riwayat Susut Audit lama berdasarkan selisih lama
         const idx = rows.findIndex(r => r.pelanggan === 'Susut Audit' && r.grade === a.kategori_item && 
-               ((a.satuan === 'butir' && r.butir == a.selisih) || (a.satuan === 'kg' && r.kilo == a.selisih)));
+               ((a.satuan === 'butir' && r.butir == -a.selisih) || (a.satuan === 'kg' && r.kilo == -a.selisih)));
                
         if (idx !== -1) {
           if (newSelisih === 0) {
@@ -570,8 +570,8 @@ window.editRiwayatAudit = async function(id) {
             rows.splice(idx, 1);
           } else {
             // Update row
-            rows[idx].butir = (a.satuan === 'butir') ? newSelisih : 0;
-            rows[idx].kilo = (a.satuan === 'kg') ? newSelisih : 0;
+            rows[idx].butir = (a.satuan === 'butir') ? -newSelisih : 0;
+            rows[idx].kilo = (a.satuan === 'kg') ? -newSelisih : 0;
             rows[idx].keterangan = newKet;
           }
           if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
@@ -584,8 +584,8 @@ window.editRiwayatAudit = async function(id) {
           rows.push({
             pelanggan: 'Susut Audit',
             grade: a.kategori_item,
-            butir: (a.satuan === 'butir') ? newSelisih : 0,
-            kilo: (a.satuan === 'kg') ? newSelisih : 0,
+            butir: (a.satuan === 'butir') ? -newSelisih : 0,
+            kilo: (a.satuan === 'kg') ? -newSelisih : 0,
             harga: 0,
             total: 'Rp 0',
             keterangan: newKet || 'Penyesuaian stok audit'
