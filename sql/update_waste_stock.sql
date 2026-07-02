@@ -95,8 +95,8 @@ BEGIN
             IF prod ? g THEN
                 b := COALESCE((j.value->>'butir')::numeric::int, 0);
                 k := COALESCE((j.value->>'kilo')::numeric, 0);
-                prod := jsonb_set(prod, ARRAY[g, 'butir'], (GREATEST(0, COALESCE(jsonb_extract_path_text(prod, g, 'butir')::numeric::int, 0) - b))::text::jsonb);
-                prod := jsonb_set(prod, ARRAY[g, 'kilo'], (GREATEST(0, COALESCE(jsonb_extract_path_text(prod, g, 'kilo')::numeric, 0) - k))::text::jsonb);
+                prod := jsonb_set(prod, ARRAY[g, 'butir'], (COALESCE(jsonb_extract_path_text(prod, g, 'butir')::numeric::int, 0) - b)::text::jsonb);
+                prod := jsonb_set(prod, ARRAY[g, 'kilo'], (COALESCE(jsonb_extract_path_text(prod, g, 'kilo')::numeric, 0) - k)::text::jsonb);
             END IF;
         END LOOP;
     END LOOP;
