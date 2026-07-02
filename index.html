@@ -2022,35 +2022,60 @@
           <option value="Non-Pakan">Non-Pakan</option>
         </select>
       </div>
-      <div class="field">
-        <label>Kategori / Nama Item</label>
-        <select id="audit-kategori" onchange="loadAuditStokSistem()"></select>
+      
+      <div class="field" style="margin-top:12px;">
+        <label>Keterangan Umum / Alasan</label>
+        <textarea id="audit-keterangan" placeholder="Contoh: Audit rutin, Dimakan tikus, telur pecah..."></textarea>
+      </div>
+
+      <!-- MODE SINGLE (PAKAN & NON-PAKAN) -->
+      <div id="audit-single-mode" style="display:none; margin-top:16px;">
+        <div class="field">
+          <label>Kategori / Nama Item</label>
+          <select id="audit-kategori" onchange="loadAuditStokSistem()"></select>
+        </div>
+        
+        <div class="info-box" style="margin:12px 0;background:#f3f4f6;border-left:4px solid #3b82f6">
+          <div style="font-size:0.8rem;color:#6b7280">Stok tercatat di sistem saat ini:</div>
+          <div id="audit-stok-sistem-text" style="font-size:1.2rem;font-weight:700;color:#1d4ed8;margin-top:4px">-</div>
+        </div>
+
+        <div class="row">
+          <div class="field" style="flex:1">
+            <label>Stok Aktual (Fisik) - <span id="audit-lbl-aktual"></span></label>
+            <input type="number" step="any" id="audit-stok-aktual" placeholder="Hitung manual..." oninput="calcAuditSelisih()">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px; align-items:center;">
+          <div class="field" style="flex:1">
+            <label>Selisih</label>
+            <input type="text" id="audit-selisih" readonly style="font-weight:bold;background:#fff" placeholder="0">
+          </div>
+          <div id="audit-selisih-info" style="flex:1; font-size:0.85rem; font-weight:600; padding-top:16px;"></div>
+        </div>
       </div>
       
-      <div class="info-box" style="margin:12px 0;background:#f3f4f6;border-left:4px solid #3b82f6">
-        <div style="font-size:0.8rem;color:#6b7280">Stok tercatat di sistem saat ini:</div>
-        <div id="audit-stok-sistem-text" style="font-size:1.2rem;font-weight:700;color:#1d4ed8;margin-top:4px">-</div>
-      </div>
-
-      <div class="row">
-        <div class="field" style="flex:1">
-          <label>Stok Aktual (Fisik) - <span id="audit-lbl-aktual"></span></label>
-          <input type="number" step="any" id="audit-stok-aktual" placeholder="Hitung manual..." oninput="calcAuditSelisih()">
+      <!-- MODE BATCH (TELUR) -->
+      <div id="audit-batch-mode" style="display:block; margin-top:16px;">
+        <div style="font-size:0.85rem; color:#6b7280; margin-bottom:8px;">Isi kotak yang ingin disesuaikan. Kosongkan jika tidak ada perubahan. Ketik 0 jika stok habis.</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.85rem;" id="audit-batch-table">
+            <thead>
+              <tr style="background:#f3f4f6; border-bottom:2px solid #d1d5db;">
+                <th style="padding:8px 4px; text-align:left;">Grade</th>
+                <th style="padding:8px 4px; text-align:center;">Sistem<br>(Btr / Kg)</th>
+                <th style="padding:8px 4px; text-align:center;">Aktual<br>Butir</th>
+                <th style="padding:8px 4px; text-align:center;">Aktual<br>Kg</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Digenerate oleh JS -->
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <div class="row" style="margin-top:12px; align-items:center;">
-        <div class="field" style="flex:1">
-          <label>Selisih</label>
-          <input type="text" id="audit-selisih" readonly style="font-weight:bold;background:#fff" placeholder="0">
-        </div>
-        <div id="audit-selisih-info" style="flex:1; font-size:0.85rem; font-weight:600; padding-top:16px;"></div>
-      </div>
-
-      <div class="field" style="margin-top:12px;">
-        <label>Keterangan / Alasan</label>
-        <textarea id="audit-keterangan" placeholder="Contoh: Dimakan tikus, telur pecah jatuh..."></textarea>
-      </div>
+      
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-audit-stok')">Batal</button>

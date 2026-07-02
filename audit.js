@@ -31,24 +31,25 @@ function openAuditModal(jenis = 'Telur') {
 async function renderAuditKategori() {
   const jenis = document.getElementById('audit-jenis').value;
   const katSelect = document.getElementById('audit-kategori');
+  
+  const singleMode = document.getElementById('audit-single-mode');
+  const batchMode = document.getElementById('audit-batch-mode');
+  
+  if (jenis === 'Telur') {
+    singleMode.style.display = 'none';
+    batchMode.style.display = 'block';
+    await loadAuditBatchTelur();
+    return;
+  }
+  
+  singleMode.style.display = 'block';
+  batchMode.style.display = 'none';
   katSelect.innerHTML = '<option value="">-- Loading... --</option>';
   
   let options = [];
   
   try {
-    if (jenis === 'Telur') {
-      options = [
-        {val: 'Normal', label: 'Normal (Butir)', satuan: 'butir'},
-        {val: 'Normal_kg', label: 'Normal (Kg)', satuan: 'kg'},
-        {val: 'Crem', label: 'Crem (Butir)', satuan: 'butir'},
-        {val: 'Crem_kg', label: 'Crem (Kg)', satuan: 'kg'},
-        {val: 'Retak', label: 'Retak (Butir)', satuan: 'butir'},
-        {val: 'Retak_kg', label: 'Retak (Kg)', satuan: 'kg'},
-        {val: 'Bentes', label: 'Bentes (Butir)', satuan: 'butir'},
-        {val: 'Bentes_kg', label: 'Bentes (Kg)', satuan: 'kg'},
-        {val: 'Ceplokan', label: 'Ceplokan (Butir)', satuan: 'butir'},
-      ];
-    } else if (jenis === 'Pakan') {
+    if (jenis === 'Pakan') {
       const pakan = await dbGetDaftarPakan();
       options = pakan.map(p => ({val: p.nama_pakan, label: p.nama_pakan, satuan: 'kg'}));
     } else if (jenis === 'Non-Pakan') {
@@ -76,8 +77,89 @@ async function renderAuditKategori() {
   }
 }
 
+let currentBatchTelurSistem = {
+  Normal: { butir: 0, kg: 0 },
+  Crem: { butir: 0, kg: 0 },
+  Bentes: { butir: 0, kg: 0 },
+  Ceplokan: { butir: 0, kg: 0 }
+};
+
+async function loadAuditBatchTelur() {
+  const tglInput = document.getElementById('audit-tanggal');
+  const nowStr = (tglInput && tglInput.value) ? tglInput.value : (typeof todayISO === 'function' ? todayISO() : new Date().toLocaleDateString('en-CA'));
+  
+  const tbody = document.querySelector('#audit-batch-table tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:#6b7280;">⏳ Menghitung stok sistem...</td></tr>';
+  
+  try {
+    let s;
+    if (typeof window.dbGetStokTelurAll === 'function') {
+      s = await window.dbGetStokTelurAll(nowStr);
+    } else {
+      const res = await fetch(`https://clabeuuigpjdkkqifujl.supabase.co/rest/v1/rpc/get_stok_telur_tf_ub?tgl=${nowStr}`, {
+        headers: { 'apikey': (typeof SB !== 'undefined' ? SB.key : '') }
+      });
+      const data = await res.json();
+      if(data && data.length > 0) s = data[0];
+    }
+    
+    if (s && s.stok) {
+      currentBatchTelurSistem = {
+        Normal: { butir: s.stok.Normal?.butir || 0, kg: s.stok.Normal?.kilo || 0 },
+        Crem: { butir: s.stok.Crem?.butir || 0, kg: s.stok.Crem?.kilo || 0 },
+        Bentes: { butir: s.stok.Bentes?.butir || 0, kg: s.stok.Bentes?.kilo || 0 },
+        Ceplokan: { butir: s.stok.Ceplokan?.butir || 0, kg: s.stok.Ceplokan?.kilo || 0 }
+      };
+    } else {
+      throw new Error('Data stok telur kosong');
+    }
+  } catch(e) {
+    console.warn('Fallback stok telur lokal', e);
+    if (typeof prod !== 'undefined' && prod.Normal) {
+      currentBatchTelurSistem = {
+        Normal: { butir: prod.Normal.butir || 0, kg: prod.Normal.kilo || 0 },
+        Crem: { butir: prod.Crem?.butir || 0, kg: prod.Crem?.kilo || 0 },
+        Bentes: { butir: prod.Bentes?.butir || 0, kg: prod.Bentes?.kilo || 0 },
+        Ceplokan: { butir: prod.Ceplokan?.butir || 0, kg: prod.Ceplokan?.kilo || 0 }
+      };
+    }
+  }
+  
+  const grades = ['Normal', 'Crem', 'Bentes', 'Ceplokan'];
+  let html = '';
+  
+  grades.forEach(g => {
+    const sysButir = currentBatchTelurSistem[g].butir;
+    const sysKg = currentBatchTelurSistem[g].kg;
+    
+    html += `
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:8px 4px; font-weight:600; color:#374151;">${g}</td>
+        <td style="padding:8px 4px; text-align:center; color:#4b5563;">
+          <div style="font-size:0.95rem;">${sysButir.toLocaleString('id-ID')}</div>
+          <div style="font-size:0.75rem; color:#9ca3af;">${sysKg.toLocaleString('id-ID')} kg</div>
+        </td>
+        <td style="padding:8px 4px;">
+          <input type="number" id="audit-batch-butir-${g}" style="width:100%; min-width:60px; padding:6px; border:1px solid #d1d5db; border-radius:4px; text-align:center;" placeholder="...">
+        </td>
+        <td style="padding:8px 4px;">
+          <input type="number" id="audit-batch-kg-${g}" step="any" style="width:100%; min-width:60px; padding:6px; border:1px solid #d1d5db; border-radius:4px; text-align:center;" placeholder="...">
+        </td>
+      </tr>
+    `;
+  });
+  
+  tbody.innerHTML = html;
+}
+
 async function loadAuditStokSistem() {
   const jenis = document.getElementById('audit-jenis').value;
+  if (jenis === 'Telur') {
+    await loadAuditBatchTelur();
+    return;
+  }
+
   const katSelect = document.getElementById('audit-kategori');
   const opt = katSelect.options[katSelect.selectedIndex];
   if(!opt || !opt.value) {
@@ -95,21 +177,7 @@ async function loadAuditStokSistem() {
     const tglInput = document.getElementById('audit-tanggal');
     const nowStr = (tglInput && tglInput.value) ? tglInput.value : (typeof todayISO === 'function' ? todayISO() : new Date().toLocaleDateString('en-CA'));
     
-    if (jenis === 'Telur') {
-      let s;
-      try {
-        s = typeof getStokTelur === 'function' ? await getStokTelur(nowStr) : await window.dbGetStokTelur(nowStr);
-      } catch(e) {
-        s = await SB.rpc('get_stok_telur_tf_ub', { p_sampai: nowStr });
-      }
-      if (val.endsWith('_kg')) {
-        const grade = val.replace('_kg', '');
-        stok = parseFloat(s[grade]?.kilo || 0);
-      } else {
-        const grade = val;
-        stok = parseInt(s[grade]?.butir || 0);
-      }
-    } else if (jenis === 'Pakan') {
+    if (jenis === 'Pakan') {
       const s = await SB.rpc('get_stok_pakan_tf_ub');
       stok = parseFloat(s[val] || 0);
     } else if (jenis === 'Non-Pakan') {
@@ -167,31 +235,7 @@ function calcAuditSelisih() {
 
 async function saveAuditStok() {
   const jenis = document.getElementById('audit-jenis').value;
-  const katSelect = document.getElementById('audit-kategori');
-  const opt = katSelect.options[katSelect.selectedIndex];
-  
-  if(!opt || !opt.value) {
-    showToast('Pilih item terlebih dahulu!', 'error');
-    return;
-  }
-  
-  const aktualInput = document.getElementById('audit-stok-aktual').value;
-  if(aktualInput === '') {
-    showToast('Masukkan stok fisik aktual!', 'error');
-    return;
-  }
-  
   const ket = document.getElementById('audit-keterangan').value.trim();
-  const aktual = parseFloat(aktualInput);
-  const selisih = aktual - currentAuditSistem;
-  
-  if (selisih !== 0 && !ket) {
-    showToast('Keterangan wajib diisi jika ada selisih stok!', 'error');
-    return;
-  }
-  
-  let val = opt.value;
-  if (jenis === 'Telur' && val.endsWith('_kg')) val = val.replace('_kg', '');
   
   const btn = document.querySelector('#modal-audit-stok .btn-primary');
   btn.disabled = true;
@@ -200,50 +244,140 @@ async function saveAuditStok() {
   try {
     const tglInput = document.getElementById('audit-tanggal');
     const tgl = (tglInput && tglInput.value) ? tglInput.value : (typeof todayISO === 'function' ? todayISO() : new Date().toLocaleDateString('en-CA'));
+    const userInput = currentUser.name || currentUser.username || 'System';
     
-    const payload = {
-      tanggal: tgl,
-      jenis_item: jenis,
-      kategori_item: val,
-      stok_sistem: currentAuditSistem,
-      stok_aktual: aktual,
-      selisih: selisih,
-      satuan: currentAuditSatuan,
-      keterangan: ket,
-      user_input: currentUser.name || currentUser.username || 'System'
-    };
-    
-    await dbSaveAudit(payload);
-    
-    // OTOMATISASI SUSUT KE PENJUALAN
-    if (jenis === 'Telur' && selisih !== 0 && typeof dbSavePenjualan === 'function') {
-      const pRow = {
-        pelanggan: 'Susut Audit',
-        grade: val,
-        butir: currentAuditSatuan === 'butir' ? selisih : 0,
-        kilo: currentAuditSatuan === 'kg' ? selisih : 0,
-        harga: 0,
-        total: 'Rp 0',
-        keterangan: ket || 'Penyesuaian stok audit'
-      };
-      // Simpan ke riwayat penjualan secara background (tidak perlu try catch terpisah karena ini satu blok try)
-      await dbSavePenjualan({
-        tanggal: tgl,
-        user_input: currentUser.name || currentUser.username || 'System',
-        rows: [pRow],
-        grand_total: 0
-      });
-      if(typeof renderRiwayatJual === 'function') renderRiwayatJual();
-    }
-    
-    showToast('Audit stok berhasil disimpan!', 'success');
-    closeModal('modal-audit-stok');
-    
-    // Refresh UI terkait
     if (jenis === 'Telur') {
+      // BATCH MODE TELUR
+      const grades = ['Normal', 'Crem', 'Bentes', 'Ceplokan'];
+      let auditPayloads = [];
+      let penjualanRows = [];
+      
+      let hasSelisihTanpaKet = false;
+      let hasAnyInput = false;
+      
+      for (const g of grades) {
+        const inputButir = document.getElementById(`audit-batch-butir-${g}`);
+        const inputKg = document.getElementById(`audit-batch-kg-${g}`);
+        
+        const sysButir = currentBatchTelurSistem[g]?.butir || 0;
+        const sysKg = currentBatchTelurSistem[g]?.kg || 0;
+        
+        // Cek Butir
+        if (inputButir && inputButir.value !== '') {
+          hasAnyInput = true;
+          const actButir = parseInt(inputButir.value);
+          const selButir = actButir - sysButir;
+          if (selButir !== 0 && !ket) hasSelisihTanpaKet = true;
+          
+          auditPayloads.push({
+            tanggal: tgl, jenis_item: jenis, kategori_item: g, satuan: 'butir',
+            stok_sistem: sysButir, stok_aktual: actButir, selisih: selButir,
+            keterangan: ket, user_input: userInput
+          });
+          
+          if (selButir !== 0) {
+            penjualanRows.push({
+              pelanggan: 'Susut Audit', grade: g, butir: selButir, kilo: 0,
+              harga: 0, total: 'Rp 0', keterangan: ket || 'Penyesuaian stok audit'
+            });
+          }
+        }
+        
+        // Cek Kg
+        if (inputKg && inputKg.value !== '') {
+          hasAnyInput = true;
+          const actKg = parseFloat(inputKg.value);
+          const selKg = actKg - sysKg;
+          if (selKg !== 0 && !ket) hasSelisihTanpaKet = true;
+          
+          auditPayloads.push({
+            tanggal: tgl, jenis_item: jenis, kategori_item: g, satuan: 'kg',
+            stok_sistem: sysKg, stok_aktual: actKg, selisih: selKg,
+            keterangan: ket, user_input: userInput
+          });
+          
+          if (selKg !== 0) {
+            // Cek apakah row penjualan untuk grade ini sudah ada (biar digabung)
+            const existRow = penjualanRows.find(r => r.grade === g);
+            if (existRow) {
+              existRow.kilo = selKg;
+            } else {
+              penjualanRows.push({
+                pelanggan: 'Susut Audit', grade: g, butir: 0, kilo: selKg,
+                harga: 0, total: 'Rp 0', keterangan: ket || 'Penyesuaian stok audit'
+              });
+            }
+          }
+        }
+      }
+      
+      if (!hasAnyInput) {
+        showToast('Minimal isi 1 kotak fisik aktual!', 'error');
+        btn.disabled = false; btn.textContent = '💾 Simpan Audit';
+        return;
+      }
+      if (hasSelisihTanpaKet) {
+        showToast('Keterangan wajib diisi jika ada selisih stok!', 'error');
+        btn.disabled = false; btn.textContent = '💾 Simpan Audit';
+        return;
+      }
+      
+      // Save audits sequentially or parallel
+      for (const payload of auditPayloads) {
+        await dbSaveAudit(payload);
+      }
+      
+      // Save to penjualan if needed
+      if (penjualanRows.length > 0 && typeof dbSavePenjualan === 'function') {
+        await dbSavePenjualan({
+          tanggal: tgl, user_input: userInput, rows: penjualanRows, grand_total: 0
+        });
+        if(typeof renderRiwayatJual === 'function') renderRiwayatJual();
+      }
+      
+      showToast('Audit batch berhasil disimpan!', 'success');
+      closeModal('modal-audit-stok');
       if (typeof renderStokTelur === 'function') renderStokTelur();
-    } else if (jenis === 'Pakan') {
-      if (typeof renderStokPakan === 'function') renderStokPakan();
+      
+    } else {
+      // SINGLE MODE (PAKAN / NON-PAKAN)
+      const katSelect = document.getElementById('audit-kategori');
+      const opt = katSelect.options[katSelect.selectedIndex];
+      
+      if(!opt || !opt.value) {
+        showToast('Pilih item terlebih dahulu!', 'error');
+        btn.disabled = false; btn.textContent = '💾 Simpan Audit';
+        return;
+      }
+      
+      const aktualInput = document.getElementById('audit-stok-aktual').value;
+      if(aktualInput === '') {
+        showToast('Masukkan stok fisik aktual!', 'error');
+        btn.disabled = false; btn.textContent = '💾 Simpan Audit';
+        return;
+      }
+      
+      const aktual = parseFloat(aktualInput);
+      const selisih = aktual - currentAuditSistem;
+      
+      if (selisih !== 0 && !ket) {
+        showToast('Keterangan wajib diisi jika ada selisih stok!', 'error');
+        btn.disabled = false; btn.textContent = '💾 Simpan Audit';
+        return;
+      }
+      
+      const val = opt.value;
+      const payload = {
+        tanggal: tgl, jenis_item: jenis, kategori_item: val,
+        stok_sistem: currentAuditSistem, stok_aktual: aktual, selisih: selisih,
+        satuan: currentAuditSatuan, keterangan: ket, user_input: userInput
+      };
+      
+      await dbSaveAudit(payload);
+      showToast('Audit stok berhasil disimpan!', 'success');
+      closeModal('modal-audit-stok');
+      
+      if (jenis === 'Pakan' && typeof renderStokPakan === 'function') renderStokPakan();
     }
   } catch (e) {
     console.error(e);
