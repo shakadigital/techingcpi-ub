@@ -443,7 +443,7 @@ async function renderRiwayatJual(){
       const ar = 'text-align:right;';
       
       const canEdit = isAdmin || ((isWaste || isSusut) && ['supervisor', 'staff'].includes(currentUser?.role));
-      const canDelete = isAdmin && !isWaste && !isSusut;
+      const canDelete = isAdmin && !isSusut;
       
       let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
       if (canEdit) aksiCell += `<button onclick="editPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit item ini">✏️</button>`;
