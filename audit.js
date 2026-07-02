@@ -94,22 +94,18 @@ async function loadAuditBatchTelur() {
   
   try {
     let s;
-    if (typeof window.dbGetStokTelurAll === 'function') {
-      s = await window.dbGetStokTelurAll(nowStr);
+    if (typeof getStokTelur === 'function') {
+      s = await getStokTelur(nowStr);
     } else {
-      const res = await fetch(`https://clabeuuigpjdkkqifujl.supabase.co/rest/v1/rpc/get_stok_telur_tf_ub?tgl=${nowStr}`, {
-        headers: { 'apikey': (typeof SB !== 'undefined' ? SB.key : '') }
-      });
-      const data = await res.json();
-      if(data && data.length > 0) s = data[0];
+      s = await SB.rpc('get_stok_telur_tf_ub', { p_sampai: nowStr });
     }
     
-    if (s && s.stok) {
+    if (s) {
       currentBatchTelurSistem = {
-        Normal: { butir: s.stok.Normal?.butir || 0, kg: s.stok.Normal?.kilo || 0 },
-        Crem: { butir: s.stok.Crem?.butir || 0, kg: s.stok.Crem?.kilo || 0 },
-        Bentes: { butir: s.stok.Bentes?.butir || 0, kg: s.stok.Bentes?.kilo || 0 },
-        Ceplokan: { butir: s.stok.Ceplokan?.butir || 0, kg: s.stok.Ceplokan?.kilo || 0 }
+        Normal: { butir: s.Normal?.butir || 0, kg: s.Normal?.kilo || 0 },
+        Crem: { butir: s.Crem?.butir || 0, kg: s.Crem?.kilo || 0 },
+        Bentes: { butir: s.Bentes?.butir || 0, kg: s.Bentes?.kilo || 0 },
+        Ceplokan: { butir: s.Ceplokan?.butir || 0, kg: s.Ceplokan?.kilo || 0 }
       };
     } else {
       throw new Error('Data stok telur kosong');
