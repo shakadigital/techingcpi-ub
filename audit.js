@@ -323,6 +323,12 @@ async function openRiwayatAuditModal(jenis = 'Telur') {
               Oleh: <b>${a.user_input || 'System'}</b>
             </div>
           </div>
+          ${ (currentUser && currentUser.role === 'superadmin') ? `
+          <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end; border-top:1px dashed #e5e7eb; padding-top:10px;">
+            <button onclick="editRiwayatAudit('${a.id}')" style="background:none; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px; font-size:0.75rem; color:#4b5563; cursor:pointer; display:flex; align-items:center; gap:4px;"><span style="font-size:0.9rem">✏️</span> Edit</button>
+            <button onclick="hapusRiwayatAudit('${a.id}')" style="background:none; border:1px solid #fca5a5; border-radius:4px; padding:4px 10px; font-size:0.75rem; color:#ef4444; cursor:pointer; display:flex; align-items:center; gap:4px;"><span style="font-size:0.9rem">🗑️</span> Hapus</button>
+          </div>
+          ` : '' }
         </div>
       `;
     }
@@ -334,3 +340,138 @@ async function openRiwayatAuditModal(jenis = 'Telur') {
     list.innerHTML = '<div style="padding:30px;text-align:center;color:#ef4444;">Gagal memuat histori audit. Cek koneksi internet.</div>';
   }
 }
+
+window.hapusRiwayatAudit = async function(id) {
+  if(!confirm('Yakin ingin menghapus histori audit ini?\\n\\nJika audit ini memiliki riwayat otomatis "Susut Audit" di Penjualan, sistem juga akan menghapusnya secara otomatis.')) return;
+  try {
+    const list = document.getElementById('riwayat-audit-list');
+    list.innerHTML = '<div style="padding:30px;text-align:center;color:#6b7280;">⏳ Menghapus...</div>';
+    
+    // Ambil data audit sebelum dihapus
+    const audits = await SB.select('audit_stok_tf_ub', `?id=eq.${id}`);
+    const a = audits && audits.length > 0 ? audits[0] : null;
+    
+    if (a) {
+      // Hapus audit
+      await SB.delete('audit_stok_tf_ub', `?id=eq.${id}`);
+      
+      // Hapus penjualan terkait (Susut Audit) jika ada
+      if (a.jenis_item === 'Telur' && parseFloat(a.selisih) !== 0 && typeof dbGetPenjualan === 'function') {
+        const pRows = await dbGetPenjualan({dari: a.tanggal, sampai: a.tanggal, limit: 1});
+        if (pRows && pRows.length > 0) {
+          const p = pRows[0];
+          let rows = p.rows || [];
+          const idx = rows.findIndex(r => r.pelanggan === 'Susut Audit' && r.grade === a.kategori_item && 
+                 ((a.satuan === 'butir' && r.butir == a.selisih) || (a.satuan === 'kg' && r.kilo == a.selisih)));
+          if (idx !== -1) {
+            rows.splice(idx, 1);
+            if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
+              await window.dbUpdatePenjualanWithOffline(p.id, rows, rows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0), p.tanggal);
+            } else if (typeof window.dbUpdatePenjualanRows === 'function') {
+              await window.dbUpdatePenjualanRows(p.id, rows);
+            } else {
+              await SB.update('penjualan_tf_ub', {rows: rows}, `?id=eq.${p.id}`);
+            }
+          }
+        }
+      }
+    }
+    showToast('Histori audit berhasil dihapus!', 'success');
+    openRiwayatAuditModal();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal menghapus audit!', 'error');
+    openRiwayatAuditModal();
+  }
+};
+
+window.editRiwayatAudit = async function(id) {
+  try {
+    const list = document.getElementById('riwayat-audit-list');
+    const audits = await SB.select('audit_stok_tf_ub', `?id=eq.${id}`);
+    const a = audits && audits.length > 0 ? audits[0] : null;
+    if (!a) {
+      showToast('Data audit tidak ditemukan!', 'error');
+      return;
+    }
+    
+    const newAktualStr = prompt(`EDIT AUDIT (${a.kategori_item})\\nStok Sistem: ${a.stok_sistem} ${a.satuan}\\nMasukkan Fisik Aktual yang baru:`, a.stok_aktual);
+    if (newAktualStr === null) return; // User membatalkan
+    
+    const newAktual = parseFloat(newAktualStr);
+    if (isNaN(newAktual)) {
+      showToast('Angka tidak valid!', 'error');
+      return;
+    }
+    
+    const newKet = prompt(`Masukkan Keterangan baru:`, a.keterangan || '');
+    if (newKet === null) return; // User membatalkan
+    
+    const newSelisih = newAktual - parseFloat(a.stok_sistem);
+    if (newSelisih !== 0 && newKet.trim() === '') {
+      showToast('Keterangan wajib diisi jika ada selisih!', 'error');
+      return;
+    }
+    
+    list.innerHTML = '<div style="padding:30px;text-align:center;color:#6b7280;">⏳ Menyimpan...</div>';
+    
+    // Update audit
+    await SB.update('audit_stok_tf_ub', {
+      stok_aktual: newAktual,
+      selisih: newSelisih,
+      keterangan: newKet
+    }, `?id=eq.${id}`);
+    
+    // Update penjualan terkait (Susut Audit) jika ada
+    if (a.jenis_item === 'Telur' && typeof dbGetPenjualan === 'function') {
+      const pRows = await dbGetPenjualan({dari: a.tanggal, sampai: a.tanggal, limit: 1});
+      if (pRows && pRows.length > 0) {
+        const p = pRows[0];
+        let rows = p.rows || [];
+        // Cari riwayat Susut Audit lama berdasarkan selisih lama
+        const idx = rows.findIndex(r => r.pelanggan === 'Susut Audit' && r.grade === a.kategori_item && 
+               ((a.satuan === 'butir' && r.butir == a.selisih) || (a.satuan === 'kg' && r.kilo == a.selisih)));
+               
+        if (idx !== -1) {
+          if (newSelisih === 0) {
+            // Hapus row jika selisih baru 0
+            rows.splice(idx, 1);
+          } else {
+            // Update row
+            rows[idx].butir = (a.satuan === 'butir') ? newSelisih : 0;
+            rows[idx].kilo = (a.satuan === 'kg') ? newSelisih : 0;
+            rows[idx].keterangan = newKet;
+          }
+          if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
+            await window.dbUpdatePenjualanWithOffline(p.id, rows, rows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0), p.tanggal);
+          } else {
+            await SB.update('penjualan_tf_ub', {rows: rows}, `?id=eq.${p.id}`);
+          }
+        } else if (newSelisih !== 0) {
+          // Buat baru jika sebelumnya tidak ada (karena selisih lama 0)
+          rows.push({
+            pelanggan: 'Susut Audit',
+            grade: a.kategori_item,
+            butir: (a.satuan === 'butir') ? newSelisih : 0,
+            kilo: (a.satuan === 'kg') ? newSelisih : 0,
+            harga: 0,
+            total: 'Rp 0',
+            keterangan: newKet || 'Penyesuaian stok audit'
+          });
+          if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
+            await window.dbUpdatePenjualanWithOffline(p.id, rows, rows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0), p.tanggal);
+          } else {
+            await SB.update('penjualan_tf_ub', {rows: rows}, `?id=eq.${p.id}`);
+          }
+        }
+      }
+    }
+    
+    showToast('Histori audit berhasil diupdate!', 'success');
+    openRiwayatAuditModal();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal update audit!', 'error');
+    openRiwayatAuditModal();
+  }
+};
