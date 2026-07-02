@@ -378,6 +378,8 @@ window.hapusRiwayatAudit = async function(id) {
     }
     showToast('Histori audit berhasil dihapus!', 'success');
     openRiwayatAuditModal();
+    if (typeof renderStokTelur === 'function') renderStokTelur();
+    if (typeof renderRiwayatJual === 'function') renderRiwayatJual();
   } catch(e) {
     console.error(e);
     showToast('Gagal menghapus audit!', 'error');
@@ -469,6 +471,8 @@ window.editRiwayatAudit = async function(id) {
     
     showToast('Histori audit berhasil diupdate!', 'success');
     openRiwayatAuditModal();
+    if (typeof renderStokTelur === 'function') renderStokTelur();
+    if (typeof renderRiwayatJual === 'function') renderRiwayatJual();
   } catch(e) {
     console.error(e);
     showToast('Gagal update audit!', 'error');
