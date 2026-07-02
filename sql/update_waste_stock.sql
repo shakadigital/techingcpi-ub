@@ -84,6 +84,13 @@ BEGIN
             IF g = 'Waste' OR g = 'Busuk' THEN
                 g := 'Normal';
             END IF;
+            -- Mapping legacy grades
+            IF g = 'Cream' THEN
+                g := 'Crem';
+            END IF;
+            IF g = 'Retak' THEN
+                g := 'Bentes';
+            END IF;
 
             IF prod ? g THEN
                 b := COALESCE((j.value->>'butir')::int, 0);

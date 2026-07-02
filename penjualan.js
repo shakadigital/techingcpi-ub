@@ -142,6 +142,7 @@ async function getStokTelur(tgl){
       let G=r.grade;
       if (G === 'Cream') G = 'Crem';
       if (G === 'Waste' || G === 'Busuk') G = 'Normal';
+      if (G === 'Retak') G = 'Bentes';
       
       if(prod[G]){
         prod[G].butir=Math.max(0,prod[G].butir-(parseInt(r.butir)||0));
