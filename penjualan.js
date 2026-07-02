@@ -442,7 +442,7 @@ async function renderRiwayatJual(){
       const fw = (isWaste || isBusuk || isSusut) ? 'font-weight:bold;' : '';
       const ar = 'text-align:right;';
       
-      const canEdit = isAdmin || ((isWaste || isSusut) && ['supervisor', 'staff'].includes(currentUser?.role));
+      const canEdit = isAdmin || ['supervisor', 'staff'].includes(currentUser?.role);
       const canDelete = isAdmin && !isSusut;
       
       let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
