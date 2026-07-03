@@ -560,11 +560,11 @@
         <div class="card-header">
           <div class="num">📊</div>
           <h2>Riwayat Penjualan</h2>
-          <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;">
-            <input type="date" id="filter-riwayat-dari" class="inp-plain" style="padding:4px 8px; font-size:0.8rem; flex-shrink:0;" onchange="renderRiwayatJual()" autocomplete="bday" />
-            <span style="font-size:0.8rem;color:#888;white-space:nowrap;">s/d</span>
-            <input type="date" id="filter-riwayat-sampai" class="inp-plain" style="padding:4px 8px; font-size:0.8rem; flex-shrink:0;" onchange="renderRiwayatJual()" autocomplete="bday" />
-            <button class="btn-export" onclick="exportRiwayatJual()" style="display:none; white-space:nowrap; flex-shrink:0;" id="btn-export-jual">⬇️ Download</button>
+          <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input type="date" id="filter-riwayat-dari" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="renderRiwayatJual()" autocomplete="bday" />
+            <span style="font-size:0.8rem;color:#888;">s/d</span>
+            <input type="date" id="filter-riwayat-sampai" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="renderRiwayatJual()" autocomplete="bday" />
+            <button class="btn-export" onclick="exportRiwayatJual()" style="display:none;" id="btn-export-jual">⬇️ Download</button>
           </div>
         </div>
         <div class="card-body">
@@ -580,13 +580,13 @@
         <div class="card-header">
           <div class="num">📦</div>
           <h2>Histori Stok Harian</h2>
-          <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;">
-            <input type="date" id="filter-stok-dari" class="inp-plain" style="padding:4px 8px; font-size:0.8rem; flex-shrink:0;" onchange="loadHistoriStokHarian()" autocomplete="bday" />
-            <span style="font-size:0.8rem;color:#888;white-space:nowrap;">s/d</span>
-            <input type="date" id="filter-stok-sampai" class="inp-plain" style="padding:4px 8px; font-size:0.8rem; flex-shrink:0;" onchange="loadHistoriStokHarian()" autocomplete="bday" />
-            <button class="btn-export" onclick="exportHistoriStokHarian()" style="background:#10b981;font-size:0.8rem;padding:4px 8px;white-space:nowrap;flex-shrink:0;">📥 Excel</button>
-            <button class="btn-export" onclick="openRiwayatAuditModal('Telur')" style="background:#0284c7;font-size:0.8rem;padding:4px 8px;white-space:nowrap;flex-shrink:0;" id="btn-riwayat-audit-telur">📋 Histori Audit</button>
-            <button class="btn-export" onclick="openAuditModal('Telur')" style="background:#f59e0b;font-size:0.8rem;padding:4px 8px;white-space:nowrap;flex-shrink:0;" id="btn-audit-telur">⚙️ Audit Stok</button>
+          <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input type="date" id="filter-stok-dari" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="loadHistoriStokHarian()" autocomplete="bday" />
+            <span style="font-size:0.8rem;color:#888;">s/d</span>
+            <input type="date" id="filter-stok-sampai" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="loadHistoriStokHarian()" autocomplete="bday" />
+            <button class="btn-export" onclick="exportHistoriStokHarian()" style="background:#10b981;font-size:0.8rem;padding:4px 8px;">📥 Excel</button>
+            <button class="btn-export" onclick="openRiwayatAuditModal('Telur')" style="background:#0284c7;font-size:0.8rem;padding:4px 8px;" id="btn-riwayat-audit-telur">📋 Histori Audit</button>
+            <button class="btn-export" onclick="openAuditModal('Telur')" style="background:#f59e0b;font-size:0.8rem;padding:4px 8px;" id="btn-audit-telur">⚙️ Audit Stok</button>
           </div>
         </div>
         <div class="card-body">
