@@ -1,4 +1,4 @@
-﻿// ═══ MODULE: gudang-pakan ═══
+// ═══ MODULE: gudang-pakan ═══
 
 async function calcStokPakan(namaPakan){
   // Coba server-side dulu
@@ -105,15 +105,8 @@ async function renderGudang(){
     });
   }
 
-  // Riwayat pemakaian — dari allInputs yang sudah di-fetch
-  const pemakaian=[];
-  allInputs.forEach(row=>{const d=row.data;if(!d||!d.pakan)return;d.pakan.forEach(p=>{if(p.kode&&p.jumlah)pemakaian.push({tgl:d.tanggal,kandang:d.kandang,pakan:p.kode,jumlah:p.jumlah});});});
-  pemakaian.sort((a,b)=>b.tgl.localeCompare(a.tgl));
-  const ptbody=document.getElementById('pakai-tbody');
-  const pempty=document.getElementById('pakai-empty');
-  ptbody.innerHTML='';
-  if(!pemakaian.length){pempty.style.display='block';}
-  else{pempty.style.display='none';pemakaian.slice(0,40).forEach(p=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(p.tgl)+'</td><td>'+esc(p.kandang)+'</td><td>'+esc(p.pakan)+'</td><td>'+p.jumlah+' kg</td>';ptbody.appendChild(tr);});}
+  // Riwayat pemakaian — panggil fungsi baru
+  await loadPemakaianPakan();
 
   // Section pembayaran — hanya manajer ke atas
   const canBayar=can('KEUANGAN');
@@ -584,3 +577,53 @@ async function openKirimanEditModal(id){
   setSupplierValue('mk2-supplier-select','mk2-supplier-text','mk2-supplier',k.supplier||'');
   document.getElementById('modal-kiriman').style.display='flex';
 }
+
+window.loadPemakaianPakan = async function() {
+  const inputDari = document.getElementById('filter-pakai-dari');
+  const inputSampai = document.getElementById('filter-pakai-sampai');
+  
+  if (inputDari && inputSampai && (!inputDari.value || !inputSampai.value)) {
+    const today = new Date();
+    inputSampai.value = today.toISOString().split('T')[0];
+    today.setDate(today.getDate() - 7);
+    inputDari.value = today.toISOString().split('T')[0];
+  }
+  
+  const dari = inputDari ? inputDari.value : '';
+  const sampai = inputSampai ? inputSampai.value : '';
+
+  const allInputs = cache.get('_all_inputs');
+  if (!allInputs) return;
+  
+  const pemakaian = [];
+  
+  allInputs.forEach(row => {
+    const d = row.data;
+    if (!d || !d.pakan) return;
+    if (dari && d.tanggal < dari) return;
+    if (sampai && d.tanggal > sampai) return;
+    
+    d.pakan.forEach(p => {
+      if (p.kode && p.jumlah) {
+        pemakaian.push({tgl: d.tanggal, kandang: d.kandang, pakan: p.kode, jumlah: p.jumlah});
+      }
+    });
+  });
+  
+  pemakaian.sort((a,b) => b.tgl.localeCompare(a.tgl));
+  const ptbody = document.getElementById('pakai-tbody');
+  const pempty = document.getElementById('pakai-empty');
+  if(!ptbody) return;
+  
+  ptbody.innerHTML = '';
+  if (!pemakaian.length) {
+    pempty.style.display = 'block';
+  } else {
+    pempty.style.display = 'none';
+    pemakaian.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+esc(p.tgl)+'</td><td>'+esc(p.kandang)+'</td><td>'+esc(p.pakan)+'</td><td>'+p.jumlah+' kg</td>';
+      ptbody.appendChild(tr);
+    });
+  }
+};

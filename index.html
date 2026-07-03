@@ -113,7 +113,7 @@
     <span>shakadigital.com</span>
   </a>
   <div style="text-align:center; margin-top: 12px; font-size: 0.75rem; color: #888; font-weight: 500;">
-    Versi 4.3.2
+    Versi 4.3.3
   </div>
 </div>
 
@@ -159,7 +159,7 @@
             <span>⏻</span> <span>Keluar</span>
           </button>
           <div style="padding: 10px 0 2px 0; text-align: center; font-size: 0.7rem; color: #aaa; border-top: 1px solid #e2e8f0; margin-top: 4px;">
-            v4.3.2
+            v4.3.3
           </div>
         </div>
       </div>
@@ -691,9 +691,16 @@
 
         <!-- Riwayat Pemakaian Pakan -->
         <div class="card">
-          <div class="card-header"><div class="num">📋</div><h2>Riwayat Pemakaian Pakan</h2><small style="margin-left:8px;color:#666;font-size:.78rem">Auto dari Input Harian</small></div>
+          <div class="card-header">
+            <div class="num">📋</div><h2>Riwayat Pemakaian Pakan</h2><small style="margin-left:8px;color:#666;font-size:.78rem">Auto dari Input Harian</small>
+            <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input type="date" id="filter-pakai-dari" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="loadPemakaianPakan()" autocomplete="bday" />
+              <span style="font-size:0.8rem;color:#888;">s/d</span>
+              <input type="date" id="filter-pakai-sampai" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="loadPemakaianPakan()" autocomplete="bday" />
+            </div>
+          </div>
           <div class="card-body">
-            <div style="overflow-x:auto">
+            <div style="overflow-x:auto; max-height: 400px; overflow-y: auto;">
               <table class="tbl">
                 <thead><tr><th>Tanggal</th><th>Kandang</th><th>Pakan</th><th>Pemakaian (kg)</th></tr></thead>
                 <tbody id="pakai-tbody"></tbody>
