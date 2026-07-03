@@ -472,23 +472,23 @@ async function renderRiwayatJual(){
       if (canDelete) aksiCell += `<button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>`;
       aksiCell += '</td>';
 
-      const dateStr = fmtTgl(rec.tanggal).replace(/\\d{4}$/, match => match.slice(2));
+      const dateStr = fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2));
       const tButir = (r.butir||0).toLocaleString('id-ID');
       const tKilo = (r.kilo||0).toLocaleString('id-ID');
       const tHarga = 'Rp ' + (r.harga ? parseFloat(r.harga).toLocaleString('id-ID') : '0');
       const rTotalRaw = parseFloat(String(r.total||'0').replace(/[^0-9.-]+/g,""));
       const tTotal = 'Rp ' + (isNaN(rTotalRaw) ? '0' : rTotalRaw.toLocaleString('id-ID'));
 
-      tr.innerHTML = \`
-        <td style="\${st}">\${dateStr}</td>
-        <td style="\${st}">\${esc(r.pelanggan||'—')}</td>
-        <td style="\${st}\${fw}">\${esc(r.grade||'—')} \${r.keterangan ? \` <br><span style="font-size:0.8rem;opacity:0.7">\${esc(r.keterangan)}</span>\` : ''}</td>
-        <td style="\${st}\${ar}">\${tButir}</td>
-        <td style="\${st}\${ar}">\${r.kilo||0}</td>
-        <td style="\${st}\${ar}">\${tHarga}</td>
-        <td style="\${st}\${ar}">\${tTotal}</td>
-        \${aksiCell}
-      \`;
+      tr.innerHTML = `
+        <td style="${st}">${dateStr}</td>
+        <td style="${st}">${esc(r.pelanggan||'—')}</td>
+        <td style="${st}${fw}">${esc(r.grade||'—')} ${r.keterangan ? ` <br><span style="font-size:0.8rem;opacity:0.7">${esc(r.keterangan)}</span>` : ''}</td>
+        <td style="${st}${ar}">${tButir}</td>
+        <td style="${st}${ar}">${r.kilo||0}</td>
+        <td style="${st}${ar}">${tHarga}</td>
+        <td style="${st}${ar}">${tTotal}</td>
+        ${aksiCell}
+      `;
       tbody.appendChild(tr);
     });
   });
@@ -975,13 +975,13 @@ function exportHistoriStokHarian() {
     
     let rowData = [];
     for (let j = 0; j < cols.length; j++) {
-      let text = cols[j].innerText.replace(/(\\r\\n|\\n|\\r)/gm, " ").replace(/"/g, '""');
-      rowData.push(\`"\${text}"\`);
+      let text = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").replace(/"/g, '""');
+      rowData.push(`"${text}"`);
     }
     csv.push(rowData.join(','));
   }
   
-  const csvFile = new Blob([csv.join('\\n')], { type: 'text/csv' });
+  const csvFile = new Blob([csv.join('\n')], { type: 'text/csv' });
   const downloadLink = document.createElement("a");
   downloadLink.download = filename;
   downloadLink.href = window.URL.createObjectURL(csvFile);
