@@ -922,44 +922,62 @@ async function loadHistoriStokHarian() {
       if (dStr > todayStr) return; // Don't show future dates
       
       const grades = ['Normal','Crem','Bentes','Ceplokan'];
+      
+      let totAwal = {b:0, k:0};
+      let totMasuk = {b:0, k:0};
+      let totJual = {b:0, k:0};
+      let totWaste = {b:0, k:0};
+      let totAudit = {b:0, k:0, has:false};
+      let totSisa = {b:0, k:0};
+      
+      let hasActivity = false;
+
       grades.forEach(g => {
         const data = dailyData[dStr][g];
-        const hasActivity = data.masuk.b > 0 || data.jual.b > 0 || data.waste.b > 0 || data.audit.has;
+        if (data.masuk.b > 0 || data.jual.b > 0 || data.waste.b > 0 || data.audit.has) hasActivity = true;
         
-        if (hasActivity || currentStok[g].butir > 0 || currentStok[g].kilo > 0) {
-          const awal = {b: currentStok[g].butir, k: currentStok[g].kilo};
-          
-          let sisaB = awal.b + data.masuk.b - data.jual.b - data.waste.b;
-          let sisaK = awal.k + data.masuk.k - data.jual.k - data.waste.k;
-          
-          if (data.audit.has) {
-            sisaB += data.audit.b;
-            sisaK += data.audit.k;
-          }
-          
-          sisaB = Math.max(0, sisaB);
-          sisaK = Math.max(0, sisaK);
-          
-          const tMasuk = data.masuk.b > 0 || data.masuk.k > 0 ? fmt(data.masuk.b, data.masuk.k, '+') : '-';
-          const tJual = data.jual.b > 0 || data.jual.k > 0 ? fmt(data.jual.b, data.jual.k, '-') : '-';
-          const tWaste = data.waste.b > 0 || data.waste.k > 0 ? fmt(data.waste.b, data.waste.k, '-') : '-';
-          const tAudit = data.audit.has ? fmt(Math.abs(data.audit.b), Math.abs(data.audit.k), data.audit.b > 0 ? '+' : (data.audit.b < 0 ? '-' : '')) : '-';
-
-          html += `<tr>
-            <td>${dStr}</td>
-            <td>${g}</td>
-            <td style="text-align:right">${fmt(awal.b, awal.k, '')}</td>
-            <td style="text-align:right; color:#10b981;">${tMasuk}</td>
-            <td style="text-align:right; color:#ef4444;">${tJual}</td>
-            <td style="text-align:right; color:#f59e0b;">${tWaste}</td>
-            <td style="text-align:right; color:${data.audit.b < 0 ? '#ef4444' : '#10b981'}">${tAudit}</td>
-            <td style="text-align:right; font-weight:bold;">${fmt(sisaB, sisaK, '')}</td>
-          </tr>`;
-          
-          currentStok[g].butir = sisaB;
-          currentStok[g].kilo = sisaK;
+        const awal = {b: currentStok[g].butir, k: currentStok[g].kilo};
+        
+        let sisaB = awal.b + data.masuk.b - data.jual.b - data.waste.b;
+        let sisaK = awal.k + data.masuk.k - data.jual.k - data.waste.k;
+        
+        if (data.audit.has) {
+          sisaB += data.audit.b;
+          sisaK += data.audit.k;
+          totAudit.has = true;
+          totAudit.b += data.audit.b;
+          totAudit.k += data.audit.k;
         }
+        
+        sisaB = Math.max(0, sisaB);
+        sisaK = Math.max(0, sisaK);
+        
+        totAwal.b += awal.b; totAwal.k += awal.k;
+        totMasuk.b += data.masuk.b; totMasuk.k += data.masuk.k;
+        totJual.b += data.jual.b; totJual.k += data.jual.k;
+        totWaste.b += data.waste.b; totWaste.k += data.waste.k;
+        totSisa.b += sisaB; totSisa.k += sisaK;
+        
+        currentStok[g].butir = sisaB;
+        currentStok[g].kilo = sisaK;
       });
+      
+      if (hasActivity || totAwal.b > 0 || totAwal.k > 0) {
+        const tMasuk = totMasuk.b > 0 || totMasuk.k > 0 ? fmt(totMasuk.b, totMasuk.k, '+') : '-';
+        const tJual = totJual.b > 0 || totJual.k > 0 ? fmt(totJual.b, totJual.k, '-') : '-';
+        const tWaste = totWaste.b > 0 || totWaste.k > 0 ? fmt(totWaste.b, totWaste.k, '-') : '-';
+        const tAudit = totAudit.has ? fmt(Math.abs(totAudit.b), Math.abs(totAudit.k), totAudit.b > 0 ? '+' : (totAudit.b < 0 ? '-' : '')) : '-';
+
+        html += `<tr>
+          <td>${dStr}</td>
+          <td style="text-align:right">${fmt(totAwal.b, totAwal.k, '')}</td>
+          <td style="text-align:right; color:#10b981;">${tMasuk}</td>
+          <td style="text-align:right; color:#ef4444;">${tJual}</td>
+          <td style="text-align:right; color:#f59e0b;">${tWaste}</td>
+          <td style="text-align:right; color:${totAudit.b < 0 ? '#ef4444' : '#10b981'}">${tAudit}</td>
+          <td style="text-align:right; font-weight:bold;">${fmt(totSisa.b, totSisa.k, '')}</td>
+        </tr>`;
+      }
     });
     
     if (html === '') {
