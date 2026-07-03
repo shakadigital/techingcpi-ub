@@ -907,7 +907,16 @@ async function loadHistoriStokHarian() {
     // Render
     let html = '';
     const todayStr = new Date().toISOString().split('T')[0];
-    const fmt = (b, k) => `${b.toLocaleString('id-ID')} (${k.toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2})} kg)`;
+    
+    const fmt = (b, k, prefix) => {
+      const strB = b.toLocaleString('id-ID');
+      const strK = k.toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2});
+      return `<div style="display:inline-grid; grid-template-columns: 85px 10px 70px; text-align:right; font-variant-numeric: tabular-nums;">
+        <span>${prefix ? prefix + ' ' : ''}${strB} btr</span>
+        <span style="color:#aaa; text-align:center;">/</span>
+        <span>${strK} kg</span>
+      </div>`;
+    };
     
     dateArray.forEach(dStr => {
       if (dStr > todayStr) return; // Don't show future dates
@@ -931,15 +940,20 @@ async function loadHistoriStokHarian() {
           sisaB = Math.max(0, sisaB);
           sisaK = Math.max(0, sisaK);
           
+          const tMasuk = data.masuk.b > 0 || data.masuk.k > 0 ? fmt(data.masuk.b, data.masuk.k, '+') : '-';
+          const tJual = data.jual.b > 0 || data.jual.k > 0 ? fmt(data.jual.b, data.jual.k, '-') : '-';
+          const tWaste = data.waste.b > 0 || data.waste.k > 0 ? fmt(data.waste.b, data.waste.k, '-') : '-';
+          const tAudit = data.audit.has ? fmt(Math.abs(data.audit.b), Math.abs(data.audit.k), data.audit.b > 0 ? '+' : (data.audit.b < 0 ? '-' : '')) : '-';
+
           html += `<tr>
             <td>${dStr}</td>
             <td>${g}</td>
-            <td style="text-align:right">${fmt(awal.b, awal.k)}</td>
-            <td style="text-align:right; color:#10b981;">+${fmt(data.masuk.b, data.masuk.k)}</td>
-            <td style="text-align:right; color:#ef4444;">-${fmt(data.jual.b, data.jual.k)}</td>
-            <td style="text-align:right; color:#f59e0b;">-${fmt(data.waste.b, data.waste.k)}</td>
-            <td style="text-align:right; color:${data.audit.b < 0 ? '#ef4444' : '#10b981'}">${data.audit.has ? (data.audit.b > 0 ? '+' : '') + fmt(data.audit.b, data.audit.k) : '-'}</td>
-            <td style="text-align:right; font-weight:bold;">${fmt(sisaB, sisaK)}</td>
+            <td style="text-align:right">${fmt(awal.b, awal.k, '')}</td>
+            <td style="text-align:right; color:#10b981;">${tMasuk}</td>
+            <td style="text-align:right; color:#ef4444;">${tJual}</td>
+            <td style="text-align:right; color:#f59e0b;">${tWaste}</td>
+            <td style="text-align:right; color:${data.audit.b < 0 ? '#ef4444' : '#10b981'}">${tAudit}</td>
+            <td style="text-align:right; font-weight:bold;">${fmt(sisaB, sisaK, '')}</td>
           </tr>`;
           
           currentStok[g].butir = sisaB;
