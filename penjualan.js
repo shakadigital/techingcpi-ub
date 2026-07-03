@@ -964,9 +964,10 @@ async function loadHistoriStokHarian() {
 function exportHistoriStokHarian() {
   const table = document.getElementById('tbl-histori-stok');
   if (!table) return;
-  const monthInput = document.getElementById('filter-bulan-stok');
-  const filename = \`Histori_Stok_Telur_\${monthInput ? monthInput.value : 'export'}.csv\`;
-  
+  const inputDari = document.getElementById('filter-stok-dari');
+  const inputSampai = document.getElementById('filter-stok-sampai');
+  const period = (inputDari && inputSampai) ? `${inputDari.value}_sd_${inputSampai.value}` : 'export';
+  const filename = `Histori_Stok_Telur_${period}.csv`;
   let csv = [];
   const rows = table.querySelectorAll('tr');
   for (let i = 0; i < rows.length; i++) {
