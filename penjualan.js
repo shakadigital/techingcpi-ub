@@ -424,52 +424,76 @@ function resetPenjualan(){
 }
 
 async function renderRiwayatJual(){
-  const all=await dbGetPenjualan();
+  const inputDari = document.getElementById('filter-riwayat-dari');
+  const inputSampai = document.getElementById('filter-riwayat-sampai');
+  
+  if (inputDari && inputSampai && (!inputDari.value || !inputSampai.value)) {
+    const today = new Date();
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 6); // 7 days including today
+    inputSampai.value = today.toISOString().split('T')[0];
+    inputDari.value = lastWeek.toISOString().split('T')[0];
+  }
+  
+  const filter = {};
+  if (inputDari && inputDari.value) filter.dari = inputDari.value;
+  if (inputSampai && inputSampai.value) filter.sampai = inputSampai.value;
+  filter.limit = 9999;
+  
+  const all=await dbGetPenjualan(filter);
   const tbody=document.getElementById('riwayat-jual-tbody');
   const empty=document.getElementById('riwayat-jual-empty');
   tbody.innerHTML='';
-  if(!all.length){empty.style.display='block';return;}
-  empty.style.display='none';
+  
+  let hasData = false;
   const isAdmin=currentUser?.role==='admin'||currentUser?.role==='superadmin';
-  all.slice(0,60).forEach(rec=>{
+  
+  all.forEach(rec=>{
     const rows=rec.rows||[];
     rows.forEach((r,i)=>{
-      const tr=document.createElement('tr');
       const isWaste = r.grade === 'Waste';
       const isBusuk = r.grade === 'Busuk';
       const isSusut = r.pelanggan === 'Susut Audit';
-      const st = (isWaste || isBusuk || isSusut) ? 'color:#dc2626;' : '';
-      const fw = (isWaste || isBusuk || isSusut) ? 'font-weight:bold;' : '';
+      
+      // Filter out waste and audit from Riwayat Penjualan
+      if (isWaste || isBusuk || isSusut) return;
+      
+      hasData = true;
+      const tr=document.createElement('tr');
+      const st = '';
+      const fw = '';
       const ar = 'text-align:right;';
       
       const canEdit = isAdmin || ['supervisor', 'staff'].includes(currentUser?.role);
-      const canDelete = isAdmin && !isSusut;
+      const canDelete = isAdmin;
       
       let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
       if (canEdit) aksiCell += `<button onclick="editPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit item ini">✏️</button>`;
       if (canDelete) aksiCell += `<button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>`;
       aksiCell += '</td>';
 
-      const dateStr = fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2));
+      const dateStr = fmtTgl(rec.tanggal).replace(/\\d{4}$/, match => match.slice(2));
       const tButir = (r.butir||0).toLocaleString('id-ID');
       const tKilo = (r.kilo||0).toLocaleString('id-ID');
       const tHarga = 'Rp ' + (r.harga ? parseFloat(r.harga).toLocaleString('id-ID') : '0');
       const rTotalRaw = parseFloat(String(r.total||'0').replace(/[^0-9.-]+/g,""));
       const tTotal = 'Rp ' + (isNaN(rTotalRaw) ? '0' : rTotalRaw.toLocaleString('id-ID'));
 
-      tr.innerHTML = `
-        <td style="${st}">${dateStr}</td>
-        <td style="${st}">${esc(r.pelanggan||'—')}</td>
-        <td style="${st}${fw}">${esc(r.grade||'—')} ${r.keterangan ? ` <br><span style="font-size:0.8rem;opacity:0.7">${esc(r.keterangan)}</span>` : ''}</td>
-        <td style="${st}${ar}">${tButir}</td>
-        <td style="${st}${ar}">${r.kilo||0}</td>
-        <td style="${st}${ar}">${tHarga}</td>
-        <td style="${st}${ar}">${tTotal}</td>
-        ${aksiCell}
-      `;
+      tr.innerHTML = \`
+        <td style="\${st}">\${dateStr}</td>
+        <td style="\${st}">\${esc(r.pelanggan||'—')}</td>
+        <td style="\${st}\${fw}">\${esc(r.grade||'—')} \${r.keterangan ? \` <br><span style="font-size:0.8rem;opacity:0.7">\${esc(r.keterangan)}</span>\` : ''}</td>
+        <td style="\${st}\${ar}">\${tButir}</td>
+        <td style="\${st}\${ar}">\${r.kilo||0}</td>
+        <td style="\${st}\${ar}">\${tHarga}</td>
+        <td style="\${st}\${ar}">\${tTotal}</td>
+        \${aksiCell}
+      \`;
       tbody.appendChild(tr);
     });
   });
+  
+  if(!hasData){empty.style.display='block';} else {empty.style.display='none';}
 }
 
 async function hapusPenjualanItem(id, index){
@@ -759,3 +783,210 @@ async function importExcelPenjualan(e) {
   }
 }
 
+// ==========================================
+// HISTORI STOK HARIAN (TELUR)
+// ==========================================
+async function loadHistoriStokHarian() {
+  const tbody = document.getElementById('histori-stok-tbody');
+  const emptyBox = document.getElementById('histori-stok-empty');
+  const inputDari = document.getElementById('filter-stok-dari');
+  const inputSampai = document.getElementById('filter-stok-sampai');
+  if (!tbody || !emptyBox || !inputDari || !inputSampai) return;
+  
+  if (!inputDari.value || !inputSampai.value) {
+    const today = new Date();
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 6);
+    inputSampai.value = today.toISOString().split('T')[0];
+    inputDari.value = lastWeek.toISOString().split('T')[0];
+  }
+  
+  const startDateStr = inputDari.value;
+  const endDateStr = inputSampai.value;
+  if (!startDateStr || !endDateStr) return;
+  
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">⏳ Memuat data histori...</td></tr>';
+  emptyBox.style.display = 'none';
+  
+  try {
+    const startObj = new Date(startDateStr);
+    const endObj = new Date(endDateStr);
+    const prevDateObj = new Date(startObj);
+    prevDateObj.setDate(prevDateObj.getDate() - 1);
+    const prevDateStr = prevDateObj.toISOString().split('T')[0];
+    
+    // Stok awal H-1 dari startDate
+    const stokAwalObj = await getStokTelur(prevDateStr); 
+    let currentStok = {
+      'Normal': {butir: stokAwalObj.Normal?.butir||0, kilo: stokAwalObj.Normal?.kilo||0},
+      'Crem': {butir: stokAwalObj.Crem?.butir||0, kilo: stokAwalObj.Crem?.kilo||0},
+      'Bentes': {butir: stokAwalObj.Bentes?.butir||0, kilo: stokAwalObj.Bentes?.kilo||0},
+      'Ceplokan': {butir: stokAwalObj.Ceplokan?.butir||0, kilo: stokAwalObj.Ceplokan?.kilo||0}
+    };
+    
+    const inputs = await dbGetInput({dari: startDateStr, sampai: endDateStr});
+    const juals = await dbGetPenjualan({dari: startDateStr, sampai: endDateStr, limit: 9999});
+    const audits = typeof dbGetAudit === 'function' ? await dbGetAudit({dari: startDateStr, sampai: endDateStr, jenis_item: 'Telur'}) : [];
+    
+    // Group by Date and Grade
+    const dailyData = {}; 
+    const dateArray = [];
+    
+    for (let d = new Date(startObj); d <= endObj; d.setDate(d.getDate() + 1)) {
+      const dStr = d.toISOString().split('T')[0];
+      dateArray.push(dStr);
+      dailyData[dStr] = {};
+      ['Normal','Crem','Bentes','Ceplokan'].forEach(g => {
+        dailyData[dStr][g] = {
+           masuk: {b:0, k:0}, jual: {b:0, k:0}, waste: {b:0, k:0}, audit: {b:0, k:0, has:false}
+        };
+      });
+    }
+    
+    // Process Inputs (Masuk)
+    inputs.forEach(row => {
+      const dStr = row.tanggal;
+      if (!dailyData[dStr]) return;
+      const d = row.data; if(!d || !d.produksi) return;
+      
+      const mapping={'normal':'Normal','crem':'Crem','bentes_kering':'Bentes','ceplokan':'Ceplokan'};
+      Object.keys(mapping).forEach(g=>{
+        const G = mapping[g];
+        dailyData[dStr][G].masuk.b += parseInt(d.produksi[g]?.butir)||0;
+        dailyData[dStr][G].masuk.k += parseFloat(d.produksi[g]?.kilo)||0;
+      });
+      if(d.produksi.cream){
+        dailyData[dStr]['Crem'].masuk.b += parseInt(d.produksi.cream.butir)||0;
+        dailyData[dStr]['Crem'].masuk.k += parseFloat(d.produksi.cream.kilo)||0;
+      }
+      if(d.produksi.retak){
+        dailyData[dStr]['Bentes'].masuk.b += parseInt(d.produksi.retak.butir)||0;
+        dailyData[dStr]['Bentes'].masuk.k += parseFloat(d.produksi.retak.kilo)||0;
+      }
+    });
+    
+    // Process Sales & Waste
+    juals.forEach(j => {
+      const dStr = j.tanggal;
+      if (!dailyData[dStr]) return;
+      (j.rows || []).forEach(r => {
+        let G = r.grade;
+        let isWaste = false;
+        if (G === 'Cream') G = 'Crem';
+        if (G === 'Waste' || G === 'Busuk') {
+          G = 'Normal';
+          isWaste = true;
+        }
+        if (G === 'Retak') G = 'Bentes';
+        
+        if (dailyData[dStr][G]) {
+          if (isWaste) {
+            dailyData[dStr][G].waste.b += parseInt(r.butir)||0;
+            dailyData[dStr][G].waste.k += parseFloat(r.kilo)||0;
+          } else {
+            dailyData[dStr][G].jual.b += parseInt(r.butir)||0;
+            dailyData[dStr][G].jual.k += parseFloat(r.kilo)||0;
+          }
+        }
+      });
+    });
+    
+    // Process Audits
+    audits.forEach(a => {
+      const dStr = a.tanggal;
+      let G = a.grade;
+      if (G === 'Retak') G = 'Bentes';
+      if (G === 'Cream') G = 'Crem';
+      if (dailyData[dStr] && dailyData[dStr][G]) {
+        dailyData[dStr][G].audit.has = true;
+        dailyData[dStr][G].audit.b = parseFloat(a.selisih_butir)||0;
+        dailyData[dStr][G].audit.k = parseFloat(a.selisih_kilo)||0;
+      }
+    });
+    
+    // Render
+    let html = '';
+    const todayStr = new Date().toISOString().split('T')[0];
+    const fmt = (b, k) => `${b.toLocaleString('id-ID')} (${k.toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2})} kg)`;
+    
+    dateArray.forEach(dStr => {
+      if (dStr > todayStr) return; // Don't show future dates
+      
+      const grades = ['Normal','Crem','Bentes','Ceplokan'];
+      grades.forEach(g => {
+        const data = dailyData[dStr][g];
+        const hasActivity = data.masuk.b > 0 || data.jual.b > 0 || data.waste.b > 0 || data.audit.has;
+        
+        if (hasActivity || currentStok[g].butir > 0 || currentStok[g].kilo > 0) {
+          const awal = {b: currentStok[g].butir, k: currentStok[g].kilo};
+          
+          let sisaB = awal.b + data.masuk.b - data.jual.b - data.waste.b;
+          let sisaK = awal.k + data.masuk.k - data.jual.k - data.waste.k;
+          
+          if (data.audit.has) {
+            sisaB += data.audit.b;
+            sisaK += data.audit.k;
+          }
+          
+          sisaB = Math.max(0, sisaB);
+          sisaK = Math.max(0, sisaK);
+          
+          html += `<tr>
+            <td>${dStr}</td>
+            <td>${g}</td>
+            <td style="text-align:right">${fmt(awal.b, awal.k)}</td>
+            <td style="text-align:right; color:#10b981;">+${fmt(data.masuk.b, data.masuk.k)}</td>
+            <td style="text-align:right; color:#ef4444;">-${fmt(data.jual.b, data.jual.k)}</td>
+            <td style="text-align:right; color:#f59e0b;">-${fmt(data.waste.b, data.waste.k)}</td>
+            <td style="text-align:right; color:${data.audit.b < 0 ? '#ef4444' : '#10b981'}">${data.audit.has ? (data.audit.b > 0 ? '+' : '') + fmt(data.audit.b, data.audit.k) : '-'}</td>
+            <td style="text-align:right; font-weight:bold;">${fmt(sisaB, sisaK)}</td>
+          </tr>`;
+          
+          currentStok[g].butir = sisaB;
+          currentStok[g].kilo = sisaK;
+        }
+      });
+    });
+    
+    if (html === '') {
+      tbody.innerHTML = '';
+      emptyBox.style.display = 'block';
+    } else {
+      tbody.innerHTML = html;
+    }
+    
+  } catch(e) {
+    console.error(e);
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:red;">Gagal memuat data: ${e.message}</td></tr>`;
+  }
+}
+
+function exportHistoriStokHarian() {
+  const table = document.getElementById('tbl-histori-stok');
+  if (!table) return;
+  const monthInput = document.getElementById('filter-bulan-stok');
+  const filename = \`Histori_Stok_Telur_\${monthInput ? monthInput.value : 'export'}.csv\`;
+  
+  let csv = [];
+  const rows = table.querySelectorAll('tr');
+  for (let i = 0; i < rows.length; i++) {
+    const cols = rows[i].querySelectorAll('th, td');
+    if(cols.length === 0) continue;
+    
+    let rowData = [];
+    for (let j = 0; j < cols.length; j++) {
+      let text = cols[j].innerText.replace(/(\\r\\n|\\n|\\r)/gm, " ").replace(/"/g, '""');
+      rowData.push(\`"\${text}"\`);
+    }
+    csv.push(rowData.join(','));
+  }
+  
+  const csvFile = new Blob([csv.join('\\n')], { type: 'text/csv' });
+  const downloadLink = document.createElement("a");
+  downloadLink.download = filename;
+  downloadLink.href = window.URL.createObjectURL(csvFile);
+  downloadLink.style.display = "none";
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+}

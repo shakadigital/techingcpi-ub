@@ -132,7 +132,7 @@ function switchPage(name, _fromBack=false){
   if(name==='user')renderUserTable();
   if(name==='master')renderMaster();
   if(name==='gudang') { showGudangCards(); }
-  if(name==='penjualan'){populateAllPelangganSelects();renderStokTelur();loadHargaPasarJual();renderRiwayatJual();showPengambilanIntiSection();}
+  if(name==='penjualan'){populateAllPelangganSelects();renderStokTelur();loadHargaPasarJual();renderRiwayatJual();showPengambilanIntiSection();loadHistoriStokHarian();}
   if(name==='biaya'){initBiayaPage();}
   if(name==='riwayat')renderRiwayat();
   if(name==='bw')initBwPage();
