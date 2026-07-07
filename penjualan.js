@@ -6,34 +6,16 @@
 
 async function populatePelangganSelect(sel){
   if(!sel) return;
-  const pelanggan = await dbGetPelanggan();
   const prev = sel.value;
-  sel.innerHTML = '<option value="Warga">Warga</option>';
-  pelanggan.filter(p => p.active !== false).forEach(p => {
-    const o = document.createElement('option');
-    o.value = p.nama;
-    o.textContent = p.nama + (p.tipe ? ` (${p.tipe})` : '');
-    sel.appendChild(o);
-  });
-  // Opsi ketik manual
-  const oManual = document.createElement('option');
-  oManual.value = '__manual__';
-  oManual.textContent = '✏️ Ketik nama...';
-  sel.appendChild(oManual);
+  sel.innerHTML = `
+    <option value="Warga & Partai">Warga & Partai</option>
+    <option value="Bakul">Bakul</option>
+  `;
   if(prev) sel.value = prev;
 }
 
 function onPelangganChange(sel){
-  const card = sel.closest('.sale-row') || sel.closest('.sale-card');
-  const txt = card.querySelector('.pelanggan-text');
-  if(sel.value === '__manual__'){
-    txt.style.display = 'block';
-    txt.value = '';
-    txt.focus();
-  } else {
-    txt.style.display = 'none';
-    txt.value = '';
-  }
+  // Fungsi ini sudah tidak diperlukan karena input teks selalu muncul
 }
 
 function onGradeChange(sel){
@@ -51,10 +33,14 @@ function onGradeChange(sel){
 function getSalePelanggan(card){
   const sel = card.querySelector('.pelanggan-select');
   const txt = card.querySelector('.pelanggan-text');
-  if(!sel) return txt ? txt.value.trim() : '';
-  if(sel.value === '__manual__') return txt ? txt.value.trim() : '';
-  if(sel.value) return sel.value;
-  return txt ? txt.value.trim() : '';
+  
+  const kategori = sel ? sel.value : '';
+  const nama = txt ? txt.value.trim() : '';
+  
+  if(!nama) return ''; // Kosong (akan dicegat saat validasi)
+  if(!kategori) return nama;
+  
+  return `${nama} (${kategori})`;
 }
 
 async function populateAllPelangganSelects(){
@@ -69,9 +55,9 @@ function addSaleRow(){
   card.className='sale-card sale-row';
   card.innerHTML=
     '<button class="btn-del-card" onclick="removeSaleRow(this)">✕</button>'+
-    '<div class="sc-row"><div class="sc-field" style="grid-column:1/-1"><label>Pelanggan</label>'+
-      '<select class="pelanggan-select" onchange="onPelangganChange(this)"><option value="Warga">Warga</option></select>'+
-      '<input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>'+
+    '<div class="sc-row"><div class="sc-field" style="grid-column:1/-1"><label>Kategori & Nama Pelanggan <span style="color:red">*</span></label>'+
+      '<select class="pelanggan-select" style="margin-bottom:6px"><option value="Warga & Partai">Warga & Partai</option></select>'+
+      '<input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:block; width:100%"/>'+
     '</div></div>'+
     '<div class="sc-row three">'+
       '<div class="sc-field"><label>Grade</label><select class="grade-select" onchange="onGradeChange(this)"><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes</option><option>Ceplokan</option></select></div>'+
@@ -233,6 +219,10 @@ async function renderStokTelur(){
     '<tr class="total-row"><td>TOTAL</td><td>'+totalButirDisp+'</td><td>'+totalKiloDisp+' kg</td></tr>'+
     '</tbody></table>'+
     '<div style="font-size:.75rem;color:#888;margin-top:8px">Kumulatif produksi s.d. '+tgl+'. Angka biru adalah stok aktual dari audit.</div>';
+    
+  if (typeof renderHistoriStok7Hari === 'function') {
+    renderHistoriStok7Hari(tgl);
+  }
 }
 
 // ═══ HARGA PASAR DI HALAMAN JUAL ═══
@@ -320,6 +310,18 @@ async function savePenjualan(){
 
   if(!rows.length){showToast('⚠️ Isi minimal satu baris penjualan!');return;}
 
+  // Validasi: pastikan nama pelanggan diisi
+  let isNamaKosong = false;
+  document.querySelectorAll('.sale-row').forEach(r => {
+    const txt = r.querySelector('.pelanggan-text');
+    if(txt && !txt.value.trim()) isNamaKosong = true;
+  });
+
+  if(isNamaKosong){
+    showToast('⚠️ Nama pelanggan wajib diisi!');
+    return;
+  }
+
   // Validasi setiap baris
   for(let i=0;i<rows.length;i++){
     const r=rows[i];
@@ -385,6 +387,7 @@ async function saveWasteOnly() {
     
     await dbSavePenjualan({tanggal:tgl,user_input:currentUser?currentUser.username:'',rows:[row],grand_total:0});
     await renderStokTelur();await renderRiwayatJual();
+    if(typeof renderRiwayatWaste === 'function') await renderRiwayatWaste();
     
     document.getElementById('waste_butir').value=0;
     document.getElementById('waste_kilo').value=0;
@@ -530,6 +533,7 @@ async function hapusPenjualanItem(id, index){
 
     await renderStokTelur();
     await renderRiwayatJual();
+    if(typeof renderRiwayatWaste === 'function') await renderRiwayatWaste();
     showToast('✅ Item penjualan dihapus!');
   }catch(e){showToast('❌ Gagal menghapus: '+e.message);}
 }
@@ -1022,4 +1026,229 @@ function exportHistoriStokHarian() {
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);
+}
+
+// ==========================================
+// HISTORI STOK 7 HARI TERAKHIR (KHUSUS TAB STOK)
+// ==========================================
+async function renderHistoriStok7Hari(endDateStr) {
+  const tbody = document.getElementById('histori-stok-7hari-tbody');
+  if (!tbody) return;
+  
+  if (!endDateStr) {
+    endDateStr = document.getElementById('jual-tanggal').value || new Date().toISOString().split('T')[0];
+  }
+  
+  const endObj = new Date(endDateStr);
+  const startObj = new Date(endObj);
+  startObj.setDate(startObj.getDate() - 6);
+  const startDateStr = startObj.toISOString().split('T')[0];
+  
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">⏳ Memuat histori 7 hari...</td></tr>';
+  
+  try {
+    const prevDateObj = new Date(startObj);
+    prevDateObj.setDate(prevDateObj.getDate() - 1);
+    const prevDateStr = prevDateObj.toISOString().split('T')[0];
+    
+    // Stok awal H-1
+    const stokAwalObj = await getStokTelur(prevDateStr); 
+    let currentStok = {
+      'Normal': {butir: stokAwalObj.Normal?.butir||0, kilo: stokAwalObj.Normal?.kilo||0},
+      'Crem': {butir: stokAwalObj.Crem?.butir||0, kilo: stokAwalObj.Crem?.kilo||0},
+      'Bentes': {butir: stokAwalObj.Bentes?.butir||0, kilo: stokAwalObj.Bentes?.kilo||0},
+      'Ceplokan': {butir: stokAwalObj.Ceplokan?.butir||0, kilo: stokAwalObj.Ceplokan?.kilo||0}
+    };
+    
+    const inputs = await dbGetInput({dari: startDateStr, sampai: endDateStr});
+    const juals = await dbGetPenjualan({dari: startDateStr, sampai: endDateStr, limit: 9999});
+    const audits = typeof dbGetAudit === 'function' ? await dbGetAudit({dari: startDateStr, sampai: endDateStr, jenis_item: 'Telur'}) : [];
+    
+    const dailyData = {}; 
+    const dateArray = [];
+    
+    for (let d = new Date(startObj); d <= endObj; d.setDate(d.getDate() + 1)) {
+      const dStr = d.toISOString().split('T')[0];
+      dateArray.push(dStr);
+      dailyData[dStr] = {};
+      ['Normal','Crem','Bentes','Ceplokan'].forEach(g => {
+        dailyData[dStr][g] = {
+           masuk: {b:0, k:0}, jual: {b:0, k:0}, waste: {b:0, k:0}, audit: {b:0, k:0, has:false}
+        };
+      });
+    }
+    
+    // Process Inputs (Masuk)
+    inputs.forEach(row => {
+      const dStr = row.tanggal;
+      if (!dailyData[dStr]) return;
+      const d = row.data; if(!d || !d.produksi) return;
+      
+      const mapping={'normal':'Normal','crem':'Crem','bentes_kering':'Bentes','ceplokan':'Ceplokan'};
+      Object.keys(mapping).forEach(g=>{
+        const G = mapping[g];
+        dailyData[dStr][G].masuk.b += parseInt(d.produksi[g]?.butir)||0;
+        dailyData[dStr][G].masuk.k += parseFloat(d.produksi[g]?.kilo)||0;
+      });
+      if(d.produksi.cream){
+        dailyData[dStr]['Crem'].masuk.b += parseInt(d.produksi.cream.butir)||0;
+        dailyData[dStr]['Crem'].masuk.k += parseFloat(d.produksi.cream.kilo)||0;
+      }
+      if(d.produksi.retak){
+        dailyData[dStr]['Bentes'].masuk.b += parseInt(d.produksi.retak.butir)||0;
+        dailyData[dStr]['Bentes'].masuk.k += parseFloat(d.produksi.retak.kilo)||0;
+      }
+    });
+    
+    // Process Sales & Waste
+    juals.forEach(j => {
+      const dStr = j.tanggal;
+      if (!dailyData[dStr]) return;
+      (j.rows || []).forEach(r => {
+        let G = r.grade;
+        let isWaste = false;
+        if (G === 'Cream') G = 'Crem';
+        if (G === 'Waste' || G === 'Busuk') {
+          G = 'Normal';
+          isWaste = true;
+        }
+        if (G === 'Retak') G = 'Bentes';
+        
+        if (dailyData[dStr][G]) {
+          if (isWaste) {
+            dailyData[dStr][G].waste.b += parseInt(r.butir)||0;
+            dailyData[dStr][G].waste.k += parseFloat(r.kilo)||0;
+          } else {
+            dailyData[dStr][G].jual.b += parseInt(r.butir)||0;
+            dailyData[dStr][G].jual.k += parseFloat(r.kilo)||0;
+          }
+        }
+      });
+    });
+    
+    // Process Audits
+    audits.forEach(a => {
+      const dStr = a.tanggal;
+      let G = a.grade;
+      if (G === 'Retak') G = 'Bentes';
+      if (G === 'Cream') G = 'Crem';
+      if (dailyData[dStr] && dailyData[dStr][G]) {
+        dailyData[dStr][G].audit.has = true;
+        dailyData[dStr][G].audit.b = parseFloat(a.selisih_butir)||0;
+        dailyData[dStr][G].audit.k = parseFloat(a.selisih_kilo)||0;
+      }
+    });
+    
+    let html = '';
+    const grades = ['Normal','Crem','Bentes','Ceplokan'];
+    
+    const fmt = (val, isKilo) => {
+      if (isKilo) return val.toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2});
+      return val.toLocaleString('id-ID');
+    };
+    
+    // Iterasi secara terbalik (descending) jika ingin tanggal terbaru di atas. 
+    // Tapi karena tabel histori biasa urut naik, kita biarkan ascending.
+    dateArray.forEach(dStr => {
+      // Calculate closing stock for the day
+      grades.forEach(g => {
+        const data = dailyData[dStr][g];
+        const awal = {b: currentStok[g].butir, k: currentStok[g].kilo};
+        let sisaB = awal.b + data.masuk.b - data.jual.b - data.waste.b;
+        let sisaK = awal.k + data.masuk.k - data.jual.k - data.waste.k;
+        if (data.audit.has) {
+          sisaB += data.audit.b;
+          sisaK += data.audit.k;
+        }
+        currentStok[g].butir = sisaB;
+        currentStok[g].kilo = sisaK;
+      });
+      
+      // Build Row
+      html += `<tr>`;
+      html += `<td style="white-space:nowrap">${dStr}</td>`;
+      grades.forEach(g => {
+        const s = currentStok[g];
+        // Jika minus, beri warna merah, jika 0 beri warna abu-abu
+        const colB = s.butir < 0 ? 'color:#dc2626;font-weight:bold' : (s.butir === 0 ? 'color:#aaa' : 'color:#1b4332;font-weight:600');
+        const colK = s.kilo < 0 ? 'color:#dc2626;font-weight:bold' : (s.kilo === 0 ? 'color:#aaa' : '');
+        html += `<td style="text-align:right; ${colB}">${fmt(s.butir, false)}</td>`;
+        html += `<td style="text-align:right; ${colK}">${fmt(s.kilo, true)}</td>`;
+      });
+      html += `</tr>`;
+    });
+    
+    if (!html) html = '<tr><td colspan="9" style="text-align:center">Belum ada histori di rentang 7 hari ini.</td></tr>';
+    tbody.innerHTML = html;
+    
+  } catch(e) {
+    console.error('Error renderHistoriStok7Hari:', e);
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:red">Gagal memuat histori.</td></tr>';
+  }
+}
+
+// ==========================================
+// RIWAYAT BUANG (WASTE)
+// ==========================================
+async function renderRiwayatWaste() {
+  const inputBulan = document.getElementById('filter-waste-bulan');
+  
+  if (inputBulan && !inputBulan.value) {
+    const today = new Date();
+    inputBulan.value = today.toISOString().substring(0, 7); // Format YYYY-MM
+  }
+  
+  const filter = {};
+  if (inputBulan && inputBulan.value) {
+    // Cari dari awal bulan sampai akhir bulan
+    const tglArr = inputBulan.value.split('-');
+    const tahun = parseInt(tglArr[0], 10);
+    const bulan = parseInt(tglArr[1], 10);
+    const lastDay = new Date(tahun, bulan, 0).getDate();
+    filter.dari = `${inputBulan.value}-01`;
+    filter.sampai = `${inputBulan.value}-${lastDay.toString().padStart(2, '0')}`;
+  }
+  filter.limit = 9999;
+  
+  const all = await dbGetPenjualan(filter);
+  const tbody = document.getElementById('riwayat-waste-tbody');
+  const empty = document.getElementById('riwayat-waste-empty');
+  if (!tbody || !empty) return;
+  
+  tbody.innerHTML = '';
+  let hasData = false;
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  
+  all.forEach(rec => {
+    const rows = rec.rows || [];
+    rows.forEach((r, i) => {
+      // Hanya ambil yang Waste
+      if (r.grade !== 'Waste') return;
+      
+      hasData = true;
+      const tr = document.createElement('tr');
+      
+      const canEdit = isAdmin || ['supervisor', 'staff'].includes(currentUser?.role);
+      const canDelete = isAdmin;
+      
+      let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
+      if (canDelete) aksiCell += `<button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus waste ini">🗑️</button>`;
+      aksiCell += '</td>';
+
+      const dateStr = fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2));
+      const tButir = (r.butir||0).toLocaleString('id-ID');
+      const tKilo = (r.kilo||0).toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2});
+      
+      tr.innerHTML = `
+        <td style="white-space:nowrap;font-size:0.85rem">${dateStr}</td>
+        <td style="text-align:right">${tButir}</td>
+        <td style="text-align:right">${tKilo}</td>
+        <td>${r.keterangan || '-'}</td>
+        ${aksiCell}
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+  
+  if(!hasData){empty.style.display='block';} else {empty.style.display='none';}
 }

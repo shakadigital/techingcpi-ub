@@ -117,16 +117,98 @@
   </div>
 </div>
 
+<!-- DESKTOP SIDEBAR & LAYOUT WRAPPER -->
+<div id="desktop-layout">
+  <aside id="desktop-sidebar">
+    <div class="sidebar-header">
+      <div class="logo-wrap">
+        <img src="icon/logo-app.png" alt="Logo"/>
+        <div class="logo-text">
+          <h2>Teaching</h2>
+          <span>cpi-ub <small style="font-size:0.6rem; color:#a5d6a7; font-weight:normal; margin-left:4px;">v4.0.1</small></span>
+        </div>
+      </div>
+      <button class="btn-collapse" onclick="toggleSidebar()" title="Kecilkan/Perbesar Sidebar">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item" onclick="navigateAndScroll('home')">
+        <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+      </a>
+      
+      <div class="nav-group">
+        <a href="#" class="nav-item has-sub" onclick="toggleSubmenu(this, 'input')">
+          <span class="nav-icon">📋</span><span class="nav-label">Input Harian</span><span class="nav-arrow">▾</span>
+        </a>
+        <div class="submenu">
+          <a href="#" class="sub-item" onclick="navigateAndScroll('input', null)">Data Umum</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('input', 'catatan')">Catatan Harian</a>
+        </div>
+      </div>
+      
+      <div class="nav-group">
+        <a href="#" class="nav-item has-sub" onclick="toggleSubmenu(this, 'penjualan')">
+          <span class="nav-icon">🥚</span><span class="nav-label">Penjualan Telur</span><span class="nav-arrow">▾</span>
+        </a>
+        <div class="submenu">
+          <a href="#" class="sub-item" onclick="navigateAndScroll('penjualan', 'stok-telur-body', true)">Stok Telur</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('penjualan', 'sale-tbody', true)">Transaksi Jual</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('penjualan', 'waste-card-penjualan', true)">Telur Dibuang (Waste)</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('penjualan', 'riwayat-jual-tbody', true)">Riwayat Penjualan</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('penjualan', 'tbl-histori-stok', true)">Histori Stok</a>
+        </div>
+      </div>
+      
+      <div class="nav-group">
+        <a href="#" class="nav-item has-sub" onclick="toggleSubmenu(this, 'gudang')">
+          <span class="nav-icon">📦</span><span class="nav-label">Gudang</span><span class="nav-arrow">▾</span>
+        </a>
+        <div class="submenu">
+          <a href="#" class="sub-item" onclick="navigateAndScroll('gudang', 'pakan', true)">Pakan</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('gudang', 'vitamin', true)">Vitamin</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('gudang', 'obat', true)">Obat</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('gudang', 'vaksin', true)">Vaksin</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('gudang', 'desinfektan', true)">Desinfektan</a>
+          <a href="#" class="sub-item" onclick="navigateAndScroll('gudang', 'lainnya', true)">Lain-lain</a>
+        </div>
+      </div>
+
+      <a href="#" class="nav-item" onclick="navigateAndScroll('biaya')">
+        <span class="nav-icon">💰</span><span class="nav-label">Biaya & Kas</span>
+      </a>
+
+      <a href="#" class="nav-item" onclick="navigateAndScroll('laporan')">
+        <span class="nav-icon">📊</span><span class="nav-label">Laporan</span>
+      </a>
+      
+      <a href="#" class="nav-item" onclick="navigateAndScroll('riwayat')">
+        <span class="nav-icon">🗂️</span><span class="nav-label">Riwayat Input</span>
+      </a>
+
+      <a href="#" class="nav-item" onclick="navigateAndScroll('bw')">
+        <span class="nav-icon">⚖️</span><span class="nav-label">Berat Badan (BW)</span>
+      </a>
+
+      <a href="#" class="nav-item" onclick="navigateAndScroll('master')">
+        <span class="nav-icon">🗃️</span><span class="nav-label">Master Data</span>
+      </a>
+      
+    </nav>
+  </aside>
+
 <!-- APP -->
 <div id="app">
   <header>
     <div class="hdr-left">
       <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none" title="Kembali">‹</button>
-      <img src="icon/logo-app.png" alt="TF-UB" style="width:32px;height:32px;cursor:pointer;border-radius:6px" onclick="switchPage('home')" title="Kembali ke Home"/>
-      <div>
-        <h1>Teaching <span style="font-size:0.6rem;background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">cpi-ub</span></h1>
+      <img src="icon/logo-app.png" alt="TF-UB" style="width:32px;height:32px;cursor:pointer;border-radius:6px" onclick="switchPage('home')" title="Kembali ke Home" id="hdr-logo"/>
+      <div id="hdr-title-box">
+        <h1 id="hdr-title">Teaching <span style="font-size:0.6rem;background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">cpi-ub</span></h1>
         <div class="sub" id="hdr-kandang">—</div>
       </div>
+      <h1 id="hdr-page-title" style="display:none;font-size:1.15rem;font-weight:700;margin:0;">Dashboard</h1>
       <span id="offline-badge" class="offline-badge" style="display:none">OFFLINE</span>
     </div>
     <div class="hdr-right">
@@ -441,17 +523,52 @@
         <input type="date" id="jual-tanggal" onchange="renderStokTelur()"/>
       </div>
 
-      <!-- Stok Telur Kumulatif -->
-      <div class="card">
-        <div class="card-header">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="num">📦</div><h2>Stok Telur Tersedia</h2>
+      <!-- P-TAB: Stok Telur -->
+      <div class="ptab-group" data-ptab="stok-telur-body">
+        <!-- Stok Telur Kumulatif -->
+        <div class="card">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="num">📦</div><h2>Stok Telur Tersedia</h2>
+            </div>
+          </div>
+          <div class="card-body" id="stok-telur-body">
+            <div style="color:#aaa;font-size:.85rem;text-align:center;padding:8px 0">Pilih tanggal untuk melihat stok.</div>
           </div>
         </div>
-        <div class="card-body" id="stok-telur-body">
-          <div style="color:#aaa;font-size:.85rem;text-align:center;padding:8px 0">Pilih tanggal untuk melihat stok.</div>
+
+        <!-- NEW: Histori Stok 7 Hari Terakhir -->
+        <div class="card">
+          <div class="card-header"><div class="num">📅</div><h2>Histori Stok (7 Hari Terakhir)</h2></div>
+          <div class="card-body">
+            <div style="overflow-x:auto">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th rowspan="2" style="vertical-align:middle">Tanggal</th>
+                    <th colspan="2" style="text-align:center">Normal</th>
+                    <th colspan="2" style="text-align:center">Crem</th>
+                    <th colspan="2" style="text-align:center">Bentes</th>
+                    <th colspan="2" style="text-align:center">Ceplokan</th>
+                  </tr>
+                  <tr>
+                    <th style="text-align:right">Butir</th><th style="text-align:right">Kilo</th>
+                    <th style="text-align:right">Butir</th><th style="text-align:right">Kilo</th>
+                    <th style="text-align:right">Butir</th><th style="text-align:right">Kilo</th>
+                    <th style="text-align:right">Butir</th><th style="text-align:right">Kilo</th>
+                  </tr>
+                </thead>
+                <tbody id="histori-stok-7hari-tbody">
+                  <tr><td colspan="9" style="text-align:center">Pilih rentang tanggal atau memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      </div> <!-- End P-TAB Stok -->
+
+      <!-- P-TAB: Transaksi Jual -->
+      <div class="ptab-group" data-ptab="sale-tbody">
 
       <!-- Harga Pasar Hari Ini -->
       <div class="card">
@@ -482,8 +599,8 @@
         <div class="card-body">
           <div class="info-box" style="margin-bottom: 12px; padding: 10px; border-radius: 6px; text-align: left; font-size: 0.85rem; color: #555; background: #fff8e1; border-left: 4px solid #ffc107;">
             <strong>Ketentuan Harga Tambahan:</strong><br/>
-            1. Eceran / Normal : DO + 1.000/kg<br/>
-            2. Bakul / Normal : DO + 300/kg<br/>
+            1. Warga & Partai / Normal : DO + 1.000/kg<br/>
+            2. Bakul / Normal : DO + 500/kg<br/>
             3. Crem : DO - 1.500/kg<br/>
             4. Bentes : DO - 5.000/kg<br/>
             5. Ceplokan : 4.000 / 5btr
@@ -492,14 +609,15 @@
             <div class="sale-card sale-row">
               <button class="btn-del-card" onclick="removeSaleRow(this)">✕</button>
               <div class="sc-row">
-                <div class="sc-field" style="grid-column:1/-1"><label>Pelanggan</label>
-                  <select class="pelanggan-select" onchange="onPelangganChange(this)"><option value="">-- Pilih Pelanggan --</option></select>
-                  <input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:none;margin-top:6px"/>
+                <div class="sc-field" style="grid-column:1/-1">
+                  <label>Kategori & Nama Pelanggan <span style="color:red">*</span></label>
+                  <select class="pelanggan-select" style="margin-bottom:6px"><option value="">-- Pilih Kategori --</option></select>
+                  <input type="text" class="pelanggan-text" placeholder="Ketik nama pelanggan..." style="display:block; width:100%"/>
                 </div>
               </div>
               <div class="sc-row three">
                 <div class="sc-field"><label>Grade</label>
-                  <select class="grade-select" onchange="onGradeChange(this)"><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Retak</option><option>Bentes</option><option>Ceplokan</option></select>
+                  <select class="grade-select" onchange="onGradeChange(this)"><option value="">-- Grade --</option><option>Normal</option><option>Crem</option><option>Bentes</option><option>Ceplokan</option></select>
                 </div>
                 <div class="sc-field"><label>Butir</label><input type="number" min="0" placeholder="0" oninput="calcTotal(this)"/></div>
                 <div class="sc-field"><label>Kilo (kg)</label><input type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal(this)"/></div>
@@ -540,8 +658,12 @@
         </div>
       </div>
 
-      <!-- Telur Dibuang / Waste -->
-      <div class="card" id="waste-card-penjualan">
+      </div> <!-- End P-TAB Transaksi Jual -->
+
+      <!-- P-TAB: Telur Dibuang (Waste) -->
+      <div class="ptab-group" data-ptab="waste-card-penjualan">
+        <!-- Telur Dibuang / Waste -->
+        <div class="card" id="waste-card-penjualan">
         <div class="card-header"><div class="num">🗑️</div><h2>Telur Dibuang (Waste)</h2></div>
         <div class="card-body">
           <div class="row">
@@ -555,19 +677,48 @@
         </div>
       </div>
 
-      <!-- Riwayat -->
+      <!-- Riwayat Waste -->
       <div class="card">
         <div class="card-header">
-          <div class="num">📊</div>
-          <h2>Riwayat Penjualan</h2>
-          <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <input type="date" id="filter-riwayat-dari" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="renderRiwayatJual()" autocomplete="bday" />
-            <span style="font-size:0.8rem;color:#888;">s/d</span>
-            <input type="date" id="filter-riwayat-sampai" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="renderRiwayatJual()" autocomplete="bday" />
-            <button class="btn-export" onclick="exportRiwayatJual()" style="display:none;" id="btn-export-jual">⬇️ Download</button>
+          <div class="num">📜</div><h2>Riwayat Buang (Waste)</h2>
+          <div style="margin-left:auto;">
+            <input type="month" id="filter-waste-bulan" class="inp-plain" onchange="renderRiwayatWaste()" />
           </div>
         </div>
         <div class="card-body">
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Tanggal</th><th style="text-align:right">Butir</th><th style="text-align:right">Kilo</th><th>Keterangan</th><th></th></tr></thead>
+              <tbody id="riwayat-waste-tbody"></tbody>
+            </table>
+          </div>
+          <div id="riwayat-waste-empty" class="info-box" style="display:none">Belum ada riwayat waste.</div>
+        </div>
+      </div>
+      </div> <!-- End P-TAB Waste -->
+
+      <!-- P-TAB: Riwayat Penjualan -->
+      <div class="ptab-group" data-ptab="riwayat-jual-tbody">
+        <!-- Riwayat -->
+        <div class="card">
+        <div class="card-header">
+          <div class="num">📊</div>
+          <h2>Riwayat Penjualan</h2>
+        </div>
+        <div class="card-body">
+          <div class="row" style="margin-bottom:12px; align-items:flex-end;">
+            <div class="field" style="flex:1">
+              <label style="font-size:0.75rem; color:#666;">Dari Tanggal</label>
+              <input type="date" id="filter-riwayat-dari" onchange="renderRiwayatJual()" autocomplete="bday" />
+            </div>
+            <div class="field" style="flex:1">
+              <label style="font-size:0.75rem; color:#666;">Sampai Tanggal</label>
+              <input type="date" id="filter-riwayat-sampai" onchange="renderRiwayatJual()" autocomplete="bday" />
+            </div>
+            <div class="field" style="flex:auto">
+              <button class="btn-export" onclick="exportRiwayatJual()" style="display:none; width:100%; height:38px;" id="btn-export-jual">⬇️ Download</button>
+            </div>
+          </div>
           <div style="overflow-x:auto">
             <table class="tbl"><thead><tr><th>Tanggal</th><th>Pelanggan</th><th>Grade</th><th style="text-align:right">Butir</th><th style="text-align:right">Kilo</th><th style="text-align:right">Harga/kg</th><th style="text-align:right">Total</th><th></th></tr></thead>
             <tbody id="riwayat-jual-tbody"></tbody></table>
@@ -575,21 +726,38 @@
           <div id="riwayat-jual-empty" class="info-box" style="display:none">Belum ada riwayat penjualan.</div>
         </div>
       </div>
-      <!-- Histori Stok Harian -->
-      <div class="card">
+      </div> <!-- End P-TAB Riwayat -->
+
+      <!-- P-TAB: Histori Stok Harian -->
+      <div class="ptab-group" data-ptab="tbl-histori-stok">
+        <!-- Histori Stok Harian -->
+        <div class="card">
         <div class="card-header">
           <div class="num">📦</div>
           <h2>Histori Stok Harian</h2>
-          <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <input type="date" id="filter-stok-dari" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="loadHistoriStokHarian()" autocomplete="bday" />
-            <span style="font-size:0.8rem;color:#888;">s/d</span>
-            <input type="date" id="filter-stok-sampai" class="inp-plain" style="padding:4px 8px; font-size:0.8rem;" onchange="loadHistoriStokHarian()" autocomplete="bday" />
-            <button class="btn-export" onclick="exportHistoriStokHarian()" style="background:#10b981;font-size:0.8rem;padding:4px 8px;">📥 Excel</button>
-            <button class="btn-export" onclick="openRiwayatAuditModal('Telur')" style="background:#0284c7;font-size:0.8rem;padding:4px 8px;" id="btn-riwayat-audit-telur">📋 Histori Audit</button>
-            <button class="btn-export" onclick="openAuditModal('Telur')" style="background:#f59e0b;font-size:0.8rem;padding:4px 8px;" id="btn-audit-telur">⚙️ Audit Stok</button>
-          </div>
         </div>
         <div class="card-body">
+          <div class="row" style="margin-bottom:12px; align-items:flex-end;">
+            <div class="field" style="flex:1">
+              <label style="font-size:0.75rem; color:#666;">Dari Tanggal</label>
+              <input type="date" id="filter-stok-dari" onchange="loadHistoriStokHarian()" autocomplete="bday" />
+            </div>
+            <div class="field" style="flex:1">
+              <label style="font-size:0.75rem; color:#666;">Sampai Tanggal</label>
+              <input type="date" id="filter-stok-sampai" onchange="loadHistoriStokHarian()" autocomplete="bday" />
+            </div>
+          </div>
+          <div class="row" style="margin-bottom:12px;">
+            <div class="field" style="flex:1">
+              <button class="btn-export" onclick="exportHistoriStokHarian()" style="background:#10b981; width:100%; height:38px; border-radius:6px; font-weight:600;">📥 Excel</button>
+            </div>
+            <div class="field" style="flex:1">
+              <button class="btn-export" onclick="openRiwayatAuditModal('Telur')" style="background:#0284c7; width:100%; height:38px; border-radius:6px; font-weight:600;" id="btn-riwayat-audit-telur">📋 Histori Audit</button>
+            </div>
+            <div class="field" style="flex:1">
+              <button class="btn-export" onclick="openAuditModal('Telur')" style="background:#f59e0b; width:100%; height:38px; border-radius:6px; font-weight:600;" id="btn-audit-telur">⚙️ Audit</button>
+            </div>
+          </div>
           <div style="overflow-x:auto">
             <table class="tbl" id="tbl-histori-stok">
               <thead>
@@ -611,6 +779,7 @@
           <div id="histori-stok-empty" class="info-box" style="display:none">Pilih bulan atau belum ada data.</div>
         </div>
       </div>
+      </div> <!-- End P-TAB Histori Stok -->
     </div>
   </div>
 
@@ -1323,11 +1492,17 @@
           <div class="card-body">
             <div style="overflow-x:auto">
               <table class="tbl">
-                <thead><tr><th>Tgl & Kdg</th><th>Populasi</th><th>Deplesi</th><th>Prod. (butir)</th><th>Prod. (kg)</th><th>HDP</th><th>Pakan (kg)</th><th>Air (L)</th><th id="th-harian-user" style="display:none">Diinput Oleh</th><th></th></tr></thead>
+                <thead><tr><th>Tanggal</th><th>Kandang</th><th>Umur</th><th>Populasi</th><th>Deplesi</th><th>Prod. (butir)</th><th>Prod. (kg)</th><th>HDP</th><th>Pakan (kg)</th><th>Air (L)</th><th id="th-harian-user" style="display:none">Diinput Oleh</th><th></th></tr></thead>
                 <tbody id="r-harian-tbody"></tbody>
               </table>
             </div>
             <div id="r-harian-empty" class="info-box" style="display:none">Belum ada data input harian.</div>
+            
+            <div id="r-harian-pagination" style="display:none; justify-content:space-between; align-items:center; margin-top:16px;">
+              <button onclick="prevRHarianPage()" style="padding:6px 12px; border:1px solid #ccc; background:#fff; border-radius:6px; cursor:pointer; font-weight:600;">⬅️ Prev</button>
+              <span id="r-harian-page-info" style="font-size:0.85rem; color:#555; font-weight:600;">Hal 1 / 1</span>
+              <button onclick="nextRHarianPage()" style="padding:6px 12px; border:1px solid #ccc; background:#fff; border-radius:6px; cursor:pointer; font-weight:600;">Next ➡️</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2134,6 +2309,8 @@
   </div>
 </div>
 
+</div> <!-- END #desktop-layout -->
+
 <script src="auth.js"></script>
 <script src="input_harian.js"></script>
 
@@ -2202,7 +2379,6 @@
           <option value="">-- Grade --</option>
           <option>Normal</option>
           <option>Crem</option>
-          <option>Retak</option>
           <option>Bentes</option>
           <option>Ceplokan</option>
           <option>Busuk</option>

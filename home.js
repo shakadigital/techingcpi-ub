@@ -21,14 +21,22 @@ async function renderHome(){
   // Hitung total kilo terjual hari ini untuk % terjual
   let totalKiloJual=0;
   juals.forEach(j=>(j.rows||[]).forEach(r=>{totalKiloJual+=parseFloat(r.kilo)||0;}));
-  // Harga pasar dari input manual — fallback ke hari terdekat sebelumnya
-  const hargaPasarData=await dbGetHargaPasar();
-  let hargaRata=0, hargaPasarTgl=null;
-  if(hargaPasarData[today]){
-    hargaRata=parseFloat(hargaPasarData[today])||0;
-    hargaPasarTgl=today;
-  } else {
-    const tglLalu=Object.keys(hargaPasarData).filter(t=>t<today).sort().pop();
+  // Harga pasar cari dari input_harian terlebih dahulu (paling update)
+  let hargaRata = 0, hargaPasarTgl = null;
+  const recentInputs = await dbGetInput({});
+  for (const row of recentInputs) {
+    if (row.data && row.data.harga_pasar && parseFloat(row.data.harga_pasar) > 0) {
+      if (!hargaPasarTgl || row.tanggal >= hargaPasarTgl) {
+        hargaRata = parseFloat(row.data.harga_pasar);
+        hargaPasarTgl = row.tanggal;
+      }
+    }
+  }
+
+  // Fallback ke dbGetHargaPasar jika masih 0
+  if(hargaRata === 0){
+    const hargaPasarData=await dbGetHargaPasar();
+    const tglLalu=Object.keys(hargaPasarData).filter(t=>t<=today).sort().pop();
     if(tglLalu){ hargaRata=parseFloat(hargaPasarData[tglLalu])||0; hargaPasarTgl=tglLalu; }
   }
   const hpEl=document.getElementById('hs-harga-pasar');
@@ -109,45 +117,85 @@ async function renderHargaPasarChart() {
   const hargaMap = {};
   inputs.forEach(r => {
     const hp = parseFloat(r.data?.harga_pasar) || 0;
-    if(hp > 0 && !hargaMap[r.tanggal]) hargaMap[r.tanggal] = hp;
+    if(hp > 0 && (!hargaMap[r.tanggal] || hp > hargaMap[r.tanggal])) hargaMap[r.tanggal] = hp;
   });
 
-  const dates = Object.keys(hargaMap).sort();
+  // Ambil data penjualan untuk rata-rata aktual
+  const penjualan = await dbGetPenjualan({dari, sampai});
+  const penjualanMap = {};
+  penjualan.forEach(p => {
+    let totRp = 0, totKg = 0;
+    (p.rows || []).forEach(r => {
+      totRp += (parseFloat(r.kilo) || 0) * (parseFloat(r.harga) || 0);
+      totKg += parseFloat(r.kilo) || 0;
+    });
+    if(totKg > 0) {
+      if(!penjualanMap[p.tanggal]) penjualanMap[p.tanggal] = {rp: 0, kg: 0};
+      penjualanMap[p.tanggal].rp += totRp;
+      penjualanMap[p.tanggal].kg += totKg;
+    }
+  });
+
+  // Gabungkan semua tanggal (dari input_harian maupun penjualan)
+  const allDates = new Set([...Object.keys(hargaMap), ...Object.keys(penjualanMap)]);
+  const dates = Array.from(allDates).sort();
+
   if(dates.length < 2) {
     document.getElementById('home-harga-info').textContent = 'Belum cukup data harga pasar (min. 2 hari)';
     return;
   }
 
   const labels = dates.map(d => d.slice(5)); // MM-DD
-  const data = dates.map(d => hargaMap[d]);
-  const lastHarga = data[data.length-1];
-  const prevHarga = data[data.length-2];
-  const diff = lastHarga - prevHarga;
+  const dataPasar = dates.map(d => hargaMap[d] || null);
+  const dataAktual = dates.map(d => {
+    if(penjualanMap[d] && penjualanMap[d].kg > 0) return Math.round(penjualanMap[d].rp / penjualanMap[d].kg);
+    return null;
+  });
 
-  document.getElementById('home-harga-info').textContent =
-    `Terakhir: Rp ${lastHarga.toLocaleString('id-ID')}/kg ${diff>0?'▲':'▼'} ${Math.abs(diff).toLocaleString('id-ID')}`;
+  // Cari last/prev untuk text label (hanya membandingkan Harga Pasar)
+  const hpDates = dates.filter(d => hargaMap[d]);
+  let diffText = '';
+  if(hpDates.length >= 2) {
+    const lastHarga = hargaMap[hpDates[hpDates.length-1]];
+    const prevHarga = hargaMap[hpDates[hpDates.length-2]];
+    const diff = lastHarga - prevHarga;
+    diffText = `Terakhir (Pasar): Rp ${lastHarga.toLocaleString('id-ID')}/kg ${diff>0?'▲':'▼'} ${Math.abs(diff).toLocaleString('id-ID')}`;
+  } else if (hpDates.length === 1) {
+    diffText = `Terakhir (Pasar): Rp ${hargaMap[hpDates[0]].toLocaleString('id-ID')}/kg`;
+  }
+  document.getElementById('home-harga-info').textContent = diffText;
 
   if(window._chartHargaPasar) window._chartHargaPasar.destroy();
   window._chartHargaPasar = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
-      datasets: [{
-        label: 'Harga Pasar (Rp/kg)',
-        data,
-        borderColor: '#2d6a4f',
-        backgroundColor: 'rgba(45,106,79,.1)',
-        fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#2d6a4f'
-      }]
+      datasets: [
+        {
+          label: 'Harga Pasar',
+          data: dataPasar,
+          borderColor: '#2d6a4f',
+          backgroundColor: 'rgba(45,106,79,.1)',
+          fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#2d6a4f', spanGaps: true
+        },
+        {
+          label: 'Aktual Penjualan',
+          data: dataAktual,
+          borderColor: '#0284c7', // Biru
+          backgroundColor: 'transparent',
+          borderDash: [5, 5],
+          fill: false, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#0284c7', spanGaps: true
+        }
+      ]
     },
     options: {
       responsive: true,
       plugins: { 
-        legend: { display: false },
+        legend: { display: true, position: 'top', labels: { boxWidth: 12, usePointStyle: true } },
         tooltip: {
           callbacks: {
             label: function(context) {
-              return 'Rp ' + Math.round(context.raw).toLocaleString('id-ID') + '/kg';
+              return context.dataset.label + ': Rp ' + Math.round(context.raw).toLocaleString('id-ID');
             }
           }
         }

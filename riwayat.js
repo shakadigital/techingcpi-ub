@@ -1,5 +1,10 @@
 // ═══ MODULE: riwayat ═══
 
+// Pagination state for Riwayat Harian
+let rHarianCurrentPage = 1;
+const rHarianItemsPerPage = 30;
+let rHarianAllRows = [];
+
 // ═══ RIWAYAT ═══
 let currentRTab='harian';
 function switchRTab(tab){
@@ -12,6 +17,16 @@ function switchRTab(tab){
 }
 
 async function renderRiwayat(){
+  const inpDari = document.getElementById('r-dari');
+  const inpSampai = document.getElementById('r-sampai');
+  if (inpDari && inpSampai && !inpDari.value && !inpSampai.value) {
+    const today = new Date();
+    const lastMonth = new Date(today);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    inpSampai.value = today.toISOString().split('T')[0];
+    inpDari.value = lastMonth.toISOString().split('T')[0];
+  }
+
   await populateRiwayatKandang();
   if(currentRTab==='harian')renderRHarian();
   else if(currentRTab==='penjualan')renderRPenjualan();
@@ -39,15 +54,47 @@ function inRange(tgl,dari,sampai){
 
 async function renderRHarian(){
   const f=getRFilter();
-  const rows=await dbGetInput(f);
+  rHarianAllRows=await dbGetInput(f);
+  rHarianCurrentPage = 1;
+  renderRHarianPage();
+}
+
+function renderRHarianPage(){
   const tbody=document.getElementById('r-harian-tbody');
   const empty=document.getElementById('r-harian-empty');
+  const pagination = document.getElementById('r-harian-pagination');
+  const pageInfo = document.getElementById('r-harian-page-info');
+  
   const isSA=currentUser?.role==='superadmin';
   const thUser=document.getElementById('th-harian-user');
   if(thUser) thUser.style.display=isSA?'':'none';
+  
   tbody.innerHTML='';
-  if(!rows.length){empty.style.display='block';return;}
+  
+  if(!rHarianAllRows.length){
+    empty.style.display='block';
+    if(pagination) pagination.style.display='none';
+    return;
+  }
   empty.style.display='none';
+  
+  const totalPages = Math.ceil(rHarianAllRows.length / rHarianItemsPerPage) || 1;
+  if(rHarianCurrentPage < 1) rHarianCurrentPage = 1;
+  if(rHarianCurrentPage > totalPages) rHarianCurrentPage = totalPages;
+  
+  const startIdx = (rHarianCurrentPage - 1) * rHarianItemsPerPage;
+  const endIdx = startIdx + rHarianItemsPerPage;
+  const rows = rHarianAllRows.slice(startIdx, endIdx);
+  
+  if(pagination) {
+    pagination.style.display = totalPages > 1 ? 'flex' : 'none';
+    if(pageInfo) pageInfo.textContent = `Hal ${rHarianCurrentPage} / ${totalPages}`;
+  }
+
+  const kandangList = cache.get('kandang_list') || [];
+  const kandangMap = {};
+  kandangList.forEach(k => kandangMap[k.nama] = k);
+
   rows.forEach(row=>{
     const d=row.data;if(!d)return;
     const totalPakan=((d.pakan||[]).reduce((s,p)=>s+(parseFloat(p.jumlah)||0),0)).toFixed(1);
@@ -57,6 +104,22 @@ async function renderRHarian(){
     const delBtn=canDel
       ?`<button class="btn-del" onclick="deleteInputHarian('${row.id}')" title="Hapus">🗑</button>`
       :`<button class="btn-del" data-no-access onclick="deleteInputHarian('${row.id}')" title="Butuh izin atasan">🔒</button>`;
+    
+    // Hitung Umur
+    let umurLabel = '—';
+    const kData = kandangMap[d.kandang];
+    if(kData?.chickin){
+      const tglRow = new Date(d.tanggal); tglRow.setHours(0,0,0,0);
+      const cin = new Date(kData.chickin); cin.setHours(0,0,0,0);
+      const hariSejak = Math.floor((tglRow - cin) / 86400000);
+      if(hariSejak >= 0){
+        const totalHari = (parseInt(kData.umur_masuk)||0) + hariSejak;
+        const mg = Math.floor(totalHari / 7);
+        const hr = totalHari % 7;
+        umurLabel = mg + 'mg' + (hr > 0 ? ' ' + hr + 'hr' : '');
+      }
+    }
+
     // Kolom tracking superadmin
     const waktuEdit=row.updated_at||row.created_at||'';
     const aksiLabel=row.updated_at&&row.updated_at!==row.created_at
@@ -68,6 +131,7 @@ async function renderRHarian(){
     const tr=document.createElement('tr');
     tr.innerHTML=
       '<td>'+fmtTgl(d.tanggal)+'</td><td>'+esc(d.kandang)+'</td>'+
+      '<td style="white-space:nowrap;color:#2d6a4f;font-weight:600;font-size:.82rem">'+umurLabel+'</td>'+
       '<td>'+(d.sisa_ayam||0)+' ekor</td><td>'+(d.deplesi?d.deplesi.total:0)+' ekor</td>'+
       '<td>'+(d.produksi?d.produksi.total.butir:0)+' butir</td><td>'+(d.produksi&&d.produksi.total.kilo?parseFloat(d.produksi.total.kilo).toFixed(1):0)+' kg</td><td>'+(d.produksi?d.produksi.hdp:'—')+'</td>'+
       '<td>'+totalPakan+' kg</td><td>'+(d.air_liter||0)+' L</td>'+
@@ -75,6 +139,21 @@ async function renderRHarian(){
       '<td style="white-space:nowrap"><button class="btn-edit" onclick="editInputHarian(\''+row.id+'\')">✏️</button>'+delBtn+'</td>';
     tbody.appendChild(tr);
   });
+}
+
+function prevRHarianPage() {
+  if (rHarianCurrentPage > 1) {
+    rHarianCurrentPage--;
+    renderRHarianPage();
+  }
+}
+
+function nextRHarianPage() {
+  const totalPages = Math.ceil(rHarianAllRows.length / rHarianItemsPerPage);
+  if (rHarianCurrentPage < totalPages) {
+    rHarianCurrentPage++;
+    renderRHarianPage();
+  }
 }
 
 async function renderRPenjualan(){

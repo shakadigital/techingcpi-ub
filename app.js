@@ -125,6 +125,10 @@ function switchPage(name, _fromBack=false){
   const sub = document.getElementById('hdr-kandang');
   if(sub) sub.textContent = name==='home' ? '—' : (PAGE_LABELS[name]||name);
 
+  // Update desktop page title
+  const deskTitle = document.getElementById('hdr-page-title');
+  if(deskTitle) deskTitle.textContent = name==='home' ? 'Dashboard' : (PAGE_LABELS[name]||name);
+
   if(name==='home')renderHome();
   if(name==='input')autoLoadInputHarian();
   if(name==='settings')renderSettings();
@@ -132,7 +136,14 @@ function switchPage(name, _fromBack=false){
   if(name==='user')renderUserTable();
   if(name==='master')renderMaster();
   if(name==='gudang') { showGudangCards(); }
-  if(name==='penjualan'){populateAllPelangganSelects();renderStokTelur();loadHargaPasarJual();renderRiwayatJual();showPengambilanIntiSection();loadHistoriStokHarian();}
+  if(name==='penjualan'){
+    populateAllPelangganSelects();renderStokTelur();loadHargaPasarJual();renderRiwayatJual();showPengambilanIntiSection();loadHistoriStokHarian();
+    if (typeof renderRiwayatWaste === 'function') renderRiwayatWaste();
+    // Default desktop tab:
+    if (!document.querySelector('#page-penjualan .ptab-group.active')) {
+      if(typeof switchPTab === 'function') switchPTab('stok-telur-body');
+    }
+  }
   if(name==='biaya'){initBiayaPage();}
   if(name==='riwayat')renderRiwayat();
   if(name==='bw')initBwPage();
@@ -231,3 +242,100 @@ if(document.readyState==='loading'){
 } else {
   bootApp();
 }
+
+// --- DESKTOP SIDEBAR LOGIC ---
+
+window.toggleSidebar = function() {
+  const sidebar = document.getElementById('desktop-sidebar');
+  if(sidebar) {
+    sidebar.classList.toggle('collapsed');
+  }
+};
+
+window.toggleSubmenu = function(element, pageId) {
+  // Prevent collapsing if the sidebar itself is collapsed
+  const sidebar = document.getElementById('desktop-sidebar');
+  if(sidebar && sidebar.classList.contains('collapsed')) {
+    sidebar.classList.remove('collapsed');
+  }
+
+  const group = element.closest('.nav-group');
+  if(group) {
+    // Optional: close other expanded groups
+    document.querySelectorAll('.nav-group.expanded').forEach(g => {
+      if(g !== group) g.classList.remove('expanded');
+    });
+    
+    group.classList.toggle('expanded');
+  }
+
+  // Jika ada pageId (misal "input", "penjualan", dll), maka langsung pindah halaman
+  if (pageId && typeof switchPage === 'function') {
+    switchPage(pageId);
+    
+    // Set active status
+    document.querySelectorAll('#desktop-sidebar .nav-item, #desktop-sidebar .sub-item').forEach(el => {
+      el.classList.remove('active');
+    });
+    element.classList.add('active');
+  }
+};
+
+window.switchPTab = function(tabId) {
+  // Hanya berlaku jika ada elemen ptab-group
+  const groups = document.querySelectorAll('#page-penjualan .ptab-group');
+  if(groups.length > 0) {
+    groups.forEach(g => g.classList.remove('active'));
+    const target = document.querySelector(`#page-penjualan .ptab-group[data-ptab="${tabId}"]`);
+    if(target) target.classList.add('active');
+  }
+};
+
+window.navigateAndScroll = function(pageId, sectionId, isTab = false) {
+  // 1. Pindah Halaman Utama
+  if (typeof switchPage === 'function') {
+    switchPage(pageId);
+  }
+
+  // Set active style di sidebar
+  if(event && event.currentTarget) {
+    document.querySelectorAll('#desktop-sidebar .nav-item, #desktop-sidebar .sub-item').forEach(el => {
+      el.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    // Jika sub-item diklik, parent nav-item juga dibikin active
+    const parentGroup = event.currentTarget.closest('.nav-group');
+    if(parentGroup) {
+      const parentNav = parentGroup.querySelector('.nav-item');
+      if(parentNav) parentNav.classList.add('active');
+    }
+  }
+
+  // Set default tab if not explicitly a tab
+  if (pageId === 'penjualan' && !isTab && sectionId) {
+    switchPTab(sectionId);
+  }
+
+  // 2. Jika ada target tab (seperti gudang)
+  if (isTab && sectionId) {
+    setTimeout(() => {
+      if (pageId === 'gudang') {
+        if (typeof window.switchGTab === 'function') window.switchGTab(sectionId);
+        else if (typeof switchGTab === 'function') switchGTab(sectionId);
+      } else if (pageId === 'penjualan') {
+        switchPTab(sectionId);
+      }
+    }, 150);
+    return;
+  }
+
+  // 3. Jika ada elemen target scroll
+  if (sectionId) {
+    setTimeout(() => {
+      const targetEl = document.getElementById(sectionId);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 300); // Jeda agar transisi halaman selesai dan DOM aktif
+  }
+};

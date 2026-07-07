@@ -270,8 +270,8 @@ async function renderRekapKemitraan(){
   inputs.forEach(r=>{
     const d=r.data;if(!d||!d.produksi)return;
     totalNormalKg+=parseFloat(d.produksi.normal?.kilo)||0;
-    totalCreamKg+=parseFloat(d.produksi.cream?.kilo)||0;
-    totalRetakKg+=parseFloat(d.produksi.retak?.kilo)||0;
+    totalCreamKg+=parseFloat(d.produksi.crem?.kilo)||0;
+    totalRetakKg+=parseFloat(d.produksi.bentes_kering?.kilo)||0;
   });
   const totalKg=totalNormalKg+totalCreamKg+totalRetakKg;
 
@@ -280,8 +280,8 @@ async function renderRekapKemitraan(){
   let creamRevenue=0,retakRevenue=0;
   penjualanAll.forEach(p=>{
     (p.rows||[]).forEach(r=>{
-      if(r.grade==='Cream') creamRevenue+=(parseFloat(r.kilo)||0)*(parseFloat(r.harga)||0);
-      if(r.grade==='Retak') retakRevenue+=(parseFloat(r.kilo)||0)*(parseFloat(r.harga)||0);
+      if(r.grade==='Crem' || r.grade==='Cream') creamRevenue+=(parseFloat(r.kilo)||0)*(parseFloat(r.harga)||0);
+      if(r.grade==='Bentes' || r.grade==='Retak') retakRevenue+=(parseFloat(r.kilo)||0)*(parseFloat(r.harga)||0);
     });
   });
 
@@ -357,15 +357,15 @@ async function renderRekapKemitraan(){
         <tr class="section-head"><td colspan="3">📦 PRODUKSI & PENJUALAN</td></tr>
         <tr><td>Normal</td><td>${totalNormalKg.toFixed(2)} kg × Rp ${hargaKontrak.toLocaleString('id-ID')}</td><td style="text-align:right;font-weight:700">Rp ${kontrakNormal.toLocaleString('id-ID')}</td></tr>
         <tr><td></td><td>+ Bagi hasil ${pctMitra}%</td><td style="text-align:right;color:#2d6a4f">Rp ${Math.round(bagiHasilKandang+bagiHasilInti).toLocaleString('id-ID')}</td></tr>
-        <tr><td>Cream</td><td>${totalCreamKg.toFixed(2)} kg (100% mitra)</td><td style="text-align:right">Rp ${creamRevenue.toLocaleString('id-ID')}</td></tr>
-        <tr><td>Retak</td><td>${totalRetakKg.toFixed(2)} kg (100% mitra)</td><td style="text-align:right">Rp ${retakRevenue.toLocaleString('id-ID')}</td></tr>
+        <tr><td>Crem</td><td>${totalCreamKg.toFixed(2)} kg (100% mitra)</td><td style="text-align:right">Rp ${creamRevenue.toLocaleString('id-ID')}</td></tr>
+        <tr><td>Bentes</td><td>${totalRetakKg.toFixed(2)} kg (100% mitra)</td><td style="text-align:right">Rp ${retakRevenue.toLocaleString('id-ID')}</td></tr>
 
         <tr class="section-head"><td colspan="3">💰 PENDAPATAN MITRA (saldo di Inti)</td></tr>
         <tr><td>Kontrak Normal</td><td></td><td style="text-align:right">Rp ${kontrakNormal.toLocaleString('id-ID')}</td></tr>
         <tr><td>Bagi hasil jual kandang (${pctMitra}%)</td><td></td><td style="text-align:right">Rp ${Math.round(bagiHasilKandang).toLocaleString('id-ID')}</td></tr>
         <tr><td>Bagi hasil pengambilan inti (${pctMitra}%)</td><td></td><td style="text-align:right">Rp ${Math.round(bagiHasilInti).toLocaleString('id-ID')}</td></tr>
-        <tr><td>Penjualan Cream</td><td></td><td style="text-align:right">Rp ${creamRevenue.toLocaleString('id-ID')}</td></tr>
-        <tr><td>Penjualan Retak</td><td></td><td style="text-align:right">Rp ${retakRevenue.toLocaleString('id-ID')}</td></tr>
+        <tr><td>Penjualan Crem</td><td></td><td style="text-align:right">Rp ${creamRevenue.toLocaleString('id-ID')}</td></tr>
+        <tr><td>Penjualan Bentes</td><td></td><td style="text-align:right">Rp ${retakRevenue.toLocaleString('id-ID')}</td></tr>
         <tr><td>Biaya operasional dari inti</td><td></td><td style="text-align:right">Rp ${opsFromInti.toLocaleString('id-ID')}</td></tr>
         <tr class="total-row" style="font-weight:700"><td>SUBTOTAL PENDAPATAN</td><td></td><td style="text-align:right">Rp ${Math.round(totalPendapatan).toLocaleString('id-ID')}</td></tr>
 
