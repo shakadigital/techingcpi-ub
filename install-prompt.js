@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════
-// INSTALL PROMPT - Teaching Farm UB V2.9.0
+// INSTALL PROMPT - Teaching Farm UB V4.3.4
 // ═══════════════════════════════════════════════════
 
-const APP_VERSION = '4.0.0'; // Naikkan ini setiap ada update besar
+const APP_VERSION = '4.3.4'; // Naikkan ini setiap ada update besar
 
 class InstallPrompt {
   constructor() {
@@ -160,7 +160,7 @@ class InstallPrompt {
           </div>
           <div class="version-features">
             <div class="version-feature">📱 Shortcut home screen sekarang tampil sebagai "cpi-ub"</div>
-            <div class="version-feature">🔄 Update versi aplikasi ke V2.9.0</div>
+            <div class="version-feature">🔄 Update versi aplikasi ke V${APP_VERSION}</div>
             <div class="version-feature">⚡ Peningkatan cache untuk performa lebih cepat</div>
           </div>
           <div class="version-tip">💡 Swipe kiri/kanan untuk navigasi cepat antar halaman!</div>
