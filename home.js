@@ -41,14 +41,19 @@ async function renderHome(){
   }
   const hpEl=document.getElementById('hs-harga-pasar');
   if(hargaRata>0){
-    hpEl.textContent='Rp '+hargaRata.toLocaleString('id-ID')+'/kg';
+    if (hargaPasarTgl === today) {
+      hpEl.innerHTML = 'Rp '+hargaRata.toLocaleString('id-ID')+'/kg';
+      hpEl.style.opacity = '1';
+    } else {
+      hpEl.innerHTML = 'Rp '+hargaRata.toLocaleString('id-ID')+'/kg<div style="font-size:0.6rem; color:#dc2626; margin-top:2px; font-weight:normal; line-height:1.2;">(Belum update hari ini)</div>';
+      hpEl.style.opacity = '1';
+    }
     hpEl.title=hargaPasarTgl===today?'Harga pasar hari ini':'Data dari '+fmtTgl(hargaPasarTgl);
-    hpEl.style.opacity=hargaPasarTgl===today?'1':'0.7';
     // Tambah tanda * jika data bukan hari ini
     const labelEl=document.getElementById('hs-harga-pasar-label');
     if(labelEl) labelEl.textContent=hargaPasarTgl===today?'Harga Pasar · % Terjual':'Harga Pasar* · % Terjual';
   } else {
-    hpEl.textContent='—';
+    hpEl.innerHTML='—';
     hpEl.style.opacity='1';
   }
   // % terjual = kilo terjual / total produksi hari ini (kg)
