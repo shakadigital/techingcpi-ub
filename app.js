@@ -137,7 +137,7 @@ function switchPage(name, _fromBack=false){
   if(name==='master')renderMaster();
   if(name==='gudang') { showGudangCards(); }
   if(name==='penjualan'){
-    populateAllPelangganSelects();renderStokTelur();loadHargaPasarJual();renderRiwayatJual();showPengambilanIntiSection();loadHistoriStokHarian();
+    populateAllPelangganSelects();renderStokTelur();loadHargaPasarJual();renderRiwayatJual();showPengambilanIntiSection();loadPageAuditStokSistem();loadPageRiwayatAudit();
     if (typeof renderRiwayatWaste === 'function') renderRiwayatWaste();
     // Default desktop tab:
     if (!document.querySelector('#page-penjualan .ptab-group.active')) {
