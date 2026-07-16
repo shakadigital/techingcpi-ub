@@ -65,6 +65,10 @@ function addSaleRow(){
       '<div class="sc-field"><label>Kilo (kg)</label><input type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal(this)"/></div>'+
     '</div>'+
     '<div class="sc-row"><div class="sc-field"><label>Harga/kg (Rp)</label><input type="number" min="0" step="100" placeholder="0" oninput="calcTotal(this)"/></div></div>'+
+    '<div class="sc-row" style="margin-top:8px;"><div class="sc-field"><label>Waktu DO</label><div style="display:flex; gap:16px; margin-top:4px;">'+
+    '<label style="display:flex; align-items:center; gap:6px; font-weight:normal;"><input type="radio" class="do-radio" name="waktu_do_'+Date.now()+'" value="DO Pagi" checked> DO Pagi</label>'+
+    '<label style="display:flex; align-items:center; gap:6px; font-weight:normal;"><input type="radio" class="do-radio" name="waktu_do_'+Date.now()+'" value="DO Siang"> DO Siang</label>'+
+    '</div></div></div>'+
     '<div class="sc-total"><span>Total</span><strong class="total-col">Rp 0</strong></div>';
   document.getElementById('sale-tbody').appendChild(card);
   populatePelangganSelect(card.querySelector('.pelanggan-select'));
@@ -305,7 +309,8 @@ async function savePenjualan(){
       butir:parseFloat(nums[0]?.value)||0,
       kilo:parseFloat(nums[1]?.value)||0,
       harga:parseFloat(nums[2]?.value)||0,
-      total:r.querySelector('.total-col')?.textContent||'Rp 0'
+      total:r.querySelector('.total-col')?.textContent||'Rp 0',
+      keterangan: r.querySelector('.do-radio:checked')?.value || 'DO Pagi'
     };
   }).filter(r=>r.kilo||r.butir);
 
@@ -334,7 +339,53 @@ async function savePenjualan(){
     if(!r.pelanggan){showToast(`⚠️ Baris ${no}: Nama pelanggan wajib diisi!`);return;}
   }
 
-  showToast('⏳ Memeriksa stok...');
+  showToast('⏳ Memeriksa harga DO dan stok...');
+
+  let needPagi = rows.some(r => r.keterangan === 'DO Pagi');
+  let needSiang = rows.some(r => r.keterangan === 'DO Siang');
+
+  let hargaPagi = 0;
+  let hargaSiang = 0;
+
+  if (needPagi) {
+    const dateObj = new Date(tgl);
+    dateObj.setDate(dateObj.getDate() - 1);
+    const tglKemarin = dateObj.toISOString().split('T')[0];
+    
+    const inputsPagi = await dbGetInput({tanggal: tglKemarin});
+    inputsPagi.forEach(r => {
+      if(r.data?.harga_pasar && parseFloat(r.data.harga_pasar) > 0) {
+        hargaPagi = parseFloat(r.data.harga_pasar);
+      }
+    });
+    if (hargaPagi <= 0) {
+      showToast(`⚠️ Harga DO Pagi (patokan ${fmtTgl(tglKemarin)}) belum diinput di halaman Input Harian!`);
+      return;
+    }
+  }
+
+  if (needSiang) {
+    const inputsSiang = await dbGetInput({tanggal: tgl});
+    inputsSiang.forEach(r => {
+      if(r.data?.harga_pasar && parseFloat(r.data.harga_pasar) > 0) {
+        hargaSiang = parseFloat(r.data.harga_pasar);
+      }
+    });
+    if (hargaSiang <= 0) {
+      showToast(`⚠️ Harga DO Siang (patokan ${fmtTgl(tgl)}) belum diinput di halaman Input Harian!`);
+      return;
+    }
+  }
+
+  // Update keterangan baris penjualan
+  rows.forEach(r => {
+    if (r.keterangan === 'DO Pagi') {
+      r.keterangan = `P ${hargaPagi.toLocaleString('id-ID')}`;
+    } else if (r.keterangan === 'DO Siang') {
+      r.keterangan = `S ${hargaSiang.toLocaleString('id-ID')}`;
+    }
+  });
+
   const stok=await getStokTelur(tgl);
   const jualPerGrade={};
   rows.forEach(r=>{const G=r.grade;if(G)jualPerGrade[G]=(jualPerGrade[G]||0)+(parseInt(r.butir)||0);});
@@ -479,14 +530,18 @@ async function renderRiwayatJual(){
       const dateStr = fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2));
       const tButir = (r.butir||0).toLocaleString('id-ID');
       const tKilo = (r.kilo||0).toLocaleString('id-ID');
-      const tHarga = 'Rp ' + (r.harga ? parseFloat(r.harga).toLocaleString('id-ID') : '0');
-      const rTotalRaw = parseFloat(String(r.total||'0').replace(/[^0-9.-]+/g,""));
-      const tTotal = 'Rp ' + (isNaN(rTotalRaw) ? '0' : rTotalRaw.toLocaleString('id-ID'));
+      const valHarga = r.harga ? parseFloat(r.harga).toLocaleString('id-ID') : '0';
+      const tHarga = `<div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${valHarga}</span></div>`;
+      
+      const rTotalRaw = parseFloat(String(r.total||'0').replace(/[^0-9,-]/g, '').replace(',', '.'));
+      const valTotal = isNaN(rTotalRaw) ? '0' : rTotalRaw.toLocaleString('id-ID');
+      const tTotal = `<div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${valTotal}</span></div>`;
 
       tr.innerHTML = `
         <td style="${st}">${dateStr}</td>
         <td style="${st}">${esc(r.pelanggan||'—')}</td>
-        <td style="${st}${fw}">${esc(r.grade||'—')} ${r.keterangan ? ` <br><span style="font-size:0.8rem;opacity:0.7">${esc(r.keterangan)}</span>` : ''}</td>
+        <td style="${st}${fw}">${esc(r.grade||'—')}</td>
+        <td style="${st}">${esc(r.keterangan||'—')}</td>
         <td style="${st}${ar}">${tButir}</td>
         <td style="${st}${ar}">${r.kilo||0}</td>
         <td style="${st}${ar}">${tHarga}</td>
@@ -688,10 +743,11 @@ async function exportExcelPenjualan() {
             'Penginput': p.user_input || '',
             'Pelanggan': r.pelanggan || '',
             'Grade': r.grade || '',
+            'DO': r.keterangan || '',
             'Butir': r.butir || 0,
             'Kilo': r.kilo || 0,
             'Harga': r.harga || 0,
-            'Total': parseFloat(String(r.total).replace(/[^0-9,-]/g, '')) || 0
+            'Total': parseFloat(String(r.total).replace(/[^0-9,-]/g, '').replace(',', '.')) || 0
           });
         });
       }
@@ -1027,32 +1083,78 @@ async function loadPageRiwayatAudit() {
       if (typeof fmtTgl === 'function') tglStr = fmtTgl(g.tanggal);
       
       let rowsHtml = '';
+      // Kelompokkan per grade untuk mencegah duplikat (terutama jika ada klik ganda)
+      let gradesMap = {};
       g.items.forEach(it => {
-        const isPlus = it.selisih > 0;
-        const isMin = it.selisih < 0;
-        const selColor = isPlus ? '#10b981' : (isMin ? '#ef4444' : '#6b7280');
-        const selSign = isPlus ? '+' : '';
-        const dec = it.satuan === 'kg' ? 2 : 0;
-        const formattedSys = parseFloat(it.stok_sistem).toLocaleString('id-ID', {maximumFractionDigits:dec});
-        const formattedAct = parseFloat(it.stok_aktual).toLocaleString('id-ID', {maximumFractionDigits:dec});
-        const formattedSel = parseFloat(it.selisih).toLocaleString('id-ID', {maximumFractionDigits:dec});
-        
-        let actDisp = '';
-        if (it.stok_aktual !== it.stok_sistem) {
-          actDisp = `<div style="font-weight:600; color:#111827;">Aktual: ${formattedAct}</div>`;
-        } else {
-          actDisp = `<div style="color:#6b7280;">Sesuai</div>`;
+        const grade = it.kategori_item || '-';
+        if (!gradesMap[grade]) {
+          gradesMap[grade] = {
+            sysB: 0, actB: 0, selB: 0,
+            sysK: 0, actK: 0, selK: 0
+          };
         }
+        if (it.satuan === 'butir') {
+          gradesMap[grade].sysB = parseFloat(it.stok_sistem)||0;
+          gradesMap[grade].actB = parseFloat(it.stok_aktual)||0;
+          gradesMap[grade].selB = parseFloat(it.selisih)||0;
+        } else if (it.satuan === 'kg' || it.satuan === 'kilo') {
+          gradesMap[grade].sysK = parseFloat(it.stok_sistem)||0;
+          gradesMap[grade].actK = parseFloat(it.stok_aktual)||0;
+          gradesMap[grade].selK = parseFloat(it.selisih)||0;
+        }
+      });
+      
+      const gradeOrder = ['Normal', 'Crem', 'Bentes', 'Ceplokan'];
+      let totSysB = 0, totActB = 0, totSelB = 0;
+      let totSysK = 0, totActK = 0, totSelK = 0;
+      
+      gradeOrder.forEach(grade => {
+        if (!gradesMap[grade]) return;
+        const d = gradesMap[grade];
+        
+        totSysB += d.sysB; totActB += d.actB; totSelB += d.selB;
+        totSysK += d.sysK; totActK += d.actK; totSelK += d.selK;
+        
+        const fmt = (v, dec) => v.toLocaleString('id-ID', {maximumFractionDigits:dec});
+        
+        const selBColor = d.selB > 0 ? '#10b981' : (d.selB < 0 ? '#ef4444' : '#6b7280');
+        const selBSign = d.selB > 0 ? '+' : '';
+        const selKColor = d.selK > 0 ? '#10b981' : (d.selK < 0 ? '#ef4444' : '#6b7280');
+        const selKSign = d.selK > 0 ? '+' : '';
+        
+        const actBDisp = d.actB !== d.sysB ? `<div style="font-weight:600; color:#111827;">${fmt(d.actB, 0)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
+        const actKDisp = d.actK !== d.sysK ? `<div style="font-weight:600; color:#111827;">${fmt(d.actK, 2)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
         
         rowsHtml += `
           <tr style="border-top:1px solid #e5e7eb;">
-            <td style="padding:6px; font-weight:500;">${it.kategori_item || '-'} (${it.satuan})</td>
-            <td style="padding:6px; text-align:right;">${formattedSys}</td>
-            <td style="padding:6px; text-align:right;">${actDisp}</td>
-            <td style="padding:6px; text-align:right; font-weight:700; color:${selColor}">${selSign}${formattedSel}</td>
+            <td style="padding:6px; font-weight:500;">${grade}</td>
+            <td style="padding:6px; text-align:right;">${fmt(d.sysB, 0)}</td>
+            <td style="padding:6px; text-align:right;">${actBDisp}</td>
+            <td style="padding:6px; text-align:right;">${fmt(d.sysK, 2)}</td>
+            <td style="padding:6px; text-align:right;">${actKDisp}</td>
+            <td style="padding:6px; text-align:right; font-weight:700; color:${selBColor}">${selBSign}${fmt(d.selB, 0)}</td>
+            <td style="padding:6px; text-align:right; font-weight:700; color:${selKColor}">${selKSign}${fmt(d.selK, 2)}</td>
           </tr>
         `;
       });
+      
+      const fmtTot = (v, dec) => v.toLocaleString('id-ID', {maximumFractionDigits:dec});
+      const totSelBColor = totSelB > 0 ? '#10b981' : (totSelB < 0 ? '#ef4444' : '#111827');
+      const totSelBSign = totSelB > 0 ? '+' : '';
+      const totSelKColor = totSelK > 0 ? '#10b981' : (totSelK < 0 ? '#ef4444' : '#111827');
+      const totSelKSign = totSelK > 0 ? '+' : '';
+      
+      rowsHtml += `
+        <tr style="background:#f9fafb; font-weight:bold; border-top:2px solid #d1d5db;">
+          <td style="padding:8px 6px;">Total</td>
+          <td style="padding:8px 6px; text-align:right;">${fmtTot(totSysB, 0)}</td>
+          <td style="padding:8px 6px; text-align:right;">${fmtTot(totActB, 0)}</td>
+          <td style="padding:8px 6px; text-align:right;">${fmtTot(totSysK, 2)}</td>
+          <td style="padding:8px 6px; text-align:right;">${fmtTot(totActK, 2)}</td>
+          <td style="padding:8px 6px; text-align:right; color:${totSelBColor}">${totSelBSign}${fmtTot(totSelB, 0)}</td>
+          <td style="padding:8px 6px; text-align:right; color:${totSelKColor}">${totSelKSign}${fmtTot(totSelK, 2)}</td>
+        </tr>
+      `;
       
       html += `
         <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:12px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
@@ -1065,9 +1167,24 @@ async function loadPageRiwayatAudit() {
               <div style="font-size:0.8rem; color:#4b5563; font-style:italic;">"${g.keterangan}"</div>
             </div>
           </div>
-          <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-            ${rowsHtml}
-          </table>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
+              <thead>
+                <tr style="background:#f3f4f6; color:#4b5563;">
+                  <th style="padding:6px; text-align:left;">Grade</th>
+                  <th style="padding:6px; text-align:right;">Sistem (btr)</th>
+                  <th style="padding:6px; text-align:right;">Aktual (btr)</th>
+                  <th style="padding:6px; text-align:right;">Sistem (kg)</th>
+                  <th style="padding:6px; text-align:right;">Aktual (kg)</th>
+                  <th style="padding:6px; text-align:right;">Susut (btr)</th>
+                  <th style="padding:6px; text-align:right;">Susut (kg)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
         </div>
       `;
     });

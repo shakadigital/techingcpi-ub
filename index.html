@@ -621,6 +621,15 @@
               <div class="sc-row">
                 <div class="sc-field"><label>Harga/kg (Rp)</label><input type="number" min="0" step="100" placeholder="0" oninput="calcTotal(this)"/></div>
               </div>
+              <div class="sc-row" style="margin-top:8px;">
+                <div class="sc-field">
+                  <label>Waktu DO</label>
+                  <div style="display:flex; gap:16px; margin-top:4px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-weight:normal;"><input type="radio" class="do-radio" name="waktu_do_1" value="DO Pagi" checked> DO Pagi</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-weight:normal;"><input type="radio" class="do-radio" name="waktu_do_1" value="DO Siang"> DO Siang</label>
+                  </div>
+                </div>
+              </div>
               <div class="sc-total"><span>Total</span><strong class="total-col">Rp 0</strong></div>
             </div>
           </div>
@@ -716,7 +725,7 @@
             </div>
           </div>
           <div style="overflow-x:auto">
-            <table class="tbl"><thead><tr><th>Tanggal</th><th>Pelanggan</th><th>Grade</th><th style="text-align:right">Butir</th><th style="text-align:right">Kilo</th><th style="text-align:right">Harga/kg</th><th style="text-align:right">Total</th><th></th></tr></thead>
+            <table class="tbl"><thead><tr><th>Tanggal</th><th>Pelanggan</th><th>Grade</th><th>DO</th><th style="text-align:right">Butir</th><th style="text-align:right">Kilo</th><th style="text-align:right">Harga/kg</th><th style="text-align:right">Total</th><th></th></tr></thead>
             <tbody id="riwayat-jual-tbody"></tbody></table>
           </div>
           <div id="riwayat-jual-empty" class="info-box" style="display:none">Belum ada riwayat penjualan.</div>
