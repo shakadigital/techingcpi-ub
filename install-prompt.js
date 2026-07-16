@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════
-// INSTALL PROMPT - Teaching Farm UB V4.3.4
+// INSTALL PROMPT - Teaching Farm UB V4.3.5
 // ═══════════════════════════════════════════════════
 
-const APP_VERSION = '4.3.4'; // Naikkan ini setiap ada update besar
+const APP_VERSION = '4.3.5'; // Naikkan ini setiap ada update besar
 
 class InstallPrompt {
   constructor() {

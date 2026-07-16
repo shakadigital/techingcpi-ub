@@ -1,4 +1,4 @@
--- Update get_stok_telur_tf_ub untuk memotong stok Normal jika ada Waste atau Busuk
+-- Update get_stok_telur_tf_ub untuk memotong stok Bentes jika ada Waste, dan Normal jika ada Busuk
 DROP FUNCTION IF EXISTS get_stok_telur_tf_ub(DATE);
 CREATE OR REPLACE FUNCTION get_stok_telur_tf_ub(p_sampai DATE)
 RETURNS jsonb
@@ -80,9 +80,12 @@ BEGIN
         FOR j IN SELECT * FROM jsonb_array_elements(rec.rows)
         LOOP
             g := j.value->>'grade';
-            -- Jika grade Waste atau Busuk, kita kurangi dari stok Normal
-            IF g = 'Waste' OR g = 'Busuk' THEN
+            -- Busuk kurangi dari stok Normal, Waste kurangi dari stok Bentes
+            IF g = 'Busuk' THEN
                 g := 'Normal';
+            END IF;
+            IF g = 'Waste' THEN
+                g := 'Bentes';
             END IF;
             -- Mapping legacy grades
             IF g = 'Cream' THEN

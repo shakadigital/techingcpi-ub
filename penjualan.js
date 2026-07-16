@@ -127,7 +127,8 @@ async function getStokTelur(tgl){
     (j.rows||[]).forEach(r=>{
       let G=r.grade;
       if (G === 'Cream') G = 'Crem';
-      if (G === 'Waste' || G === 'Busuk') G = 'Normal';
+      if (G === 'Busuk') G = 'Normal';
+      if (G === 'Waste') G = 'Bentes';
       if (G === 'Retak') G = 'Bentes';
       
       if(prod[G]){
@@ -1158,8 +1159,11 @@ async function renderHistoriStok7Hari(endDateStr) {
         let G = r.grade;
         let isWaste = false;
         if (G === 'Cream') G = 'Crem';
-        if (G === 'Waste' || G === 'Busuk') {
+        if (G === 'Busuk') {
           G = 'Normal';
+          isWaste = true;
+        } else if (G === 'Waste') {
+          G = 'Bentes';
           isWaste = true;
         }
         if (G === 'Retak') G = 'Bentes';
@@ -1168,7 +1172,8 @@ async function renderHistoriStok7Hari(endDateStr) {
           if (isWaste) {
             dailyData[dStr][G].waste.b += parseInt(r.butir)||0;
             dailyData[dStr][G].waste.k += parseFloat(r.kilo)||0;
-          } else {
+          } else if (r.pelanggan !== 'Susut Audit') {
+            // Jangan masukkan Susut Audit ke kolom Jual, biarkan dihitung di kolom Susut/Audit nanti
             dailyData[dStr][G].jual.b += parseInt(r.butir)||0;
             dailyData[dStr][G].jual.k += parseFloat(r.kilo)||0;
           }
@@ -1179,13 +1184,18 @@ async function renderHistoriStok7Hari(endDateStr) {
     // Process Audits
     audits.forEach(a => {
       const dStr = a.tanggal;
-      let G = a.grade;
+      let G = a.kategori_item;
       if (G === 'Retak') G = 'Bentes';
       if (G === 'Cream') G = 'Crem';
       if (dailyData[dStr] && dailyData[dStr][G]) {
         dailyData[dStr][G].audit.has = true;
-        dailyData[dStr][G].audit.b = parseFloat(a.selisih_butir)||0;
-        dailyData[dStr][G].audit.k = parseFloat(a.selisih_kilo)||0;
+        if (a.satuan === 'butir') {
+          dailyData[dStr][G].audit.b = parseFloat(a.selisih)||0;
+          dailyData[dStr][G].audit.actB = parseFloat(a.stok_aktual)||0;
+        } else if (a.satuan === 'kg' || a.satuan === 'kilo') {
+          dailyData[dStr][G].audit.k = parseFloat(a.selisih)||0;
+          dailyData[dStr][G].audit.actK = parseFloat(a.stok_aktual)||0;
+        }
       }
     });
     
@@ -1207,8 +1217,10 @@ async function renderHistoriStok7Hari(endDateStr) {
         let sisaB = awal.b + data.masuk.b - data.jual.b - data.waste.b;
         let sisaK = awal.k + data.masuk.k - data.jual.k - data.waste.k;
         if (data.audit.has) {
-          sisaB += data.audit.b;
-          sisaK += data.audit.k;
+          // Reset point: Jika ada audit, maka sisa = stok aktual
+          // Selisih ditambahkan untuk display indikasi susut
+          if (data.audit.actB !== undefined) sisaB = data.audit.actB;
+          if (data.audit.actK !== undefined) sisaK = data.audit.actK;
         }
         currentStok[g].butir = sisaB;
         currentStok[g].kilo = sisaK;

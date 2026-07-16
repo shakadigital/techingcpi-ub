@@ -2,7 +2,7 @@
   "name": "Teaching cpi-ub",
   "short_name": "cpi-ub",
   "description": "Sistem Manajemen Terpadu Peternakan Ayam Petelur - Teaching cpi-ub dengan fitur Offline, Mobile UX, dan Real-time Updates",
-  "version": "4.3.4",
+  "version": "4.3.5",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
