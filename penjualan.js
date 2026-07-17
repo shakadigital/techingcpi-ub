@@ -570,7 +570,7 @@ async function hapusPenjualanItem(id, index){
     
     // Jika masih ada sisa baris, update transaksi
     if (newRows.length > 0) {
-      const newGrandTotal = newRows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0);
+      const newGrandTotal = newRows.reduce((sum, r) => sum + (parseInt(String(r.total||'0').replace(/[^0-9]/g,''))||0), 0);
       const updatedRec = { ...rec, rows: newRows, grand_total: newGrandTotal };
       
       if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
@@ -679,7 +679,7 @@ async function simpanEditPenjualan() {
     
     rec.rows[index] = newRow;
     
-    const newGrandTotal = rec.rows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0);
+    const newGrandTotal = rec.rows.reduce((sum, r) => sum + (parseInt(String(r.total||'0').replace(/[^0-9]/g,''))||0), 0);
     rec.grand_total = newGrandTotal;
     
     if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
