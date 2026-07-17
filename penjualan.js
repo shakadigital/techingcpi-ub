@@ -1014,7 +1014,6 @@ async function savePageAuditStok() {
       const penjPanel = {
         tanggal: tgl,
         rows: penjualanRows,
-        keterangan: ket || 'Penyesuaian stok audit',
         grand_total: 0
       };
       await dbSavePenjualan(penjPanel);
