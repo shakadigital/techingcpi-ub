@@ -1013,9 +1013,9 @@ async function savePageAuditStok() {
     if (penjualanRows.length > 0) {
       const penjPanel = {
         tanggal: tgl,
-        jenis: 'Penjualan',
         rows: penjualanRows,
-        keterangan: ket || 'Penyesuaian stok audit'
+        keterangan: ket || 'Penyesuaian stok audit',
+        grand_total: 0
       };
       await dbSavePenjualan(penjPanel);
     }
