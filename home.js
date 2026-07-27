@@ -214,6 +214,7 @@ async function renderHargaPasarChart() {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: { 
         legend: { display: true, position: 'top', labels: { boxWidth: 12, usePointStyle: true } },
         tooltip: {
