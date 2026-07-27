@@ -113,9 +113,26 @@ async function renderHargaPasarChart() {
   const ctx = document.getElementById('chart-harga-pasar');
   if(!ctx || typeof Chart === 'undefined') return;
 
-  // Ambil 14 hari terakhir harga pasar dari input_harian
-  const sampai = new Date().toISOString().split('T')[0];
-  const dari = new Date(Date.now() - 14*86400000).toISOString().split('T')[0];
+  const inputDari = document.getElementById('chart-hp-dari');
+  const inputSampai = document.getElementById('chart-hp-sampai');
+
+  let dari = inputDari ? inputDari.value : '';
+  let sampai = inputSampai ? inputSampai.value : '';
+
+  if (!sampai) {
+    sampai = new Date().toISOString().split('T')[0];
+    if (inputSampai) inputSampai.value = sampai;
+  }
+  
+  if (!dari) {
+    const isMobile = window.innerWidth <= 768;
+    const daysToSubtract = isMobile ? 30 : 60;
+    const dDate = new Date(sampai);
+    dDate.setDate(dDate.getDate() - daysToSubtract);
+    dari = dDate.toISOString().split('T')[0];
+    if (inputDari) inputDari.value = dari;
+  }
+
   const inputs = await dbGetInput({dari, sampai});
 
   // Kumpulkan harga pasar per tanggal
@@ -131,8 +148,10 @@ async function renderHargaPasarChart() {
   penjualan.forEach(p => {
     let totRp = 0, totKg = 0;
     (p.rows || []).forEach(r => {
-      totRp += (parseFloat(r.kilo) || 0) * (parseFloat(r.harga) || 0);
-      totKg += parseFloat(r.kilo) || 0;
+      if (r.grade === 'Normal') {
+        totRp += (parseFloat(r.kilo) || 0) * (parseFloat(r.harga) || 0);
+        totKg += parseFloat(r.kilo) || 0;
+      }
     });
     if(totKg > 0) {
       if(!penjualanMap[p.tanggal]) penjualanMap[p.tanggal] = {rp: 0, kg: 0};
