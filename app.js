@@ -365,7 +365,16 @@ async function openActivityLogModal() {
     }
     
     tbody.innerHTML = logs.map(l => {
-      let tglFmt = l.tanggal ? l.tanggal.replace('T', ' ').substring(0, 16) : '—';
+      let tglFmt = '—';
+      if (l.tanggal) {
+        const d = new Date(l.tanggal);
+        if (!isNaN(d)) {
+          const pad = n => n.toString().padStart(2, '0');
+          tglFmt = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        } else {
+          tglFmt = l.tanggal.replace('T', ' ').substring(0, 16);
+        }
+      }
       let badgeClass = 'badge-blue';
       if(l.aksi === 'HAPUS' || l.aksi === 'NONAKTIF') badgeClass = 'badge-red';
       else if(l.aksi === 'TAMBAH' || l.aksi === 'AKTIFKAN') badgeClass = 'badge-green';
