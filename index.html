@@ -2461,6 +2461,34 @@
   </div>
 </div>
 
+<!-- ACTIVITY LOG MODAL -->
+<div class="modal-overlay" id="modal-activity-log" style="display:none" onclick="if(event.target===this)closeModal('modal-activity-log')">
+  <div class="modal" style="width: 90%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-header">
+      <h3 id="modal-activity-log-title" style="margin: 0; color: #1b4332;">📜 Log Aktivitas Sistem</h3>
+      <button class="modal-close" onclick="closeModal('modal-activity-log')">×</button>
+    </div>
+    <div class="modal-body" style="overflow-y: auto; flex: 1; padding: 16px;">
+      <div style="overflow-x:auto;">
+        <table class="tbl" style="width: 100%;">
+          <thead>
+            <tr>
+              <th>Waktu</th>
+              <th>User</th>
+              <th>Aksi</th>
+              <th>Tabel</th>
+              <th>Keterangan</th>
+            </tr>
+          </thead>
+          <tbody id="activity-log-tbody">
+            <tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 
 

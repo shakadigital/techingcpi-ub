@@ -339,3 +339,43 @@ window.navigateAndScroll = function(pageId, sectionId, isTab = false) {
     }, 300); // Jeda agar transisi halaman selesai dan DOM aktif
   }
 };
+
+// --- SHORTCUT & ACTIVITY LOG ---
+document.addEventListener('keydown', function(e) {
+  // Shortcut: Ctrl + Shift + L
+  if (e.ctrlKey && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+    e.preventDefault();
+    openActivityLogModal();
+  }
+});
+
+async function openActivityLogModal() {
+  const modal = document.getElementById('modal-activity-log');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  
+  const tbody = document.getElementById('activity-log-tbody');
+  tbody.innerHTML = '<tr><td colspan=""5"" style=""text-align:center;"">? Memuat log aktivitas...</td></tr>';
+  
+  try {
+    const logs = await dbGetLog(); // Ambil 200 log terakhir
+    if (!logs || logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan=""5"" style=""text-align:center;color:#aaa;"">Belum ada catatan aktivitas.</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = logs.map(l => {
+      let tglFmt = l.tanggal ? l.tanggal.replace('T', ' ').substring(0, 16) : '—';
+      return <tr>
+        <td style=""white-space:nowrap;font-size:0.8rem;color:#666""></td>
+        <td><strong></strong></td>
+        <td><span style=""font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:bold;""></span></td>
+        <td></td>
+        <td style=""font-size:0.8rem;max-width:250px;white-space:normal;color:#444""></td>
+      </tr>;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan=""5"" style=""text-align:center;color:#dc2626;"">Gagal memuat log.</td></tr>';
+    console.error(e);
+  }
+}
