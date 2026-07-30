@@ -1088,18 +1088,20 @@ async function loadPageRiwayatAudit() {
         const grade = it.kategori_item || '-';
         if (!gradesMap[grade]) {
           gradesMap[grade] = {
-            sysB: 0, actB: 0, selB: 0,
-            sysK: 0, actK: 0, selK: 0
+            sysB: 0, actB: 0, selB: 0, idB: null,
+            sysK: 0, actK: 0, selK: 0, idK: null
           };
         }
         if (it.satuan === 'butir') {
           gradesMap[grade].sysB = parseFloat(it.stok_sistem)||0;
           gradesMap[grade].actB = parseFloat(it.stok_aktual)||0;
           gradesMap[grade].selB = parseFloat(it.selisih)||0;
+          gradesMap[grade].idB = it.id;
         } else if (it.satuan === 'kg' || it.satuan === 'kilo') {
           gradesMap[grade].sysK = parseFloat(it.stok_sistem)||0;
           gradesMap[grade].actK = parseFloat(it.stok_aktual)||0;
           gradesMap[grade].selK = parseFloat(it.selisih)||0;
+          gradesMap[grade].idK = it.id;
         }
       });
       
@@ -1121,8 +1123,13 @@ async function loadPageRiwayatAudit() {
         const selKColor = d.selK > 0 ? '#10b981' : (d.selK < 0 ? '#ef4444' : '#6b7280');
         const selKSign = d.selK > 0 ? '+' : '';
         
-        const actBDisp = d.actB !== d.sysB ? `<div style="font-weight:600; color:#111827;">${fmt(d.actB, 0)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
-        const actKDisp = d.actK !== d.sysK ? `<div style="font-weight:600; color:#111827;">${fmt(d.actK, 2)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
+        const canEdit = currentUser && ['supervisor','admin','superadmin'].includes(currentUser.role);
+        
+        let actBDisp = d.actB !== d.sysB ? `<div style="font-weight:600; color:#111827;">${fmt(d.actB, 0)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
+        if (canEdit && d.idB) actBDisp = `<div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">${actBDisp} <span onclick="editRiwayatAudit('${d.idB}')" style="cursor:pointer;font-size:0.85rem;" title="Edit Aktual Butir">✏️</span></div>`;
+        
+        let actKDisp = d.actK !== d.sysK ? `<div style="font-weight:600; color:#111827;">${fmt(d.actK, 2)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
+        if (canEdit && d.idK) actKDisp = `<div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">${actKDisp} <span onclick="editRiwayatAudit('${d.idK}')" style="cursor:pointer;font-size:0.85rem;" title="Edit Aktual Kg">✏️</span></div>`;
         
         rowsHtml += `
           <tr style="border-top:1px solid #e5e7eb;">

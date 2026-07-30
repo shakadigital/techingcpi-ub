@@ -453,11 +453,12 @@ async function openRiwayatAuditModal(jenis = 'Telur') {
               Oleh: <b>${a.user_input || 'System'}</b>
             </div>
           </div>
-          ${ (currentUser && currentUser.role === 'superadmin') ? `
+          ${ (currentUser && ['supervisor', 'admin', 'superadmin'].includes(currentUser.role)) ? `
           <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end; border-top:1px dashed #e5e7eb; padding-top:10px;">
             <button onclick="editRiwayatAudit('${a.id}')" style="background:none; border:1px solid #d1d5db; border-radius:4px; padding:4px 10px; font-size:0.75rem; color:#4b5563; cursor:pointer; display:flex; align-items:center; gap:4px;"><span style="font-size:0.9rem">✏️</span> Edit</button>
             <button onclick="hapusRiwayatAudit('${a.id}')" style="background:none; border:1px solid #fca5a5; border-radius:4px; padding:4px 10px; font-size:0.75rem; color:#ef4444; cursor:pointer; display:flex; align-items:center; gap:4px;"><span style="font-size:0.9rem">🗑️</span> Hapus</button>
           </div>
+
           ` : '' }
         </div>
       `;
