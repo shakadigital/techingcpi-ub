@@ -1225,15 +1225,14 @@ async function loadPageRiwayatAudit() {
       }
     };
     
-    // Bind scroll pada container parent
-    const cardBody = container.parentElement;
-    if (!cardBody.dataset.scrollBound) {
-      cardBody.addEventListener('scroll', function() {
-        if (this.scrollTop + this.clientHeight >= this.scrollHeight - 50) {
+    // Bind scroll pada window
+    if (!window._auditScrollBound) {
+      window.addEventListener('scroll', function() {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
            if (window._renderNextRiwayatAudit) window._renderNextRiwayatAudit();
         }
       });
-      cardBody.dataset.scrollBound = 'true';
+      window._auditScrollBound = true;
     }
     
     // Render 10 pertama
