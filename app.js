@@ -1,4 +1,4 @@
-// ═══ APP.JS — CORE MODULE ═══
+// â•â•â• APP.JS â€” CORE MODULE â•â•â•
 // Contains: DB object, manualSync, navigation (switchPage, goBack), initApp,
 // populateKandangSelects, bootApp, PWA registration, and cache/ROLE_LEVEL constants.
 //
@@ -8,7 +8,7 @@
 //   backup.js, kas.js, master.js, pwa-update.js, gudang-nonpakan.js,
 //   standar-performa.js
 
-// ═══ STORAGE (localStorage fallback untuk session saja) ═══
+// â•â•â• STORAGE (localStorage fallback untuk session saja) â•â•â•
 const DB={
   get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},
   set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
@@ -16,7 +16,7 @@ const DB={
 };
 
 
-// ═══ MANUAL SYNC ═══
+// â•â•â• MANUAL SYNC â•â•â•
 async function manualSync(){
   const btn=document.getElementById('btn-sync');
   if(!btn) return;
@@ -24,12 +24,12 @@ async function manualSync(){
   
   btn.classList.add('syncing');
   btn.title='Syncing...';
-  showToast('🔄 Memulai sync...');
+  showToast('ðŸ”„ Memulai sync...');
   
   try{
     // Cek mode database
     if(window.DB_MODE!=='supabase'){
-      showToast('⚠️ Sync hanya tersedia di mode Supabase');
+      showToast('âš ï¸ Sync hanya tersedia di mode Supabase');
       btn.classList.remove('syncing');
       return;
     }
@@ -62,11 +62,11 @@ async function manualSync(){
       console.error('Sync errors:',failed);
       btn.classList.add('error');
       setTimeout(()=>btn.classList.remove('error'),2000);
-      showToast('❌ Sync gagal: '+failed.length+' tabel error');
+      showToast('âŒ Sync gagal: '+failed.length+' tabel error');
     }else{
       btn.classList.add('success');
       setTimeout(()=>btn.classList.remove('success'),2000);
-      showToast('✅ Sync berhasil! Data diperbarui.');
+      showToast('âœ… Sync berhasil! Data diperbarui.');
       
       // Refresh tampilan jika di home
       const activePage=document.querySelector('.page.active');
@@ -78,7 +78,7 @@ async function manualSync(){
     console.error('Sync error:',e);
     btn.classList.add('error');
     setTimeout(()=>btn.classList.remove('error'),2000);
-    showToast('❌ Sync gagal: '+e.message);
+    showToast('âŒ Sync gagal: '+e.message);
   }finally{
     btn.classList.remove('syncing');
     btn.title='Sync Data';
@@ -87,7 +87,7 @@ async function manualSync(){
 
 
 
-// ═══ NAVIGATION ═══
+// â•â•â• NAVIGATION â•â•â•
 const _pageHistory = [];
 
 const PAGE_LABELS = {
@@ -123,7 +123,7 @@ function switchPage(name, _fromBack=false){
 
   // Update subtitle header dengan nama halaman
   const sub = document.getElementById('hdr-kandang');
-  if(sub) sub.textContent = name==='home' ? '—' : (PAGE_LABELS[name]||name);
+  if(sub) sub.textContent = name==='home' ? 'â€”' : (PAGE_LABELS[name]||name);
 
   // Update desktop page title
   const deskTitle = document.getElementById('hdr-page-title');
@@ -155,11 +155,11 @@ function goBack(){
   switchPage(prev || 'home', true);
 }
 
-// ═══ INIT ═══
+// â•â•â• INIT â•â•â•
 async function initApp(){
   if(!document.getElementById('tanggal').value)document.getElementById('tanggal').value=new Date().toISOString().split('T')[0];
   if(!document.getElementById('jual-tanggal').value)document.getElementById('jual-tanggal').value=new Date().toISOString().split('T')[0];
-  // Parallel fetch — semua independen satu sama lain
+  // Parallel fetch â€” semua independen satu sama lain
   await Promise.all([
     populateKandangSelects(),
     populateAllPakanSelects(),
@@ -171,7 +171,7 @@ async function initApp(){
   renderHome();
 }
 
-// ═══ KANDANG SELECT ═══
+// â•â•â• KANDANG SELECT â•â•â•
 async function populateKandangSelects(){
   const list=await dbGetKandang();
   cache.set('kandang_list',list);
@@ -179,12 +179,12 @@ async function populateKandangSelects(){
     const sel=document.getElementById(id);if(!sel)return;
     const prev=sel.value;
     sel.innerHTML='<option value="">-- Pilih Kandang --</option>';
-    list.forEach(k=>{const o=document.createElement('option');o.value=k.nama;o.textContent=k.nama+(k.status==='Aktif'?' ✅':' ⬜');sel.appendChild(o);});
+    list.forEach(k=>{const o=document.createElement('option');o.value=k.nama;o.textContent=k.nama+(k.status==='Aktif'?' âœ…':' â¬œ');sel.appendChild(o);});
     if(prev)sel.value=prev;
   });
 }
 
-// ═══ PWA ═══
+// â•â•â• PWA â•â•â•
 if('serviceWorker' in navigator && location.protocol !== 'file:'){
   navigator.serviceWorker.register('sw.js').then(reg => {
     // Jika ada SW baru menunggu, langsung aktifkan
@@ -193,7 +193,7 @@ if('serviceWorker' in navigator && location.protocol !== 'file:'){
       const newSW = reg.installing;
       if(newSW) newSW.addEventListener('statechange', () => {
         if(newSW.state === 'installed' && navigator.serviceWorker.controller){
-          // SW baru siap — reload untuk pakai versi terbaru
+          // SW baru siap â€” reload untuk pakai versi terbaru
           window.location.reload();
         }
       });
@@ -207,15 +207,15 @@ if('serviceWorker' in navigator && location.protocol !== 'file:'){
   });
 }
 
-// ═══ BOOT ═══
+// â•â•â• BOOT â•â•â•
 // Wait for DB script to load before initializing
 let _bootAttempts = 0;
 function bootApp(){
   _bootAttempts++;
 
-  // Timeout 10 detik — jika DB tidak load, tampilkan login
+  // Timeout 10 detik â€” jika DB tidak load, tampilkan login
   if(_bootAttempts > 100){
-    console.error('❌ DB script gagal load setelah 10 detik');
+    console.error('âŒ DB script gagal load setelah 10 detik');
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('login-screen').style.display='flex';
     return;
@@ -340,7 +340,7 @@ window.navigateAndScroll = function(pageId, sectionId, isTab = false) {
   }
 };
 
-// --- SHORTCUT & ACTIVITY LOG ---
+// ═══ SHORTCUT & ACTIVITY LOG ═══
 document.addEventListener('keydown', function(e) {
   // Shortcut: Ctrl + Shift + L
   if (e.ctrlKey && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
@@ -355,27 +355,32 @@ async function openActivityLogModal() {
   modal.style.display = 'flex';
   
   const tbody = document.getElementById('activity-log-tbody');
-  tbody.innerHTML = '<tr><td colspan=""5"" style=""text-align:center;"">? Memuat log aktivitas...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">⏳ Memuat log aktivitas...</td></tr>';
   
   try {
     const logs = await dbGetLog(); // Ambil 200 log terakhir
     if (!logs || logs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan=""5"" style=""text-align:center;color:#aaa;"">Belum ada catatan aktivitas.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;">Belum ada catatan aktivitas.</td></tr>';
       return;
     }
     
     tbody.innerHTML = logs.map(l => {
-      let tglFmt = l.tanggal ? l.tanggal.replace('T', ' ').substring(0, 16) : '�';
-      return <tr>
-        <td style=""white-space:nowrap;font-size:0.8rem;color:#666""></td>
-        <td><strong></strong></td>
-        <td><span style=""font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:bold;""></span></td>
-        <td></td>
-        <td style=""font-size:0.8rem;max-width:250px;white-space:normal;color:#444""></td>
-      </tr>;
+      let tglFmt = l.tanggal ? l.tanggal.replace('T', ' ').substring(0, 16) : '—';
+      let badgeClass = 'badge-blue';
+      if(l.aksi === 'HAPUS' || l.aksi === 'NONAKTIF') badgeClass = 'badge-red';
+      else if(l.aksi === 'TAMBAH' || l.aksi === 'AKTIFKAN') badgeClass = 'badge-green';
+      else if(l.aksi === 'EDIT' || l.aksi === 'UPDATE') badgeClass = 'badge-orange';
+      
+      return `<tr>
+        <td style="white-space:nowrap;font-size:0.8rem;color:#666">${tglFmt}</td>
+        <td><strong>${esc(l.user_input || '—')}</strong></td>
+        <td><span style="font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:bold;">${esc(l.aksi || '—')}</span></td>
+        <td>${esc(l.tabel || '—')}</td>
+        <td style="font-size:0.8rem;max-width:250px;white-space:normal;color:#444">${esc(l.keterangan || '—')}</td>
+      </tr>`;
     }).join('');
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan=""5"" style=""text-align:center;color:#dc2626;"">Gagal memuat log.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#dc2626;">Gagal memuat log.</td></tr>';
     console.error(e);
   }
 }
