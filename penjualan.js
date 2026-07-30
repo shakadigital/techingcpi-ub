@@ -1074,128 +1074,170 @@ async function loadPageRiwayatAudit() {
       return (grouped[b].created_at || '').localeCompare(grouped[a].created_at || '');
     });
     
-    let html = '';
+    window._riwayatAuditSortedKeys = sortedKeys;
+    window._riwayatAuditGrouped = grouped;
+    window._riwayatAuditIndex = 0;
+    container.innerHTML = '';
     
-    sortedKeys.forEach(k => {
-      const g = grouped[k];
-      let tglStr = g.tanggal;
-      if (typeof fmtTgl === 'function') tglStr = fmtTgl(g.tanggal);
+    window._renderNextRiwayatAudit = function() {
+      if (window._riwayatAuditIndex >= window._riwayatAuditSortedKeys.length) return;
       
-      let rowsHtml = '';
-      // Kelompokkan per grade untuk mencegah duplikat (terutama jika ada klik ganda)
-      let gradesMap = {};
-      g.items.forEach(it => {
-        const grade = it.kategori_item || '-';
-        if (!gradesMap[grade]) {
-          gradesMap[grade] = {
-            sysB: 0, actB: 0, selB: 0, idB: null,
-            sysK: 0, actK: 0, selK: 0, idK: null
-          };
-        }
-        if (it.satuan === 'butir') {
-          gradesMap[grade].sysB = parseFloat(it.stok_sistem)||0;
-          gradesMap[grade].actB = parseFloat(it.stok_aktual)||0;
-          gradesMap[grade].selB = parseFloat(it.selisih)||0;
-          gradesMap[grade].idB = it.id;
-        } else if (it.satuan === 'kg' || it.satuan === 'kilo') {
-          gradesMap[grade].sysK = parseFloat(it.stok_sistem)||0;
-          gradesMap[grade].actK = parseFloat(it.stok_aktual)||0;
-          gradesMap[grade].selK = parseFloat(it.selisih)||0;
-          gradesMap[grade].idK = it.id;
-        }
-      });
+      const limit = window._riwayatAuditIndex + 10;
+      let html = '';
       
-      const gradeOrder = ['Normal', 'Crem', 'Bentes', 'Ceplokan'];
-      let totSysB = 0, totActB = 0, totSelB = 0;
-      let totSysK = 0, totActK = 0, totSelK = 0;
-      
-      gradeOrder.forEach(grade => {
-        if (!gradesMap[grade]) return;
-        const d = gradesMap[grade];
+      for (let i = window._riwayatAuditIndex; i < limit && i < window._riwayatAuditSortedKeys.length; i++) {
+        const k = window._riwayatAuditSortedKeys[i];
+        const g = window._riwayatAuditGrouped[k];
+        let tglStr = g.tanggal;
+        if (typeof fmtTgl === 'function') tglStr = fmtTgl(g.tanggal);
         
-        totSysB += d.sysB; totActB += d.actB; totSelB += d.selB;
-        totSysK += d.sysK; totActK += d.actK; totSelK += d.selK;
+        let rowsHtml = '';
+        // Kelompokkan per grade untuk mencegah duplikat (terutama jika ada klik ganda)
+        let gradesMap = {};
+        g.items.forEach(it => {
+          const grade = it.kategori_item || '-';
+          if (!gradesMap[grade]) {
+            gradesMap[grade] = {
+              sysB: 0, actB: 0, selB: 0, idB: null,
+              sysK: 0, actK: 0, selK: 0, idK: null
+            };
+          }
+          if (it.satuan === 'butir') {
+            gradesMap[grade].sysB = parseFloat(it.stok_sistem)||0;
+            gradesMap[grade].actB = parseFloat(it.stok_aktual)||0;
+            gradesMap[grade].selB = parseFloat(it.selisih)||0;
+            gradesMap[grade].idB = it.id;
+          } else if (it.satuan === 'kg' || it.satuan === 'kilo') {
+            gradesMap[grade].sysK = parseFloat(it.stok_sistem)||0;
+            gradesMap[grade].actK = parseFloat(it.stok_aktual)||0;
+            gradesMap[grade].selK = parseFloat(it.selisih)||0;
+            gradesMap[grade].idK = it.id;
+          }
+        });
         
-        const fmt = (v, dec) => v.toLocaleString('id-ID', {maximumFractionDigits:dec});
+        const gradeOrder = ['Normal', 'Crem', 'Bentes', 'Ceplokan'];
+        let totSysB = 0, totActB = 0, totSelB = 0;
+        let totSysK = 0, totActK = 0, totSelK = 0;
         
-        const selBColor = d.selB > 0 ? '#10b981' : (d.selB < 0 ? '#ef4444' : '#6b7280');
-        const selBSign = d.selB > 0 ? '+' : '';
-        const selKColor = d.selK > 0 ? '#10b981' : (d.selK < 0 ? '#ef4444' : '#6b7280');
-        const selKSign = d.selK > 0 ? '+' : '';
+        gradeOrder.forEach(grade => {
+          if (!gradesMap[grade]) return;
+          const d = gradesMap[grade];
+          
+          totSysB += d.sysB; totActB += d.actB; totSelB += d.selB;
+          totSysK += d.sysK; totActK += d.actK; totSelK += d.selK;
+          
+          const fmt = (v, dec) => v.toLocaleString('id-ID', {maximumFractionDigits:dec});
+          
+          const selBColor = d.selB > 0 ? '#10b981' : (d.selB < 0 ? '#ef4444' : '#6b7280');
+          const selBSign = d.selB > 0 ? '+' : '';
+          const selKColor = d.selK > 0 ? '#10b981' : (d.selK < 0 ? '#ef4444' : '#6b7280');
+          const selKSign = d.selK > 0 ? '+' : '';
+          
+          const canEdit = currentUser && ['supervisor','admin','superadmin'].includes(currentUser.role);
+          
+          let actBDisp = d.actB !== d.sysB ? `<div style="font-weight:600; color:#111827;">${fmt(d.actB, 0)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
+          if (canEdit && d.idB) actBDisp = `<div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">${actBDisp} <span onclick="editRiwayatAudit('${d.idB}')" style="cursor:pointer;font-size:0.85rem;" title="Edit Aktual Butir">✏️</span></div>`;
+          
+          let actKDisp = d.actK !== d.sysK ? `<div style="font-weight:600; color:#111827;">${fmt(d.actK, 2)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
+          if (canEdit && d.idK) actKDisp = `<div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">${actKDisp} <span onclick="editRiwayatAudit('${d.idK}')" style="cursor:pointer;font-size:0.85rem;" title="Edit Aktual Kg">✏️</span></div>`;
+          
+          rowsHtml += `
+            <tr style="border-top:1px solid #e5e7eb;">
+              <td style="padding:6px; font-weight:500;">${grade}</td>
+              <td style="padding:6px; text-align:right;">${fmt(d.sysB, 0)}</td>
+              <td style="padding:6px; text-align:right;">${actBDisp}</td>
+              <td style="padding:6px; text-align:right;">${fmt(d.sysK, 2)}</td>
+              <td style="padding:6px; text-align:right;">${actKDisp}</td>
+              <td style="padding:6px; text-align:right; font-weight:700; color:${selBColor}">${selBSign}${fmt(d.selB, 0)}</td>
+              <td style="padding:6px; text-align:right; font-weight:700; color:${selKColor}">${selKSign}${fmt(d.selK, 2)}</td>
+            </tr>
+          `;
+        });
         
-        const canEdit = currentUser && ['supervisor','admin','superadmin'].includes(currentUser.role);
-        
-        let actBDisp = d.actB !== d.sysB ? `<div style="font-weight:600; color:#111827;">${fmt(d.actB, 0)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
-        if (canEdit && d.idB) actBDisp = `<div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">${actBDisp} <span onclick="editRiwayatAudit('${d.idB}')" style="cursor:pointer;font-size:0.85rem;" title="Edit Aktual Butir">✏️</span></div>`;
-        
-        let actKDisp = d.actK !== d.sysK ? `<div style="font-weight:600; color:#111827;">${fmt(d.actK, 2)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
-        if (canEdit && d.idK) actKDisp = `<div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">${actKDisp} <span onclick="editRiwayatAudit('${d.idK}')" style="cursor:pointer;font-size:0.85rem;" title="Edit Aktual Kg">✏️</span></div>`;
+        const fmtTot = (v, dec) => v.toLocaleString('id-ID', {maximumFractionDigits:dec});
+        const totSelBColor = totSelB > 0 ? '#10b981' : (totSelB < 0 ? '#ef4444' : '#111827');
+        const totSelBSign = totSelB > 0 ? '+' : '';
+        const totSelKColor = totSelK > 0 ? '#10b981' : (totSelK < 0 ? '#ef4444' : '#111827');
+        const totSelKSign = totSelK > 0 ? '+' : '';
         
         rowsHtml += `
-          <tr style="border-top:1px solid #e5e7eb;">
-            <td style="padding:6px; font-weight:500;">${grade}</td>
-            <td style="padding:6px; text-align:right;">${fmt(d.sysB, 0)}</td>
-            <td style="padding:6px; text-align:right;">${actBDisp}</td>
-            <td style="padding:6px; text-align:right;">${fmt(d.sysK, 2)}</td>
-            <td style="padding:6px; text-align:right;">${actKDisp}</td>
-            <td style="padding:6px; text-align:right; font-weight:700; color:${selBColor}">${selBSign}${fmt(d.selB, 0)}</td>
-            <td style="padding:6px; text-align:right; font-weight:700; color:${selKColor}">${selKSign}${fmt(d.selK, 2)}</td>
+          <tr style="background:#f9fafb; font-weight:bold; border-top:2px solid #d1d5db;">
+            <td style="padding:8px 6px;">Total</td>
+            <td style="padding:8px 6px; text-align:right;">${fmtTot(totSysB, 0)}</td>
+            <td style="padding:8px 6px; text-align:right;">${fmtTot(totActB, 0)}</td>
+            <td style="padding:8px 6px; text-align:right;">${fmtTot(totSysK, 2)}</td>
+            <td style="padding:8px 6px; text-align:right;">${fmtTot(totActK, 2)}</td>
+            <td style="padding:8px 6px; text-align:right; color:${totSelBColor}">${totSelBSign}${fmtTot(totSelB, 0)}</td>
+            <td style="padding:8px 6px; text-align:right; color:${totSelKColor}">${totSelKSign}${fmtTot(totSelK, 2)}</td>
           </tr>
         `;
-      });
-      
-      const fmtTot = (v, dec) => v.toLocaleString('id-ID', {maximumFractionDigits:dec});
-      const totSelBColor = totSelB > 0 ? '#10b981' : (totSelB < 0 ? '#ef4444' : '#111827');
-      const totSelBSign = totSelB > 0 ? '+' : '';
-      const totSelKColor = totSelK > 0 ? '#10b981' : (totSelK < 0 ? '#ef4444' : '#111827');
-      const totSelKSign = totSelK > 0 ? '+' : '';
-      
-      rowsHtml += `
-        <tr style="background:#f9fafb; font-weight:bold; border-top:2px solid #d1d5db;">
-          <td style="padding:8px 6px;">Total</td>
-          <td style="padding:8px 6px; text-align:right;">${fmtTot(totSysB, 0)}</td>
-          <td style="padding:8px 6px; text-align:right;">${fmtTot(totActB, 0)}</td>
-          <td style="padding:8px 6px; text-align:right;">${fmtTot(totSysK, 2)}</td>
-          <td style="padding:8px 6px; text-align:right;">${fmtTot(totActK, 2)}</td>
-          <td style="padding:8px 6px; text-align:right; color:${totSelBColor}">${totSelBSign}${fmtTot(totSelB, 0)}</td>
-          <td style="padding:8px 6px; text-align:right; color:${totSelKColor}">${totSelKSign}${fmtTot(totSelK, 2)}</td>
-        </tr>
-      `;
-      
-      html += `
-        <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:12px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-          <div style="background:#f9fafb; padding:10px 12px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-weight:600; color:#111827; font-size:0.95rem;">${tglStr}</div>
-              <div style="font-size:0.8rem; color:#6b7280;">Oleh: <b>${g.user}</b></div>
+        
+        html += `
+          <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:12px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+            <div style="background:#f9fafb; padding:10px 12px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:600; color:#111827; font-size:0.95rem;">${tglStr}</div>
+                <div style="font-size:0.8rem; color:#6b7280;">Oleh: <b>${g.user}</b></div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:0.8rem; color:#4b5563; font-style:italic;">"${g.keterangan}"</div>
+              </div>
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:0.8rem; color:#4b5563; font-style:italic;">"${g.keterangan}"</div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
+                <thead>
+                  <tr style="background:#f3f4f6; color:#4b5563;">
+                    <th style="padding:6px; text-align:left;">Grade</th>
+                    <th style="padding:6px; text-align:right;">Sistem (btr)</th>
+                    <th style="padding:6px; text-align:right;">Aktual (btr)</th>
+                    <th style="padding:6px; text-align:right;">Sistem (kg)</th>
+                    <th style="padding:6px; text-align:right;">Aktual (kg)</th>
+                    <th style="padding:6px; text-align:right;">Susut (btr)</th>
+                    <th style="padding:6px; text-align:right;">Susut (kg)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
             </div>
           </div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
-              <thead>
-                <tr style="background:#f3f4f6; color:#4b5563;">
-                  <th style="padding:6px; text-align:left;">Grade</th>
-                  <th style="padding:6px; text-align:right;">Sistem (btr)</th>
-                  <th style="padding:6px; text-align:right;">Aktual (btr)</th>
-                  <th style="padding:6px; text-align:right;">Sistem (kg)</th>
-                  <th style="padding:6px; text-align:right;">Aktual (kg)</th>
-                  <th style="padding:6px; text-align:right;">Susut (btr)</th>
-                  <th style="padding:6px; text-align:right;">Susut (kg)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    });
+        `;
+      }
+      
+      window._riwayatAuditIndex = limit;
+      
+      // Jika masih ada sisa data, tambahkan teks indikator scroll
+      let htmlToAppend = html;
+      if (window._riwayatAuditIndex < window._riwayatAuditSortedKeys.length) {
+         htmlToAppend += '<div id="riwayat-audit-loading-indicator" style="text-align:center; padding:10px; color:#9ca3af; font-size:0.8rem;">Scroll ke bawah untuk melihat lebih banyak...</div>';
+      }
+      
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlToAppend;
+      
+      // Hapus indikator loading lama jika ada
+      const oldIndicator = container.querySelector('#riwayat-audit-loading-indicator');
+      if (oldIndicator) oldIndicator.remove();
+      
+      while(tempDiv.firstChild) {
+        container.appendChild(tempDiv.firstChild);
+      }
+    };
     
-    container.innerHTML = html;
+    // Bind scroll pada container parent
+    const cardBody = container.parentElement;
+    if (!cardBody.dataset.scrollBound) {
+      cardBody.addEventListener('scroll', function() {
+        if (this.scrollTop + this.clientHeight >= this.scrollHeight - 50) {
+           if (window._renderNextRiwayatAudit) window._renderNextRiwayatAudit();
+        }
+      });
+      cardBody.dataset.scrollBound = 'true';
+    }
+    
+    // Render 10 pertama
+    window._renderNextRiwayatAudit();
   } catch(e) {
     console.error(e);
     container.innerHTML = `<div style="padding:20px; text-align:center; color:#ef4444;">Gagal memuat: ${e.message}</div>`;
