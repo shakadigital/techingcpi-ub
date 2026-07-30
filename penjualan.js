@@ -611,20 +611,31 @@ async function editPenjualanItem(id, index) {
   await populatePelangganSelect(document.getElementById('edit-pj-pelanggan'));
   
   // Set pelanggan
-  let pelFound = false;
-  for(let opt of document.getElementById('edit-pj-pelanggan').options) {
-    if(opt.value === r.pelanggan) {
-      opt.selected = true;
-      pelFound = true; break;
+  let pel = r.pelanggan || '';
+  let kat = '';
+  let nama = pel;
+  
+  const match = pel.match(/^(.*) \((.*)\)$/);
+  if (match) {
+    nama = match[1];
+    kat = match[2];
+  } else {
+    // Cek apakah murni kategori
+    let foundKat = false;
+    for(let opt of document.getElementById('edit-pj-pelanggan').options) {
+      if(opt.value && opt.value === pel) {
+        foundKat = true;
+        break;
+      }
+    }
+    if(foundKat) {
+      kat = pel;
+      nama = '';
     }
   }
-  if(!pelFound) {
-    document.getElementById('edit-pj-pelanggan').value = '__manual__';
-    document.getElementById('edit-pj-pelanggan-txt').style.display = 'block';
-    document.getElementById('edit-pj-pelanggan-txt').value = r.pelanggan || '';
-  } else {
-    document.getElementById('edit-pj-pelanggan-txt').style.display = 'none';
-  }
+  
+  document.getElementById('edit-pj-pelanggan').value = kat;
+  document.getElementById('edit-pj-pelanggan-txt').value = nama;
   
   let g = r.grade || '';
   if (g === 'Cream') g = 'Crem';
@@ -649,9 +660,12 @@ async function simpanEditPenjualan() {
   const id = document.getElementById('edit-pj-id').value;
   const index = parseInt(document.getElementById('edit-pj-index').value, 10);
   
-  const selPel = document.getElementById('edit-pj-pelanggan');
-  const txtPel = document.getElementById('edit-pj-pelanggan-txt');
-  const pel = selPel.value === '__manual__' ? txtPel.value.trim() : selPel.value;
+  const selPel = document.getElementById('edit-pj-pelanggan').value;
+  const txtPel = document.getElementById('edit-pj-pelanggan-txt').value.trim();
+  
+  let pel = txtPel;
+  if(selPel && pel) pel = `${pel} (${selPel})`;
+  else if(selPel && !pel) pel = selPel;
   
   const grade = document.getElementById('edit-pj-grade').value;
   const butir = parseFloat(document.getElementById('edit-pj-butir').value) || 0;

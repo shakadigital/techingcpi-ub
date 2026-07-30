@@ -2392,9 +2392,11 @@
       <input type="hidden" id="edit-pj-index">
       
       <div class="field">
-        <label>Pelanggan</label>
-        <select id="edit-pj-pelanggan" class="pelanggan-select" onchange="if(this.value==='__manual__'){document.getElementById('edit-pj-pelanggan-txt').style.display='block';document.getElementById('edit-pj-pelanggan-txt').focus();}else{document.getElementById('edit-pj-pelanggan-txt').style.display='none';}"></select>
-        <input type="text" id="edit-pj-pelanggan-txt" style="display:none;margin-top:6px" placeholder="Ketik nama pelanggan...">
+        <label>Kategori & Nama Pelanggan <span style="color:red">*</span></label>
+        <select id="edit-pj-pelanggan" class="pelanggan-select" style="margin-bottom:6px">
+          <option value="">-- Pilih Kategori --</option>
+        </select>
+        <input type="text" id="edit-pj-pelanggan-txt" style="display:block; width:100%" placeholder="Ketik nama pelanggan...">
       </div>
       
       <div class="field">
