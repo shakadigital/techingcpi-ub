@@ -901,16 +901,16 @@ async function loadPageAuditStokSistem() {
     
     html += `
       <tr style="border-bottom:1px solid #e5e7eb;">
-        <td style="padding:8px 4px; font-weight:600; color:#374151;">${g}</td>
-        <td style="padding:8px 4px; text-align:center; color:#4b5563;">
-          <div style="font-size:0.95rem;">${sysButir.toLocaleString('id-ID')}</div>
+        <td style="padding:4px 2px; font-weight:600; color:#374151;">${g}</td>
+        <td style="padding:4px 2px; text-align:center; color:#4b5563;">
+          <div style="font-size:0.9rem;">${sysButir.toLocaleString('id-ID')}</div>
           <div style="font-size:0.75rem; color:#9ca3af;">${sysKg.toLocaleString('id-ID')} kg</div>
         </td>
-        <td style="padding:8px 4px;">
-          <input type="number" id="page-audit-batch-butir-${g}" style="width:100%; min-width:60px; padding:6px; border:1px solid #d1d5db; border-radius:4px; text-align:center;" placeholder="...">
+        <td style="padding:4px 2px;">
+          <input type="number" id="page-audit-batch-butir-${g}" style="width:100%; min-width:60px; padding:4px; border:1px solid #d1d5db; border-radius:4px; text-align:center;" placeholder="...">
         </td>
-        <td style="padding:8px 4px;">
-          <input type="number" id="page-audit-batch-kg-${g}" step="any" style="width:100%; min-width:60px; padding:6px; border:1px solid #d1d5db; border-radius:4px; text-align:center;" placeholder="...">
+        <td style="padding:4px 2px;">
+          <input type="number" id="page-audit-batch-kg-${g}" step="any" style="width:100%; min-width:60px; padding:4px; border:1px solid #d1d5db; border-radius:4px; text-align:center;" placeholder="...">
         </td>
       </tr>
     `;
