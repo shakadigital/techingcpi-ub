@@ -1,4 +1,4 @@
-const CACHE_NAME = 'teachingfarm-v4.3.5';
+const CACHE_NAME = 'teachingfarm-v4.3.6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

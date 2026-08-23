@@ -725,12 +725,12 @@ async function exportRiwayatJual(){
   try{
     const list=await dbGetPenjualan({limit: 999999});
     if(list.length===0){showToast('⚠️ Tidak ada data penjualan');return;}
-    const headers=['Tanggal','Pelanggan','Grade','Butir','Kilo (kg)','Harga/kg (Rp)','Total (Rp)','Diinput Oleh'];
+    const headers=['Tanggal','Pelanggan','Grade','Harga DO','Butir','Kilo (kg)','Harga/kg (Rp)','Total (Rp)','Diinput Oleh'];
     const data=[];
     list.forEach(p=>{
       const items=p.rows||[];
       items.forEach(item=>{
-        data.push([p.tanggal,item.pelanggan||'',item.grade||'',item.butir||0,item.kilo||0,item.harga||0,item.total||0,p.user_input||'']);
+        data.push([p.tanggal,item.pelanggan||'',item.grade||'',item.keterangan||'',item.butir||0,item.kilo||0,item.harga||0,item.total||0,p.user_input||'']);
       });
     });
     await exportExcel('Riwayat Penjualan Telur',headers,data,`Riwayat_Penjualan_${new Date().toISOString().slice(0,10)}.xlsx`);

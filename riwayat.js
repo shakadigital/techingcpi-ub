@@ -501,9 +501,9 @@ async function exportRiwayat(){
   } else if(currentRTab==='penjualan'){
     const all=await dbGetPenjualan({});
     if(!all.length){showToast('⚠️ Tidak ada data untuk diexport!');return;}
-    const headers=['Tanggal','Pelanggan','Grade','Butir','Kilo (kg)','Harga/kg (Rp)','Total (Rp)'];
+    const headers=['Tanggal','Pelanggan','Grade','Harga DO','Butir','Kilo (kg)','Harga/kg (Rp)','Total (Rp)'];
     const data=[];
-    all.forEach(rec=>{(rec.rows||[]).forEach(r=>{data.push([rec.tanggal,r.pelanggan||'',r.grade||'',r.butir||0,r.kilo||0,r.harga||0,String(r.total||'').replace(/[^0-9]/g,'')]);});});
+    all.forEach(rec=>{(rec.rows||[]).forEach(r=>{data.push([rec.tanggal,r.pelanggan||'',r.grade||'',r.keterangan||'',r.butir||0,r.kilo||0,r.harga||0,String(r.total||'').replace(/[^0-9]/g,'')]);});});
     await exportExcel('Riwayat Penjualan',headers,data,'riwayat_penjualan_'+today+'.xlsx');
   } else {
     const kiriman=await dbGetKiriman({});
