@@ -1,8 +1,10 @@
 // ═══════════════════════════════════════════════════
-// INSTALL PROMPT - Teaching Farm UB V4.3.5
+// INSTALL PROMPT - Teaching Farm UB V4.3.6
 // ═══════════════════════════════════════════════════
 
-const APP_VERSION = '4.3.5'; // Naikkan ini setiap ada update besar
+// Konfigurasi Notifikasi
+const INSTALL_COOLDOWN = 24 * 60 * 60 * 1000; // 24 jam
+const APP_VERSION = '4.3.6'; // Naikkan ini setiap ada update besar
 
 class InstallPrompt {
   constructor() {
