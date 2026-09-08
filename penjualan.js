@@ -522,9 +522,20 @@ async function renderRiwayatJual(){
   
   if (inputDari && inputSampai && (!inputDari.value || !inputSampai.value)) {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1); // Bulan lalu
     inputSampai.value = today.toISOString().split('T')[0];
-    inputDari.value = firstDay.toISOString().split('T')[0];
+    try {
+      const oldestData = await SB.select('penjualan_tf_ub', '?order=tanggal.asc&limit=1&select=tanggal');
+      if (oldestData && oldestData.length > 0 && oldestData[0].tanggal) {
+        inputDari.value = oldestData[0].tanggal;
+      } else {
+        const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        inputDari.value = firstDay.toISOString().split('T')[0];
+      }
+    } catch(e) {
+      console.warn('Gagal mengambil tanggal tertua:', e);
+      const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      inputDari.value = firstDay.toISOString().split('T')[0];
+    }
   }
   
   const filter = {};
