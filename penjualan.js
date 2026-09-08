@@ -1351,7 +1351,10 @@ async function loadPageRiwayatAudit() {
           let actionCell = '';
           if (canEdit && (d.idB || d.idK)) {
             const escKet = (g.keterangan || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-            actionCell = `<td style="padding:6px; text-align:center;"><button onclick="startEditAuditRow('${d.idB||''}', '${d.idK||''}', '${grade}', ${d.sysB}, ${d.sysK}, ${d.actB}, ${d.actK}, '${escKet}', this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;" title="Edit Aktual">✏️</button></td>`;
+            actionCell = `<td style="padding:6px; text-align:center;">
+               <button onclick="startEditAuditRow('${d.idB||''}', '${d.idK||''}', '${grade}', ${d.sysB}, ${d.sysK}, ${d.actB}, ${d.actK}, '${escKet}', this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit Aktual">✏️</button>
+               <button onclick="deleteAuditRow('${d.idB||''}', '${d.idK||''}')" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#ef4444;" title="Hapus Audit">🗑️</button>
+            </td>`;
           } else {
             actionCell = canEdit ? `<td></td>` : '';
           }
@@ -1582,6 +1585,55 @@ async function editRiwayatAuditInline(idB, idK, actB, actK, selB, selK, ket) {
         await window.dbUpdatePenjualanWithOffline(p.id, rows, rows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0), p.tanggal);
       } else {
         await SB.update('penjualan_tf_ub', {rows: rows}, `?id=eq.${p.id}`);
+      }
+    }
+  }
+}
+
+window.deleteAuditRow = async function(idB, idK) {
+  if(!confirm('Yakin ingin menghapus histori audit ini?\\n\\nJika audit ini memiliki riwayat otomatis "Susut Audit" di Penjualan, sistem juga akan menghapusnya secara otomatis.')) return;
+  
+  try {
+    const container = document.getElementById('page-riwayat-audit-list');
+    if(container) container.innerHTML = '<div style="padding:20px; text-align:center; color:#6b7280;">⏳ Menghapus...</div>';
+    
+    if (idB) await hapusRiwayatAuditSilent(idB);
+    if (idK) await hapusRiwayatAuditSilent(idK);
+    
+    showToast('Histori audit berhasil dihapus!', 'success');
+    if (typeof loadPageRiwayatAudit === 'function') loadPageRiwayatAudit();
+    if (typeof renderStokTelur === 'function') renderStokTelur();
+    if (typeof renderRiwayatJual === 'function') renderRiwayatJual();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal menghapus audit!', 'error');
+    if (typeof loadPageRiwayatAudit === 'function') loadPageRiwayatAudit();
+  }
+};
+
+async function hapusRiwayatAuditSilent(id) {
+  const audits = await SB.select('audit_stok_tf_ub', `?id=eq.${id}`);
+  const a = audits && audits.length > 0 ? audits[0] : null;
+  
+  if (a) {
+    await SB.delete('audit_stok_tf_ub', `?id=eq.${id}`);
+    if (a.jenis_item === 'Telur' && parseFloat(a.selisih) !== 0 && typeof dbGetPenjualan === 'function') {
+      const pRows = await dbGetPenjualan({dari: a.tanggal, sampai: a.tanggal, limit: 1});
+      if (pRows && pRows.length > 0) {
+        const p = pRows[0];
+        let rows = p.rows || [];
+        const idx = rows.findIndex(r => r.pelanggan === 'Susut Audit' && r.grade === a.kategori_item && 
+               ((a.satuan === 'butir' && r.butir == -a.selisih) || (a.satuan === 'kg' && r.kilo == -a.selisih)));
+        if (idx !== -1) {
+          rows.splice(idx, 1);
+          if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
+            await window.dbUpdatePenjualanWithOffline(p.id, rows, rows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0), p.tanggal);
+          } else if (typeof window.dbUpdatePenjualanRows === 'function') {
+            await window.dbUpdatePenjualanRows(p.id, rows);
+          } else {
+            await SB.update('penjualan_tf_ub', {rows: rows}, `?id=eq.${p.id}`);
+          }
+        }
       }
     }
   }
