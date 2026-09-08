@@ -355,6 +355,13 @@ async function dbGetStokTelur(sampai) {
   } catch { return null; }
 }
 
+// Server-side stok kandang (total kumulatif tanpa potong penjualan/waste/audit)
+async function dbGetStokKandang(sampai) {
+  try {
+    return await SB.rpc('get_stok_kandang_tf_ub', { p_sampai: sampai || new Date().toISOString().split('T')[0] });
+  } catch { return null; }
+}
+
 // Server-side stok pakan
 async function dbGetStokPakan() {
   try {

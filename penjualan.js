@@ -148,7 +148,16 @@ async function renderStokTelur(){
   const tgl=document.getElementById('jual-tanggal').value||new Date().toISOString().split('T')[0];
   const el=document.getElementById('stok-telur-body');
   el.innerHTML='<div style="color:#aaa;font-size:.85rem;text-align:center;padding:8px">⏳ Menghitung stok...</div>';
+  
+  // Ambil Stok Gudang
   const stok=await getStokTelur(tgl);
+  
+  // Ambil Stok Kandang (Kumulatif)
+  let stokKandang = null;
+  if (typeof dbGetStokKandang === 'function') {
+    stokKandang = await dbGetStokKandang(tgl);
+  }
+
   let audits = [];
   try { audits = await dbGetAudit({ dari: tgl, sampai: tgl, jenis_item: 'Telur' }); } catch(e) {}
   let totalSysButir = 0, totalSysKilo = 0;
@@ -162,7 +171,6 @@ async function renderStokTelur(){
   const getDisp = (g, sat, val) => {
     const a = audits.find(x => x.kategori_item === g && x.satuan === sat);
     if (a && a.stok_aktual != null && a.selisih != null) {
-      // Cek apakah audit ini sudah dicatat di Penjualan (fitur baru)
       let isDeducted = false;
       juals.forEach(j => {
         if (j.tanggal === a.tanggal) {
@@ -174,9 +182,6 @@ async function renderStokTelur(){
       
       const aktual = sat === 'butir' ? parseInt(a.stok_aktual) : parseFloat(a.stok_aktual);
       const sel = sat === 'butir' ? parseInt(a.selisih) : parseFloat(a.selisih);
-      
-      // Jika sudah dipotong di Penjualan, val adalah stok aktual. Maka teoritis = val + selisih.
-      // Jika belum dipotong, val adalah stok teoritis.
       const sysVal = isDeducted ? (val + sel) : val;
       
       if (sat === 'butir') {
@@ -192,7 +197,6 @@ async function renderStokTelur(){
       return `${sysVal.toFixed(2)} / <span style="color:#0284c7">${aktual.toFixed(2)}</span>`;
     }
     
-    // Fallback jika tidak ada audit di hari tersebut
     if (sat === 'butir') {
       totalSysButir += val;
       totalActButir += val;
@@ -205,7 +209,8 @@ async function renderStokTelur(){
 
   const grades=['Normal','Crem','Bentes','Ceplokan'];
   
-  const tbodyHtml = grades.map(g => {
+  // Row untuk Stok Gudang
+  const tbodyGudang = grades.map(g => {
     return '<tr><td>'+g+'</td><td style="font-weight:700;color:'+(stok[g].butir>0?'#1b4332':'#dc2626')+'">'+getDisp(g, 'butir', stok[g].butir)+'</td><td>'+getDisp(g, 'kg', stok[g].kilo)+' kg</td></tr>';
   }).join('');
   
@@ -217,18 +222,43 @@ async function renderStokTelur(){
     ? `${totalSysKilo.toFixed(2)} / <span style="color:#0284c7">${totalActKilo.toFixed(2)}</span>`
     : totalSysKilo.toFixed(2);
 
-  el.innerHTML=
-    '<table class="tbl" style="margin-bottom:0">'+
-    '<thead><tr><th>Grade</th><th>Stok (butir)</th><th>Stok (kg)</th></tr></thead><tbody>'+
-    tbodyHtml+
-    '<tr class="total-row"><td>TOTAL</td><td>'+totalButirDisp+'</td><td>'+totalKiloDisp+' kg</td></tr>'+
-    '</tbody></table>'+
-    '<div style="font-size:.75rem;color:#888;margin-top:8px">Kumulatif produksi s.d. '+tgl+'. Angka biru adalah stok aktual dari audit.</div>';
+  let html = '';
+
+  // Tambahkan Tabel Stok Kandang jika ada data
+  if (stokKandang) {
+    let totKButir = 0, totKKilo = 0;
+    const tbodyKandang = grades.map(g => {
+      const b = parseInt(stokKandang[g]?.butir || 0);
+      const k = parseFloat(stokKandang[g]?.kilo || 0);
+      totKButir += b;
+      totKKilo += k;
+      return '<tr><td>'+g+'</td><td style="font-weight:700;color:#1b4332">'+b.toLocaleString('id-ID')+'</td><td>'+k.toFixed(2)+' kg</td></tr>';
+    }).join('');
+    
+    html += '<h3 style="font-size:1rem;margin:0 0 8px 0;color:#2f855a">Stok Kandang (Kumulatif)</h3>';
+    html += '<table class="tbl" style="margin-bottom:16px">';
+    html += '<thead><tr><th>Grade</th><th>Stok (butir)</th><th>Stok (kg)</th></tr></thead><tbody>';
+    html += tbodyKandang;
+    html += '<tr class="total-row"><td>TOTAL</td><td>'+totKButir.toLocaleString('id-ID')+'</td><td>'+totKKilo.toFixed(2)+' kg</td></tr>';
+    html += '</tbody></table>';
+  }
+
+  // Tabel Stok Gudang
+  html += '<h3 style="font-size:1rem;margin:0 0 8px 0;color:#2f855a">Stok Gudang (Siap Jual)</h3>';
+  html += '<table class="tbl" style="margin-bottom:0">';
+  html += '<thead><tr><th>Grade</th><th>Stok (butir)</th><th>Stok (kg)</th></tr></thead><tbody>';
+  html += tbodyGudang;
+  html += '<tr class="total-row"><td>TOTAL</td><td>'+totalButirDisp+'</td><td>'+totalKiloDisp+' kg</td></tr>';
+  html += '</tbody></table>';
+  html += '<div style="font-size:.75rem;color:#888;margin-top:8px">Angka biru pada Gudang adalah stok aktual dari audit terakhir.</div>';
+
+  el.innerHTML = html;
     
   if (typeof renderHistoriStok7Hari === 'function') {
     renderHistoriStok7Hari(tgl);
   }
 }
+
 
 // ═══ HARGA PASAR DI HALAMAN JUAL ═══
 async function loadHargaPasarJual() {
