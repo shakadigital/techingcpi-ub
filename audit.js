@@ -508,13 +508,20 @@ window.hapusRiwayatAudit = async function(id) {
       }
     }
     showToast('Histori audit berhasil dihapus!', 'success');
-    openRiwayatAuditModal();
+    
+    // Refresh modal if it is currently open
+    const modal = document.getElementById('modal-riwayat-audit');
+    if (modal && modal.style.display === 'flex') {
+      openRiwayatAuditModal();
+    }
+    
+    // Refresh main tables
+    if (typeof loadPageRiwayatAudit === 'function') loadPageRiwayatAudit();
     if (typeof renderStokTelur === 'function') renderStokTelur();
     if (typeof renderRiwayatJual === 'function') renderRiwayatJual();
   } catch(e) {
     console.error(e);
     showToast('Gagal menghapus audit!', 'error');
-    openRiwayatAuditModal();
   }
 };
 
@@ -601,12 +608,19 @@ window.editRiwayatAudit = async function(id) {
     }
     
     showToast('Histori audit berhasil diupdate!', 'success');
-    openRiwayatAuditModal();
+    
+    // Refresh modal if it is currently open
+    const modal = document.getElementById('modal-riwayat-audit');
+    if (modal && modal.style.display === 'flex') {
+      openRiwayatAuditModal();
+    }
+    
+    // Refresh main tables
+    if (typeof loadPageRiwayatAudit === 'function') loadPageRiwayatAudit();
     if (typeof renderStokTelur === 'function') renderStokTelur();
     if (typeof renderRiwayatJual === 'function') renderRiwayatJual();
   } catch(e) {
     console.error(e);
     showToast('Gagal update audit!', 'error');
-    openRiwayatAuditModal();
   }
 };
