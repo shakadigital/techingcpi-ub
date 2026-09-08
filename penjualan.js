@@ -1329,6 +1329,8 @@ async function loadPageRiwayatAudit() {
         let totSysB = 0, totActB = 0, totSelB = 0;
         let totSysK = 0, totActK = 0, totSelK = 0;
         
+        const canEdit = currentUser && ['supervisor','admin','superadmin'].includes(currentUser.role);
+        
         gradeOrder.forEach(grade => {
           if (!gradesMap[grade]) return;
           const d = gradesMap[grade];
@@ -1342,8 +1344,6 @@ async function loadPageRiwayatAudit() {
           const selBSign = d.selB > 0 ? '+' : '';
           const selKColor = d.selK > 0 ? '#10b981' : (d.selK < 0 ? '#ef4444' : '#6b7280');
           const selKSign = d.selK > 0 ? '+' : '';
-          
-          const canEdit = currentUser && ['supervisor','admin','superadmin'].includes(currentUser.role);
           
           let actBDisp = d.actB !== d.sysB ? `<div style="font-weight:600; color:#111827;">${fmt(d.actB, 0)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
           let actKDisp = d.actK !== d.sysK ? `<div style="font-weight:600; color:#111827;">${fmt(d.actK, 2)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
