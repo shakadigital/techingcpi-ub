@@ -1823,24 +1823,39 @@ async function renderHistoriStok7Hari(endDateStr) {
 // ==========================================
 // RIWAYAT BUANG (WASTE)
 // ==========================================
+window.resetFilterRiwayatWaste = function() {
+  const inputDari = document.getElementById('filter-waste-dari');
+  const inputSampai = document.getElementById('filter-waste-sampai');
+  if(inputDari) inputDari.value = '';
+  if(inputSampai) inputSampai.value = '';
+  renderRiwayatWaste();
+};
+
 async function renderRiwayatWaste() {
-  const inputBulan = document.getElementById('filter-waste-bulan');
+  const inputDari = document.getElementById('filter-waste-dari');
+  const inputSampai = document.getElementById('filter-waste-sampai');
   
-  if (inputBulan && !inputBulan.value) {
+  if (inputDari && inputSampai && (!inputDari.value || !inputSampai.value)) {
     const today = new Date();
-    inputBulan.value = today.toISOString().substring(0, 7); // Format YYYY-MM
+    inputSampai.value = today.toISOString().split('T')[0];
+    try {
+      const oldestData = await SB.select('penjualan_tf_ub', '?order=tanggal.asc&limit=1&select=tanggal');
+      if (oldestData && oldestData.length > 0 && oldestData[0].tanggal) {
+        inputDari.value = oldestData[0].tanggal;
+      } else {
+        const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        inputDari.value = firstDay.toISOString().split('T')[0];
+      }
+    } catch(e) {
+      console.warn('Gagal mengambil tanggal tertua:', e);
+      const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      inputDari.value = firstDay.toISOString().split('T')[0];
+    }
   }
   
   const filter = {};
-  if (inputBulan && inputBulan.value) {
-    // Cari dari awal bulan sampai akhir bulan
-    const tglArr = inputBulan.value.split('-');
-    const tahun = parseInt(tglArr[0], 10);
-    const bulan = parseInt(tglArr[1], 10);
-    const lastDay = new Date(tahun, bulan, 0).getDate();
-    filter.dari = `${inputBulan.value}-01`;
-    filter.sampai = `${inputBulan.value}-${lastDay.toString().padStart(2, '0')}`;
-  }
+  if (inputDari && inputDari.value) filter.dari = inputDari.value;
+  if (inputSampai && inputSampai.value) filter.sampai = inputSampai.value;
   filter.limit = 9999;
   
   const all = await dbGetPenjualan(filter);
@@ -1849,39 +1864,150 @@ async function renderRiwayatWaste() {
   if (!tbody || !empty) return;
   
   tbody.innerHTML = '';
-  let hasData = false;
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
   
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  const canDelete = isAdmin;
+  
+  let flatItems = [];
   all.forEach(rec => {
     const rows = rec.rows || [];
-    rows.forEach((r, i) => {
-      // Hanya ambil yang Waste
+    rows.forEach((r, idx) => {
       if (r.grade !== 'Waste') return;
       
-      hasData = true;
-      const tr = document.createElement('tr');
+      const parts = rec.tanggal.split('-'); // YYYY-MM-DD
+      const bKey = parts[0] + '-' + parts[1]; // YYYY-MM
+      const d = new Date(rec.tanggal);
+      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
       
-      const canEdit = isAdmin || ['supervisor', 'staff'].includes(currentUser?.role);
-      const canDelete = isAdmin;
-      
-      let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
-      if (canDelete) aksiCell += `<button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus waste ini">🗑️</button>`;
-      aksiCell += '</td>';
-
-      const dateStr = fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2));
-      const tButir = (r.butir||0).toLocaleString('id-ID');
-      const tKilo = (r.kilo||0).toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2});
-      
-      tr.innerHTML = `
-        <td style="white-space:nowrap;font-size:0.85rem">${dateStr}</td>
-        <td style="text-align:right">${tButir}</td>
-        <td style="text-align:right">${tKilo}</td>
-        <td>${r.keterangan || '-'}</td>
-        ${aksiCell}
-      `;
-      tbody.appendChild(tr);
+      flatItems.push({
+        tanggal: rec.tanggal,
+        bulanKey: bKey,
+        bulanStr: months[d.getMonth()] + ' ' + d.getFullYear(),
+        butir: parseInt(String(r.butir||'0').replace(/[^0-9]/g, '')) || 0,
+        kilo: parseFloat(r.kilo||0) || 0,
+        keterangan: r.keterangan || '-',
+        recId: rec.id,
+        index: idx
+      });
     });
   });
   
-  if(!hasData){empty.style.display='block';} else {empty.style.display='none';}
+  if(flatItems.length === 0){
+    empty.style.display='block';
+    return;
+  } else {
+    empty.style.display='none';
+  }
+  
+  const currentMonthKey = new Date().toISOString().substring(0,7);
+  
+  const groups = {}; 
+  flatItems.forEach(item => {
+    if(!groups[item.bulanKey]) {
+      groups[item.bulanKey] = { items: [], tanggals: {}, bulanStr: item.bulanStr };
+    }
+    groups[item.bulanKey].items.push(item);
+    
+    const tglKey = item.tanggal;
+    if(!groups[item.bulanKey].tanggals[tglKey]) {
+      groups[item.bulanKey].tanggals[tglKey] = [];
+    }
+    groups[item.bulanKey].tanggals[tglKey].push(item);
+  });
+  
+  const ar = 'text-align:right;';
+  const sortedBulan = Object.keys(groups).sort().reverse();
+  
+  sortedBulan.forEach(bKey => {
+    const gBulan = groups[bKey];
+    const isCurrentMonth = (bKey === currentMonthKey);
+    
+    if (isCurrentMonth) {
+      gBulan.items.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal)).forEach(item => {
+        renderWasteLevel3(item, tbody, ar, canDelete, '');
+      });
+    } else {
+      const sumButir = gBulan.items.reduce((s, x)=>s+x.butir, 0);
+      const sumKilo = gBulan.items.reduce((s, x)=>s+x.kilo, 0);
+      
+      const bClass = 'cw-' + bKey;
+      
+      const trB = document.createElement('tr');
+      trB.className = 'group-bulan';
+      trB.setAttribute('data-target', '.'+bClass);
+      trB.setAttribute('data-expanded', 'false');
+      trB.style.cursor = 'pointer';
+      trB.style.background = '#fef2f2'; 
+      trB.style.fontWeight = 'bold';
+      trB.onclick = function() { toggleRiwayatGroup(this); }; 
+      
+      trB.innerHTML = `
+        <td><span class="toggle-icon" style="display:inline-block;width:16px;">▶</span> ${gBulan.bulanStr}</td>
+        <td style="${ar}">${sumButir.toLocaleString('id-ID')}</td>
+        <td style="${ar}">${sumKilo.toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2})}</td>
+        <td>-</td>
+        <td></td>
+      `;
+      tbody.appendChild(trB);
+      
+      const sortedTgl = Object.keys(gBulan.tanggals).sort().reverse();
+      sortedTgl.forEach((tKey, tIdx) => {
+        const tItems = gBulan.tanggals[tKey];
+        const pSumButir = tItems.reduce((s, x)=>s+x.butir, 0);
+        const pSumKilo = tItems.reduce((s, x)=>s+x.kilo, 0);
+        
+        const tClass = bClass + '-t' + tIdx;
+        const fmtDate = fmtTgl(tKey).replace(/\\d{4}$/, match => match.slice(2));
+        
+        const trT = document.createElement('tr');
+        trT.className = 'group-tanggal ' + bClass;
+        trT.setAttribute('data-target', '.'+tClass);
+        trT.setAttribute('data-expanded', 'false');
+        trT.style.cursor = 'pointer';
+        trT.style.background = '#fef8f8';
+        trT.style.fontWeight = '600';
+        trT.style.display = 'none';
+        trT.onclick = function() { toggleRiwayatGroup(this); };
+        
+        trT.innerHTML = `
+          <td><span class="toggle-icon" style="display:inline-block;width:16px;margin-left:12px;">▶</span> ${fmtDate}</td>
+          <td style="${ar}">${pSumButir.toLocaleString('id-ID')}</td>
+          <td style="${ar}">${pSumKilo.toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2})}</td>
+          <td>-</td>
+          <td></td>
+        `;
+        tbody.appendChild(trT);
+        
+        tItems.forEach(item => {
+           renderWasteLevel3(item, tbody, ar, canDelete, bClass + ' ' + tClass);
+        });
+      });
+    }
+  });
+}
+
+function renderWasteLevel3(item, tbody, ar, canDelete, parentClasses) {
+  const tr = document.createElement('tr');
+  if (parentClasses) {
+    tr.className = parentClasses;
+    tr.style.display = 'none';
+  }
+  
+  let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
+  if (canDelete) {
+    aksiCell += `<button onclick="hapusPenjualanItem('${item.recId}', ${item.index})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus waste ini">🗑️</button>`;
+  }
+  aksiCell += '</td>';
+  
+  const dateStr = fmtTgl(item.tanggal).replace(/\\d{4}$/, match => match.slice(2));
+  let paddingLeft = parentClasses ? '28px' : '0';
+  
+  tr.innerHTML = `
+    <td style="white-space:nowrap;font-size:0.85rem; padding-left:${paddingLeft}">${parentClasses ? '' : dateStr}</td>
+    <td style="${ar}">${item.butir.toLocaleString('id-ID')}</td>
+    <td style="${ar}">${item.kilo.toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:2})}</td>
+    <td>${esc(item.keterangan)}</td>
+    ${aksiCell}
+  `;
+  tbody.appendChild(tr);
 }
