@@ -1346,10 +1346,15 @@ async function loadPageRiwayatAudit() {
           const canEdit = currentUser && ['supervisor','admin','superadmin'].includes(currentUser.role);
           
           let actBDisp = d.actB !== d.sysB ? `<div style="font-weight:600; color:#111827;">${fmt(d.actB, 0)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
-          if (canEdit && d.idB) actBDisp = `<div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">${actBDisp} <span onclick="editRiwayatAudit('${d.idB}')" style="cursor:pointer;font-size:0.85rem;" title="Edit Aktual Butir">✏️</span></div>`;
-          
           let actKDisp = d.actK !== d.sysK ? `<div style="font-weight:600; color:#111827;">${fmt(d.actK, 2)}</div>` : `<div style="color:#6b7280;">Sesuai</div>`;
-          if (canEdit && d.idK) actKDisp = `<div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">${actKDisp} <span onclick="editRiwayatAudit('${d.idK}')" style="cursor:pointer;font-size:0.85rem;" title="Edit Aktual Kg">✏️</span></div>`;
+          
+          let actionCell = '';
+          if (canEdit && (d.idB || d.idK)) {
+            const escKet = (g.keterangan || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            actionCell = `<td style="padding:6px; text-align:center;"><button onclick="startEditAuditRow('${d.idB||''}', '${d.idK||''}', '${grade}', ${d.sysB}, ${d.sysK}, ${d.actB}, ${d.actK}, '${escKet}', this)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;" title="Edit Aktual">✏️</button></td>`;
+          } else {
+            actionCell = canEdit ? `<td></td>` : '';
+          }
           
           rowsHtml += `
             <tr style="border-top:1px solid #e5e7eb;">
@@ -1360,6 +1365,7 @@ async function loadPageRiwayatAudit() {
               <td style="padding:6px; text-align:right;">${actKDisp}</td>
               <td style="padding:6px; text-align:right; font-weight:700; color:${selBColor}">${selBSign}${fmt(d.selB, 0)}</td>
               <td style="padding:6px; text-align:right; font-weight:700; color:${selKColor}">${selKSign}${fmt(d.selK, 2)}</td>
+              ${actionCell}
             </tr>
           `;
         });
@@ -1379,6 +1385,7 @@ async function loadPageRiwayatAudit() {
             <td style="padding:8px 6px; text-align:right;">${fmtTot(totActK, 2)}</td>
             <td style="padding:8px 6px; text-align:right; color:${totSelBColor}">${totSelBSign}${fmtTot(totSelB, 0)}</td>
             <td style="padding:8px 6px; text-align:right; color:${totSelKColor}">${totSelKSign}${fmtTot(totSelK, 2)}</td>
+            ${canEdit ? `<td></td>` : ''}
           </tr>
         `;
         
@@ -1404,6 +1411,7 @@ async function loadPageRiwayatAudit() {
                     <th style="padding:6px; text-align:right;">Aktual (kg)</th>
                     <th style="padding:6px; text-align:right;">Susut (btr)</th>
                     <th style="padding:6px; text-align:right;">Susut (kg)</th>
+                    ${canEdit ? `<th style="padding:6px; text-align:center;">Aksi</th>` : ''}
                   </tr>
                 </thead>
                 <tbody>
@@ -1450,6 +1458,132 @@ async function loadPageRiwayatAudit() {
   } catch(e) {
     console.error(e);
     container.innerHTML = `<div style="padding:20px; text-align:center; color:#ef4444;">Gagal memuat: ${e.message}</div>`;
+  }
+}
+
+window.startEditAuditRow = function(idB, idK, grade, sysB, sysK, actB, actK, ket, btnEl) {
+  const tr = btnEl.closest('tr');
+  if(!tr.dataset.originalHtml) {
+    tr.dataset.originalHtml = encodeURIComponent(tr.innerHTML);
+  }
+  
+  tr.innerHTML = `
+    <td style="padding:6px; font-weight:500;">${grade}</td>
+    <td style="padding:6px; text-align:right;">${sysB}</td>
+    <td style="padding:6px; text-align:right;"><input type="number" id="inline-actB-${grade}" value="${actB}" style="width:70px; text-align:right; padding:4px; border:1px solid #ccc; border-radius:4px;" /></td>
+    <td style="padding:6px; text-align:right;">${sysK}</td>
+    <td style="padding:6px; text-align:right;"><input type="number" step="0.01" id="inline-actK-${grade}" value="${actK}" style="width:70px; text-align:right; padding:4px; border:1px solid #ccc; border-radius:4px;" /></td>
+    <td colspan="2" style="padding:6px;"><input type="text" id="inline-ket-${grade}" value="${ket === '-' ? '' : ket}" placeholder="Keterangan..." style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;" /></td>
+    <td style="padding:6px; text-align:center; white-space:nowrap;">
+       <button onclick="saveEditAuditRow('${idB}', '${idK}', '${grade}', ${sysB}, ${sysK}, this)" style="background:#10b981; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-right:4px;" title="Simpan">💾</button>
+       <button onclick="cancelEditAuditRow(this)" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;" title="Batal">❌</button>
+    </td>
+  `;
+};
+
+window.cancelEditAuditRow = function(btnEl) {
+  const tr = btnEl.closest('tr');
+  if(tr.dataset.originalHtml) {
+    tr.innerHTML = decodeURIComponent(tr.dataset.originalHtml);
+  }
+};
+
+window.saveEditAuditRow = async function(idB, idK, grade, sysB, sysK, btnEl) {
+  const tr = btnEl.closest('tr');
+  const actB = parseFloat(document.getElementById(`inline-actB-${grade}`).value);
+  const actK = parseFloat(document.getElementById(`inline-actK-${grade}`).value);
+  const ket = document.getElementById(`inline-ket-${grade}`).value.trim();
+  
+  if (isNaN(actB) || isNaN(actK)) {
+    showToast('Input aktual harus berupa angka!', 'error');
+    return;
+  }
+  
+  const selB = actB - sysB;
+  const selK = actK - sysK;
+  
+  if ((selB !== 0 || selK !== 0) && ket === '') {
+    showToast('Keterangan wajib diisi jika ada selisih!', 'error');
+    return;
+  }
+  
+  try {
+    tr.innerHTML = `<td colspan="8" style="padding:10px; text-align:center;">⏳ Menyimpan...</td>`;
+    
+    // We update audit logic using the backend `editRiwayatAuditInline`
+    await editRiwayatAuditInline(idB, idK, actB, actK, selB, selK, ket);
+    
+    showToast('Audit berhasil diupdate!', 'success');
+    if (typeof loadPageRiwayatAudit === 'function') loadPageRiwayatAudit();
+    if (typeof renderStokTelur === 'function') renderStokTelur();
+    if (typeof renderRiwayatJual === 'function') renderRiwayatJual();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal update audit!', 'error');
+    if (typeof loadPageRiwayatAudit === 'function') loadPageRiwayatAudit(); // Refresh to undo
+  }
+};
+
+async function editRiwayatAuditInline(idB, idK, actB, actK, selB, selK, ket) {
+  let auditRow = null;
+  // UPDATE BUTIR
+  if (idB) {
+    const audits = await SB.select('audit_stok_tf_ub', `?id=eq.${idB}`);
+    if (audits && audits.length > 0) {
+      auditRow = audits[0];
+      await SB.update('audit_stok_tf_ub', {
+        stok_aktual: actB, selisih: selB, keterangan: ket
+      }, `?id=eq.${idB}`);
+    }
+  }
+  // UPDATE KG
+  if (idK) {
+    const audits = await SB.select('audit_stok_tf_ub', `?id=eq.${idK}`);
+    if (audits && audits.length > 0) {
+      if(!auditRow) auditRow = audits[0];
+      await SB.update('audit_stok_tf_ub', {
+        stok_aktual: actK, selisih: selK, keterangan: ket
+      }, `?id=eq.${idK}`);
+    }
+  }
+  
+  // UPDATE PENJUALAN
+  if (auditRow && auditRow.jenis_item === 'Telur' && typeof dbGetPenjualan === 'function') {
+    const pRows = await dbGetPenjualan({dari: auditRow.tanggal, sampai: auditRow.tanggal, limit: 1});
+    if (pRows && pRows.length > 0) {
+      const p = pRows[0];
+      let rows = p.rows || [];
+      const grade = auditRow.kategori_item;
+      // Find 'Susut Audit' for this grade
+      const idx = rows.findIndex(r => r.pelanggan === 'Susut Audit' && r.grade === grade);
+      
+      if (idx !== -1) {
+        if (selB === 0 && selK === 0) {
+           rows.splice(idx, 1);
+        } else {
+           rows[idx].butir = -selB;
+           rows[idx].kilo = -selK;
+           rows[idx].keterangan = ket;
+        }
+      } else if (selB !== 0 || selK !== 0) {
+        rows.push({
+          pelanggan: 'Susut Audit',
+          grade: grade,
+          butir: -selB,
+          kilo: -selK,
+          harga: 0,
+          total: 'Rp 0',
+          keterangan: ket || 'Penyesuaian stok audit'
+        });
+      }
+      
+      // Update DB
+      if (typeof window.dbUpdatePenjualanWithOffline === 'function') {
+        await window.dbUpdatePenjualanWithOffline(p.id, rows, rows.reduce((sum, r) => sum + (parseInt((r.total||'').replace(/[^0-9]/g,''))||0), 0), p.tanggal);
+      } else {
+        await SB.update('penjualan_tf_ub', {rows: rows}, `?id=eq.${p.id}`);
+      }
+    }
   }
 }
 
