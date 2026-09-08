@@ -514,10 +514,9 @@ async function renderRiwayatJual(){
   
   if (inputDari && inputSampai && (!inputDari.value || !inputSampai.value)) {
     const today = new Date();
-    const lastWeek = new Date(today);
-    lastWeek.setDate(lastWeek.getDate() - 6); // 7 days including today
+    const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1); // Bulan lalu
     inputSampai.value = today.toISOString().split('T')[0];
-    inputDari.value = lastWeek.toISOString().split('T')[0];
+    inputDari.value = firstDay.toISOString().split('T')[0];
   }
   
   const filter = {};
@@ -532,57 +531,210 @@ async function renderRiwayatJual(){
   
   let hasData = false;
   const isAdmin=currentUser?.role==='admin'||currentUser?.role==='superadmin';
+  const canEdit = isAdmin || ['supervisor', 'staff'].includes(currentUser?.role);
+  const canDelete = isAdmin;
   
-  all.forEach(rec=>{
+  const currentMonthKey = new Date().toISOString().substring(0,7);
+  
+  // 1. Flatten valid items
+  let flatItems = [];
+  all.forEach(rec => {
     const rows=rec.rows||[];
     rows.forEach((r,i)=>{
-      const isWaste = r.grade === 'Waste';
-      const isBusuk = r.grade === 'Busuk';
-      const isSusut = r.pelanggan === 'Susut Audit';
-      
-      // Filter out waste and audit from Riwayat Penjualan
-      if (isWaste || isBusuk || isSusut) return;
-      
+      if (r.grade === 'Waste' || r.grade === 'Busuk' || r.pelanggan === 'Susut Audit') return;
       hasData = true;
-      const tr=document.createElement('tr');
-      const st = '';
-      const fw = '';
-      const ar = 'text-align:right;';
+      const t = new Date(rec.tanggal);
+      const mNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
       
-      const canEdit = isAdmin || ['supervisor', 'staff'].includes(currentUser?.role);
-      const canDelete = isAdmin;
-      
-      let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
-      if (canEdit) aksiCell += `<button onclick="editPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit item ini">✏️</button>`;
-      if (canDelete) aksiCell += `<button onclick="hapusPenjualanItem('${rec.id}', ${i})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>`;
-      aksiCell += '</td>';
-
-      const dateStr = fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2));
-      const tButir = (r.butir||0).toLocaleString('id-ID');
-      const tKilo = (r.kilo||0).toLocaleString('id-ID');
-      const valHarga = r.harga ? parseFloat(r.harga).toLocaleString('id-ID') : '0';
-      const tHarga = `<div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${valHarga}</span></div>`;
-      
-      const rTotalRaw = parseFloat(String(r.total||'0').replace(/[^0-9,-]/g, '').replace(',', '.'));
-      const valTotal = isNaN(rTotalRaw) ? '0' : rTotalRaw.toLocaleString('id-ID');
-      const tTotal = `<div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${valTotal}</span></div>`;
-
-      tr.innerHTML = `
-        <td style="${st}">${dateStr}</td>
-        <td style="${st}">${esc(r.pelanggan||'—')}</td>
-        <td style="${st}${fw}">${esc(r.grade||'—')}</td>
-        <td style="${st}">${esc(r.keterangan||'—')}</td>
-        <td style="${st}${ar}">${tButir}</td>
-        <td style="${st}${ar}">${r.kilo||0}</td>
-        <td style="${st}${ar}">${tHarga}</td>
-        <td style="${st}${ar}">${tTotal}</td>
-        ${aksiCell}
-      `;
-      tbody.appendChild(tr);
+      flatItems.push({
+         recId: rec.id,
+         index: i,
+         tanggal: rec.tanggal,
+         dateStr: fmtTgl(rec.tanggal).replace(/\d{4}$/, match => match.slice(2)),
+         bulanKey: rec.tanggal.substring(0,7),
+         bulanStr: mNames[t.getMonth()] + ' ' + t.getFullYear(),
+         pelanggan: r.pelanggan || '—',
+         grade: r.grade || '—',
+         keterangan: r.keterangan || '—',
+         butir: parseFloat(r.butir||0) || 0,
+         kilo: parseFloat(r.kilo||0) || 0,
+         harga: r.harga ? parseFloat(r.harga) : 0,
+         total: parseFloat(String(r.total||'0').replace(/[^0-9,-]/g, '').replace(',', '.')) || 0,
+         r: r
+      });
     });
   });
+
+  if(!hasData){
+    empty.style.display='block';
+    return;
+  } else {
+    empty.style.display='none';
+  }
+
+  // 2. Group items
+  const groups = {}; // { [bulanKey]: { items: [], pelanggans: {} } }
+  flatItems.forEach(item => {
+    if(!groups[item.bulanKey]) {
+      groups[item.bulanKey] = { items: [], pelanggans: {}, bulanStr: item.bulanStr };
+    }
+    groups[item.bulanKey].items.push(item);
+    
+    if(!groups[item.bulanKey].pelanggans[item.pelanggan]) {
+      groups[item.bulanKey].pelanggans[item.pelanggan] = { items: [] };
+    }
+    groups[item.bulanKey].pelanggans[item.pelanggan].items.push(item);
+  });
+
+  const ar = 'text-align:right;';
   
-  if(!hasData){empty.style.display='block';} else {empty.style.display='none';}
+  // 3. Render
+  const sortedBulan = Object.keys(groups).sort().reverse();
+  
+  sortedBulan.forEach(bKey => {
+    const gBulan = groups[bKey];
+    const isCurrentMonth = (bKey === currentMonthKey);
+    
+    if (isCurrentMonth) {
+      // Tidak di-group, render flat (Level 3 langsung)
+      gBulan.items.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal)).forEach(item => {
+        renderLevel3(item, tbody, ar, canEdit, canDelete, '');
+      });
+    } else {
+      // Grouping (Bulan -> Pelanggan -> Detail)
+      const sumButir = gBulan.items.reduce((s, x)=>s+x.butir, 0);
+      const sumKilo = gBulan.items.reduce((s, x)=>s+x.kilo, 0);
+      const sumTotal = gBulan.items.reduce((s, x)=>s+x.total, 0);
+      const pelCount = Object.keys(gBulan.pelanggans).length;
+      
+      const bClass = 'cb-' + bKey;
+      
+      // Render Level 1
+      const trB = document.createElement('tr');
+      trB.className = 'group-bulan';
+      trB.setAttribute('data-target', '.'+bClass);
+      trB.setAttribute('data-expanded', 'false');
+      trB.style.cursor = 'pointer';
+      trB.style.background = '#f0fdf4';
+      trB.style.fontWeight = 'bold';
+      trB.onclick = function() { toggleRiwayatGroup(this); };
+      
+      trB.innerHTML = `
+        <td><span class="toggle-icon" style="display:inline-block;width:16px;">▶</span> ${gBulan.bulanStr}</td>
+        <td>${pelCount} Pelanggan</td>
+        <td>-</td>
+        <td>-</td>
+        <td style="${ar}">${sumButir.toLocaleString('id-ID')}</td>
+        <td style="${ar}">${sumKilo.toLocaleString('id-ID')}</td>
+        <td style="${ar}">-</td>
+        <td style="${ar}"><div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${sumTotal.toLocaleString('id-ID')}</span></div></td>
+        <td></td>
+      `;
+      tbody.appendChild(trB);
+      
+      // Render Level 2 & 3
+      const sortedPel = Object.keys(gBulan.pelanggans).sort();
+      sortedPel.forEach((pName, pIdx) => {
+        const gPel = gBulan.pelanggans[pName];
+        const pSumButir = gPel.items.reduce((s, x)=>s+x.butir, 0);
+        const pSumKilo = gPel.items.reduce((s, x)=>s+x.kilo, 0);
+        const pSumTotal = gPel.items.reduce((s, x)=>s+x.total, 0);
+        
+        const pClass = bClass + '-p' + pIdx;
+        
+        // Render Level 2
+        const trP = document.createElement('tr');
+        trP.className = 'group-pelanggan ' + bClass;
+        trP.setAttribute('data-target', '.'+pClass);
+        trP.setAttribute('data-expanded', 'false');
+        trP.style.cursor = 'pointer';
+        trP.style.background = '#f8fafc';
+        trP.style.fontWeight = '600';
+        trP.style.display = 'none';
+        trP.onclick = function() { toggleRiwayatGroup(this); };
+        
+        trP.innerHTML = `
+          <td></td>
+          <td><span class="toggle-icon" style="display:inline-block;width:16px;">▶</span> ${esc(pName)}</td>
+          <td>-</td>
+          <td>-</td>
+          <td style="${ar}">${pSumButir.toLocaleString('id-ID')}</td>
+          <td style="${ar}">${pSumKilo.toLocaleString('id-ID')}</td>
+          <td style="${ar}">-</td>
+          <td style="${ar}"><div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${pSumTotal.toLocaleString('id-ID')}</span></div></td>
+          <td></td>
+        `;
+        tbody.appendChild(trP);
+        
+        // Render Level 3
+        gPel.items.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal)).forEach(item => {
+           renderLevel3(item, tbody, ar, canEdit, canDelete, bClass + ' ' + pClass);
+        });
+      });
+    }
+  });
+}
+
+function renderLevel3(item, tbody, ar, canEdit, canDelete, classes) {
+  const tr = document.createElement('tr');
+  if(classes) {
+      tr.className = classes;
+      tr.style.display = 'none';
+  }
+  
+  let aksiCell = '<td style="text-align:center;vertical-align:middle;white-space:nowrap;">';
+  if (canEdit) aksiCell += `<button onclick="editPenjualanItem('${item.recId}', ${item.index})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#0ea5e9;margin-right:6px;" title="Edit item ini">✏️</button>`;
+  if (canDelete) aksiCell += `<button onclick="hapusPenjualanItem('${item.recId}', ${item.index})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#dc2626" title="Hapus item ini">🗑️</button>`;
+  aksiCell += '</td>';
+
+  const tHarga = `<div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${item.harga.toLocaleString('id-ID')}</span></div>`;
+  const tTotal = `<div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${item.total.toLocaleString('id-ID')}</span></div>`;
+
+  tr.innerHTML = `
+    <td>${item.dateStr}</td>
+    <td>${esc(item.pelanggan)}</td>
+    <td>${esc(item.grade)}</td>
+    <td>${esc(item.keterangan)}</td>
+    <td style="${ar}">${item.butir.toLocaleString('id-ID')}</td>
+    <td style="${ar}">${item.kilo.toLocaleString('id-ID')}</td>
+    <td style="${ar}">${tHarga}</td>
+    <td style="${ar}">${tTotal}</td>
+    ${aksiCell}
+  `;
+  tbody.appendChild(tr);
+}
+
+window.toggleRiwayatGroup = function(row) {
+    const targetSelector = row.getAttribute('data-target');
+    const isExpanded = row.getAttribute('data-expanded') === 'true';
+    const isLevel1 = row.classList.contains('group-bulan');
+    
+    if (isExpanded) {
+        row.setAttribute('data-expanded', 'false');
+        row.querySelector('.toggle-icon').textContent = '▶';
+        // Sembunyikan semua turunan
+        document.querySelectorAll(targetSelector).forEach(el => {
+            el.style.display = 'none';
+            if (el.hasAttribute('data-expanded')) {
+                 el.setAttribute('data-expanded', 'false');
+                 const icon = el.querySelector('.toggle-icon');
+                 if(icon) icon.textContent = '▶';
+            }
+        });
+    } else {
+        row.setAttribute('data-expanded', 'true');
+        row.querySelector('.toggle-icon').textContent = '▼';
+        // Tampilkan child langsung
+        document.querySelectorAll(targetSelector).forEach(el => {
+            if (isLevel1) {
+                // Untuk level 1, hanya tampilkan level 2 (class group-pelanggan)
+                if (el.classList.contains('group-pelanggan')) el.style.display = 'table-row';
+            } else {
+                // Untuk level 2, tampilkan semua level 3 yang ber-class tsb
+                el.style.display = 'table-row';
+            }
+        });
+    }
 }
 
 async function hapusPenjualanItem(id, index){
