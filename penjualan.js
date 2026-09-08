@@ -496,7 +496,7 @@ function resetPenjualan(){
     const pelSel=first.querySelector('.pelanggan-select');
     if(pelSel) pelSel.value='';
     const pelTxt=first.querySelector('.pelanggan-text');
-    if(pelTxt){pelTxt.value='';pelTxt.style.display='none';}
+    if(pelTxt){pelTxt.value='';}
     const gradeSel=first.querySelector('.sc-row.three select');
     if(gradeSel) gradeSel.value='';
     const tc=first.querySelector('.total-col');
