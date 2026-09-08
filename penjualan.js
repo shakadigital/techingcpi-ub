@@ -508,6 +508,14 @@ function resetPenjualan(){
   showToast('🔄 Form direset!');
 }
 
+window.resetFilterRiwayatJual = function() {
+  const inputDari = document.getElementById('filter-riwayat-dari');
+  const inputSampai = document.getElementById('filter-riwayat-sampai');
+  if(inputDari) inputDari.value = '';
+  if(inputSampai) inputSampai.value = '';
+  renderRiwayatJual();
+};
+
 async function renderRiwayatJual(){
   const inputDari = document.getElementById('filter-riwayat-dari');
   const inputSampai = document.getElementById('filter-riwayat-sampai');
@@ -573,17 +581,19 @@ async function renderRiwayatJual(){
   }
 
   // 2. Group items
-  const groups = {}; // { [bulanKey]: { items: [], pelanggans: {} } }
+  const groups = {}; // { [bulanKey]: { items: [], tanggals: {} } }
   flatItems.forEach(item => {
     if(!groups[item.bulanKey]) {
-      groups[item.bulanKey] = { items: [], pelanggans: {}, bulanStr: item.bulanStr };
+      groups[item.bulanKey] = { items: [], tanggals: {}, bulanStr: item.bulanStr };
     }
     groups[item.bulanKey].items.push(item);
     
-    if(!groups[item.bulanKey].pelanggans[item.pelanggan]) {
-      groups[item.bulanKey].pelanggans[item.pelanggan] = { items: [] };
+    const tglKey = item.tanggal;
+    if(!groups[item.bulanKey].tanggals[tglKey]) {
+      groups[item.bulanKey].tanggals[tglKey] = { items: [], pelanggans: new Set() };
     }
-    groups[item.bulanKey].pelanggans[item.pelanggan].items.push(item);
+    groups[item.bulanKey].tanggals[tglKey].items.push(item);
+    groups[item.bulanKey].tanggals[tglKey].pelanggans.add(item.pelanggan);
   });
 
   const ar = 'text-align:right;';
@@ -601,11 +611,11 @@ async function renderRiwayatJual(){
         renderLevel3(item, tbody, ar, canEdit, canDelete, '');
       });
     } else {
-      // Grouping (Bulan -> Pelanggan -> Detail)
+      // Grouping (Bulan -> Tanggal -> Detail)
       const sumButir = gBulan.items.reduce((s, x)=>s+x.butir, 0);
       const sumKilo = gBulan.items.reduce((s, x)=>s+x.kilo, 0);
       const sumTotal = gBulan.items.reduce((s, x)=>s+x.total, 0);
-      const pelCount = Object.keys(gBulan.pelanggans).length;
+      const pelCount = new Set(gBulan.items.map(x=>x.pelanggan)).size;
       
       const bClass = 'cb-' + bKey;
       
@@ -633,29 +643,31 @@ async function renderRiwayatJual(){
       tbody.appendChild(trB);
       
       // Render Level 2 & 3
-      const sortedPel = Object.keys(gBulan.pelanggans).sort();
-      sortedPel.forEach((pName, pIdx) => {
-        const gPel = gBulan.pelanggans[pName];
-        const pSumButir = gPel.items.reduce((s, x)=>s+x.butir, 0);
-        const pSumKilo = gPel.items.reduce((s, x)=>s+x.kilo, 0);
-        const pSumTotal = gPel.items.reduce((s, x)=>s+x.total, 0);
+      const sortedTgl = Object.keys(gBulan.tanggals).sort().reverse();
+      sortedTgl.forEach((tKey, tIdx) => {
+        const gTgl = gBulan.tanggals[tKey];
+        const pSumButir = gTgl.items.reduce((s, x)=>s+x.butir, 0);
+        const pSumKilo = gTgl.items.reduce((s, x)=>s+x.kilo, 0);
+        const pSumTotal = gTgl.items.reduce((s, x)=>s+x.total, 0);
+        const tglPelCount = gTgl.pelanggans.size;
         
-        const pClass = bClass + '-p' + pIdx;
+        const tClass = bClass + '-t' + tIdx;
+        const fmtDate = fmtTgl(tKey).replace(/\d{4}$/, match => match.slice(2));
         
         // Render Level 2
-        const trP = document.createElement('tr');
-        trP.className = 'group-pelanggan ' + bClass;
-        trP.setAttribute('data-target', '.'+pClass);
-        trP.setAttribute('data-expanded', 'false');
-        trP.style.cursor = 'pointer';
-        trP.style.background = '#f8fafc';
-        trP.style.fontWeight = '600';
-        trP.style.display = 'none';
-        trP.onclick = function() { toggleRiwayatGroup(this); };
+        const trT = document.createElement('tr');
+        trT.className = 'group-tanggal ' + bClass;
+        trT.setAttribute('data-target', '.'+tClass);
+        trT.setAttribute('data-expanded', 'false');
+        trT.style.cursor = 'pointer';
+        trT.style.background = '#f8fafc';
+        trT.style.fontWeight = '600';
+        trT.style.display = 'none';
+        trT.onclick = function() { toggleRiwayatGroup(this); };
         
-        trP.innerHTML = `
-          <td></td>
-          <td><span class="toggle-icon" style="display:inline-block;width:16px;">▶</span> ${esc(pName)}</td>
+        trT.innerHTML = `
+          <td><span class="toggle-icon" style="display:inline-block;width:16px;margin-left:12px;">▶</span> ${fmtDate}</td>
+          <td>${tglPelCount} Pelanggan</td>
           <td>-</td>
           <td>-</td>
           <td style="${ar}">${pSumButir.toLocaleString('id-ID')}</td>
@@ -664,11 +676,13 @@ async function renderRiwayatJual(){
           <td style="${ar}"><div style="display:flex; justify-content:space-between; padding-left:12px;"><span>Rp</span><span>${pSumTotal.toLocaleString('id-ID')}</span></div></td>
           <td></td>
         `;
-        tbody.appendChild(trP);
+        tbody.appendChild(trT);
         
         // Render Level 3
-        gPel.items.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal)).forEach(item => {
-           renderLevel3(item, tbody, ar, canEdit, canDelete, bClass + ' ' + pClass);
+        gTgl.items.forEach(item => {
+           // We pass classes for child of bClass and tClass
+           // but we also need to add padding/indentation to the 1st column of level 3?
+           renderLevel3(item, tbody, ar, canEdit, canDelete, bClass + ' ' + tClass);
         });
       });
     }
@@ -727,8 +741,8 @@ window.toggleRiwayatGroup = function(row) {
         // Tampilkan child langsung
         document.querySelectorAll(targetSelector).forEach(el => {
             if (isLevel1) {
-                // Untuk level 1, hanya tampilkan level 2 (class group-pelanggan)
-                if (el.classList.contains('group-pelanggan')) el.style.display = 'table-row';
+                // Untuk level 1, hanya tampilkan level 2 (class group-tanggal)
+                if (el.classList.contains('group-tanggal')) el.style.display = 'table-row';
             } else {
                 // Untuk level 2, tampilkan semua level 3 yang ber-class tsb
                 el.style.display = 'table-row';
